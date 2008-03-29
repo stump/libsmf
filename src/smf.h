@@ -2,6 +2,7 @@
 #define SMF_H
 
 #include <stdio.h>
+#include <gdk/gdk.h>
 
 struct smf_struct {
 	FILE		*stream;
@@ -17,6 +18,8 @@ struct smf_struct {
 	int		ppqn;
 	int		frames_per_second;
 	int		resolution;
+
+	GQueue		*tracks_queue;
 };
 
 typedef struct smf_struct smf_t;
@@ -29,6 +32,8 @@ struct smf_track_struct {
 
 	int		next_event_offset;
 	int		last_status; /* Used for "running status". */
+
+	GQueue		*events_queue;
 };
 
 typedef struct smf_track_struct smf_track_t;

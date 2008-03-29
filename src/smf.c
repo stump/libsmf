@@ -28,6 +28,9 @@ smf_new(void)
 
 	memset(smf, 0, sizeof(smf_t));
 
+	smf->tracks_queue = g_queue_new();
+	assert(smf->tracks_queue);
+
 	return smf;
 }
 
@@ -41,6 +44,9 @@ smf_track_new(smf_t *smf)
 	memset(track, 0, sizeof(smf_track_t));
 
 	track->smf = smf;
+	g_queue_push_tail(smf->tracks_queue, (gpointer)track);
+	track->events_queue = g_queue_new();
+	assert(track->events_queue);
 
 	return track;
 }
@@ -55,6 +61,7 @@ smf_event_new(smf_track_t *track)
 	memset(event, 0, sizeof(smf_event_t));
 
 	event->track = track;
+	g_queue_push_tail(track->events_queue, (gpointer)event);
 
 	return event;
 }
@@ -97,20 +104,20 @@ parse_mthd_header(smf_t *smf)
 	mthd = next_chunk(smf);
 
 	if (mthd == NULL) {
-		fprintf(stderr, "Truncated file.\n");
+		g_critical("Truncated file.");
 
 		return 1;
 	}
 
 	if (!signature_matches(mthd, "MThd")) {
-		fprintf(stderr, "MThd signature not found, is that a MIDI file?\n");
+		g_critical("MThd signature not found, is that a MIDI file?");
 		
 		return 2;
 	}
 
 	len = ntohl(mthd->length);
 	if (len != 6) {
-		fprintf(stderr, "MThd chunk length %d, should be 6, please report this.\n", len);
+		g_critical("MThd chunk length %d, should be 6, please report this.", len);
 
 		return 3;
 	}
@@ -155,34 +162,34 @@ parse_mthd_chunk(smf_t *smf)
 static void
 print_mthd(smf_t *smf)
 {
-	fprintf(stderr, "**** Values from MThd ****\n");
+	g_debug("**** Values from MThd ****");
 
 	switch (smf->format) {
 		case 0:
-			fprintf(stderr, "Format: 0 (single track)\n");
+			g_debug("Format: 0 (single track)");
 			break;
 
 		case 1:
-			fprintf(stderr, "Format: 1 (sevaral simultaneous tracks)\n");
+			g_debug("Format: 1 (sevaral simultaneous tracks)");
 			break;
 
 		case 2:
-			fprintf(stderr, "Format: 2 (sevaral independent tracks)\n");
+			g_debug("Format: 2 (sevaral independent tracks)");
 			break;
 
 		default:
-			fprintf(stderr, "Format: %d (INVALID FORMAT)\n", smf->format);
+			g_debug("Format: %d (INVALID FORMAT)", smf->format);
 			break;
 	}
 
-	fprintf(stderr, "Number of tracks: %d\n", smf->number_of_tracks);
+	g_debug("Number of tracks: %d", smf->number_of_tracks);
 	if (smf->format == 0 && smf->number_of_tracks != 0)
-		fprintf(stderr, "Warning: number of tracks is %d, but this is a single track file.\n", smf->number_of_tracks);
+		g_warning("Warning: number of tracks is %d, but this is a single track file.", smf->number_of_tracks);
 
 	if (smf->ppqn != 0)
-		fprintf(stderr, "Division: %d PPQN\n", smf->ppqn);
+		g_debug("Division: %d PPQN", smf->ppqn);
 	else
-		fprintf(stderr, "Division: %d FPS, %d resolution\n", smf->frames_per_second, smf->resolution);
+		g_debug("Division: %d FPS, %d resolution", smf->frames_per_second, smf->resolution);
 }
 
 /*
@@ -229,7 +236,7 @@ extract_midi_event(const unsigned char *buf, smf_event_t *event, int *len, int p
 	}
 
 	if ((status & 0x80) == 0) {
-		fprintf(stderr, "Bad status (MSB is zero).\n");
+		g_critical("Bad status (MSB is zero).");
 		return -1;
 	}
 
@@ -242,7 +249,7 @@ extract_midi_event(const unsigned char *buf, smf_event_t *event, int *len, int p
 
 		for (i = 1; i < len; i++, c++) {
 			if (i >= 1024) {
-				fprintf(stderr, "Whoops, meta event too long.\n");
+				g_warning("Whoops, meta event too long.");
 				continue;
 			}
 
@@ -255,7 +262,7 @@ extract_midi_event(const unsigned char *buf, smf_event_t *event, int *len, int p
 		/* Copy the rest of the MIDI event into buffer. */
 		for (i = 1; (*(c + 1) & 0x80) == 0; i++, c++) {
 			if (i >= 1024) {
-				fprintf(stderr, "Whoops, MIDI event too long.\n");
+				g_warning("Whoops, MIDI event too long.");
 				continue;
 			}
 
@@ -455,13 +462,13 @@ parse_mtrk_header(smf_track_t *track)
 	mtrk = next_chunk(track->smf);
 
 	if (mtrk == NULL) {
-		fprintf(stderr, "Truncated file.\n");
+		g_critical("Truncated file.");
 
 		return 1;
 	}
 
 	if (!signature_matches(mtrk, "MTrk")) {
-		fprintf(stderr, "MTrk signature not found, skipping chunk.\n");
+		g_critical("MTrk signature not found, skipping chunk.");
 		
 		return 2;
 	}
@@ -488,21 +495,16 @@ parse_mtrk_chunk(smf_track_t *track)
 	if (parse_mtrk_header(track))
 		return 1;
 
-	fprintf(stderr, "*** Parsing track ***\n");
 	for (;;) {
 		smf_event_t *event = parse_next_event(track);
 
-		if (is_end_of_track(event)) {
-			print_event(event);
-			free(event);
+		if (is_end_of_track(event))
 			break;
-		}
 
 		if (event == NULL)
 			return 2;
 
 		print_event(event);
-		free(event);
 	}
 
 	return 0;
