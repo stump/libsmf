@@ -6,6 +6,9 @@
 struct smf_struct {
 	FILE		*stream;
 	void		*buffer;
+	int		buffer_length;
+
+	int		next_chunk_offset;
 
 	int		format;
 	int		number_of_tracks;

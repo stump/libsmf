@@ -30,6 +30,23 @@ smf_new(void)
 	return smf;
 }
 
+static struct chunk_header_struct *
+next_chunk(smf_t *smf)
+{
+	struct chunk_header_struct *chunk;
+
+	void *next_chunk_ptr = (unsigned char *)smf->buffer + smf->next_chunk_offset;
+
+	chunk = (struct chunk_header_struct *)next_chunk_ptr;
+
+	smf->next_chunk_offset += sizeof(struct chunk_header_struct) + ntohl(chunk->length);
+
+	if (smf->next_chunk_offset > smf->buffer_length)
+		return NULL;
+
+	return chunk;
+}
+
 static int
 signature_matches(const struct chunk_header_struct *chunk, const char *signature)
 {
@@ -48,19 +65,25 @@ parse_mthd_header(smf_t *smf)
 	/* Make sure compiler didn't do anything stupid. */
 	assert(sizeof(struct chunk_header_struct) == 8);
 
-	mthd = (struct chunk_header_struct *)smf->buffer;
+	mthd = next_chunk(smf);
+
+	if (mthd == NULL) {
+		fprintf(stderr, "Truncated file.\n");
+
+		return 1;
+	}
 
 	if (!signature_matches(mthd, "MThd")) {
 		fprintf(stderr, "MThd signature not found, is that a MIDI file?\n");
 		
-		return 1;
+		return 2;
 	}
 
 	len = ntohl(mthd->length);
 	if (len != 6) {
 		fprintf(stderr, "MThd chunk length %d, should be 6, please report this.\n", len);
 
-		return 2;
+		return 3;
 	}
 
 	return 0;
@@ -101,9 +124,9 @@ parse_mthd_chunk(smf_t *smf)
 }
 
 void
-print_things(smf_t *smf)
+print_mthd(smf_t *smf)
 {
-	fprintf(stderr, " **** Values from MThd ****\n");
+	fprintf(stderr, "**** Values from MThd ****\n");
 
 	switch (smf->format) {
 		case 0:
@@ -133,11 +156,46 @@ print_things(smf_t *smf)
 		fprintf(stderr, "Division: %d FPS, %d resolution\n", smf->frames_per_second, smf->resolution);
 }
 
+static int
+parse_mtrk_header(smf_t *smf)
+{
+	int len;
+	struct chunk_header_struct *mtrk;
+
+	/* Make sure compiler didn't do anything stupid. */
+	assert(sizeof(struct chunk_header_struct) == 8);
+
+	mtrk = next_chunk(smf);
+
+	if (mtrk == NULL) {
+		fprintf(stderr, "Truncated file.\n");
+
+		return 1;
+	}
+
+	if (!signature_matches(mtrk, "MTrk")) {
+		fprintf(stderr, "MTrk signature not found, skipping chunk.\n");
+		
+		return 2;
+	}
+
+	len = ntohl(mtrk->length);
+
+	return 0;
+}
+
+static int
+parse_mtrk_chunk(smf_t *smf)
+{
+	if (parse_mtrk_header(smf))
+		return 1;
+
+	return 0;
+}
+
 int
 load_file_into_buffer(smf_t *smf, const char *file_name)
 {
-	int size;
-
 	smf->stream = fopen(file_name, "r");
 	if (smf->stream == NULL) {
 		perror("Cannot open input file");
@@ -151,8 +209,8 @@ load_file_into_buffer(smf_t *smf, const char *file_name)
 		return 2;
 	}
 
-	size = ftell(smf->stream);
-	if (size == -1) {
+	smf->buffer_length = ftell(smf->stream);
+	if (smf->buffer_length == -1) {
 		perror("ftell(3) failed");
 
 		return 3;
@@ -164,14 +222,14 @@ load_file_into_buffer(smf_t *smf, const char *file_name)
 		return 4;
 	}
 
-	smf->buffer = malloc(size);
+	smf->buffer = malloc(smf->buffer_length);
 	if (smf->buffer == NULL) {
 		perror("malloc(3) failed");
 
 		return 5;
 	}
 
-	if (fread(smf->buffer, 1, size, smf->stream) != size) {
+	if (fread(smf->buffer, 1, smf->buffer_length, smf->stream) != smf->buffer_length) {
 		perror("fread(3) failed");
 
 		return 6;
@@ -183,6 +241,8 @@ load_file_into_buffer(smf_t *smf, const char *file_name)
 smf_t *
 smf_open(const char *file_name)
 {
+	int i;
+
 	smf_t *smf = smf_new();
 
 	if (load_file_into_buffer(smf, file_name))
@@ -191,7 +251,12 @@ smf_open(const char *file_name)
 	if (parse_mthd_chunk(smf))
 		return NULL;
 
-	print_things(smf);
+	print_mthd(smf);
+
+	for (i = 0; i < smf->number_of_tracks; i++) {
+		if (parse_mtrk_chunk(smf))
+			return NULL;
+	}
 
 	return smf;
 }
