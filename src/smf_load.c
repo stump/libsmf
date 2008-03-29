@@ -140,7 +140,16 @@ parse_mthd_chunk(smf_t *smf)
 	mthd = (struct mthd_chunk_struct *)smf->buffer;
 
 	smf->format = ntohs(mthd->format);
+	if (smf->format < 0 || smf->format > 2) {
+		g_critical("Bad MThd format field value: %d, valid values are (0-2).", smf->format);
+		return -1;
+	}
+
 	smf->number_of_tracks = ntohs(mthd->number_of_tracks);
+	if (smf->number_of_tracks <= 0) {
+		g_critical("Bad number of tracks: %d, should be greater than zero.", smf->number_of_tracks);
+		return -2;
+	}
 
 	/* XXX: endianess? */
 	first_byte_of_division = *((signed char *)&(mthd->division));
@@ -504,7 +513,9 @@ parse_mtrk_chunk(smf_track_t *track)
 		if (event == NULL)
 			return 2;
 
+#if 0
 		print_event(event);
+#endif
 	}
 
 	return 0;
@@ -556,7 +567,7 @@ load_file_into_buffer(smf_t *smf, const char *file_name)
 }
 
 smf_t *
-smf_open(const char *file_name)
+smf_load(const char *file_name)
 {
 	int i;
 
@@ -580,17 +591,24 @@ smf_open(const char *file_name)
 	return smf;
 }
 
-void
-smf_close(smf_t *smf)
+void *
+smf_get_next_message(smf_t *smf)
 {
-	if (smf->buffer != NULL) {
-		free(smf->buffer);
-		smf->buffer = NULL;
+	int i;
+	smf_event_t *event;
+	smf_track_t *track;
+
+	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
+		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
+
+		if (g_queue_is_empty(track->events_queue))
+			continue;
+
+		event = (smf_event_t *)g_queue_pop_head(track->events_queue);
+
+		return event->midi_buffer;
 	}
 
-	if (smf->stream != NULL) {
-		fclose(smf->stream);
-		smf->stream = NULL;
-	}
+	return NULL;
 }
 

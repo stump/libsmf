@@ -47,8 +47,9 @@ struct smf_event_struct {
 
 typedef struct smf_event_struct smf_event_t;
 
-smf_t *smf_open(const char *file_name);
-void smf_close(smf_t *smf);
+smf_t *smf_load(const char *file_name);
+void *smf_get_next_message_time(smf_t *smf);
+void *smf_get_next_message(smf_t *smf);
 
 #endif /* SMF_H */
 
