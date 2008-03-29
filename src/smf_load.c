@@ -185,20 +185,17 @@ print_mthd(smf_t *smf)
 		fprintf(stderr, "Division: %d FPS, %d resolution\n", smf->frames_per_second, smf->resolution);
 }
 
-static smf_event_t *
-parse_next_event(smf_track_t *track)
+/*
+ * Puts value extracted from from "buf" into "value" and number of consumed bytes into "len".
+ */
+void
+extract_packed_number(const unsigned char *buf, int *value, int *len)
 {
-	int time = 0, status, i;
-	unsigned char *c, *start, *actual_event_start;
+	int val = 0;
+	const unsigned char *c = buf;
 
-	smf_event_t *event = smf_event_new(track);
-	
-	start = (unsigned char *)track->buffer + track->next_event_offset;
-	c = start;
-
-	/* First, extract the time. */
 	for (;;) {
-		time = (time << 7) + (*c & 0x7F);
+		val = (val << 7) + (*c & 0x7F);
 
 		if (*c & 0x80)
 			c++;
@@ -206,13 +203,27 @@ parse_next_event(smf_track_t *track)
 			break;
 	};
 
+	*value = val;
+	*len = buf - c + 1;
+}
+
+static smf_event_t *
+parse_next_event(smf_track_t *track)
+{
+	int time = 0, status, i, len;
+	unsigned char *c, *start;
+
+	smf_event_t *event = smf_event_new(track);
+	
+	start = (unsigned char *)track->buffer + track->next_event_offset;
+	c = start;
+
+	extract_packed_number(start, &time, &len);
+	c += len;
+
 	event->time = time;
 
-	//fprintf(stderr, "time = %d; c - start = %d;\n", time, c - start);
-
 	/* Now, extract the actual event. */
-	c++;
-	actual_event_start = c;
 
 	/* Is the first byte the status byte? */
 	if (*c & 0x80) {
@@ -224,8 +235,6 @@ parse_next_event(smf_track_t *track)
 		/* No, we use running status then. */
 		status = track->last_status;
 	}
-
-	//fprintf(stderr, "time %d; status 0x%x; ", time, status);
 
 	if ((status & 0x80) == 0) {
 		fprintf(stderr, "Bad status (MSB is zero).\n");
@@ -239,15 +248,12 @@ parse_next_event(smf_track_t *track)
 		/* 0xFF 0xwhatever 0xlength + the actual length. */
 		int len = *(c + 1) + 3;
 
-		//fprintf(stderr, "len %d\n", len);
-
 		for (i = 1; i < len; i++, c++) {
 			if (i >= 1024) {
 				fprintf(stderr, "Whoops, meta event too long.\n");
 				continue;
 			}
 
-	//		fprintf(stderr, "0x%x ", *c);
 			event->midi_buffer[i] = *c;
 		}
 
@@ -261,13 +267,10 @@ parse_next_event(smf_track_t *track)
 				continue;
 			}
 
-	//		fprintf(stderr, "0x%x ", *c);
 			event->midi_buffer[i] = *c;
 		}
 	}
 	
-	//fprintf(stderr, "\ntime length %d; actual event length %d;\n", actual_event_start - start, c - actual_event_start);
-
 	track->next_event_offset += c - start;
 
 	return event;
@@ -296,7 +299,11 @@ is_real_event(const smf_event_t *event)
 char *
 string_from_event(const smf_event_t *event)
 {
-	return make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]);
+	int string_length, length_length;
+
+	extract_packed_number((void *)&(event->midi_buffer[2]), &string_length, &length_length);
+
+	return make_string((void *)(&event->midi_buffer[2] + length_length), string_length);
 }
 
 static void
