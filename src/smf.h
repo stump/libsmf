@@ -34,6 +34,7 @@ struct smf_track_struct {
 	int		last_status; /* Used for "running status". */
 
 	GQueue		*events_queue;
+	int		time_of_next_event; /* Absolute time of next event on events_queue. */
 };
 
 typedef struct smf_track_struct smf_track_t;
@@ -48,8 +49,8 @@ struct smf_event_struct {
 typedef struct smf_event_struct smf_event_t;
 
 smf_t *smf_load(const char *file_name);
-void *smf_get_next_message_time(smf_t *smf);
-void *smf_get_next_message(smf_t *smf);
+smf_event_t *smf_get_next_event(smf_t *smf);
+void smf_rewind(smf_t *smf);
 
 #endif /* SMF_H */
 

@@ -501,11 +501,18 @@ is_end_of_track(const smf_event_t *event)
 static int
 parse_mtrk_chunk(smf_track_t *track)
 {
+	int time = 0;
+	smf_event_t *event;
+
 	if (parse_mtrk_header(track))
 		return 1;
 
 	for (;;) {
-		smf_event_t *event = parse_next_event(track);
+		event = parse_next_event(track);
+
+		/* Replace "relative" event time with absolute one, i.e. relative to the start of the track. */
+		event->time += time;
+		time = event->time;
 
 		if (is_end_of_track(event))
 			break;
@@ -591,24 +598,48 @@ smf_load(const char *file_name)
 	return smf;
 }
 
-void *
-smf_get_next_message(smf_t *smf)
+smf_event_t *
+smf_get_next_event_from_track(smf_track_t *track)
+{
+	smf_event_t *event = (smf_event_t *)g_queue_pop_head(track->events_queue);
+	
+	if (event == NULL) {
+		g_critical("End of the track.");
+		return NULL;
+	}
+
+	track->time_of_next_event = event->time;
+
+	return event;
+}
+
+smf_event_t *
+smf_get_next_event(smf_t *smf)
 {
 	int i;
-	smf_event_t *event;
-	smf_track_t *track;
+	smf_track_t *track = NULL, *min_time_track = NULL;
 
+	int min_time = 0;
+
+	/* Find track with event that should be played next. */
 	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
 		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
 
 		if (g_queue_is_empty(track->events_queue))
-			continue;
+				continue;
 
-		event = (smf_event_t *)g_queue_pop_head(track->events_queue);
-
-		return event->midi_buffer;
+		if (track->time_of_next_event < min_time || min_time_track == NULL) {
+			min_time = track->time_of_next_event;
+			min_time_track = track;
+		}
 	}
 
-	return NULL;
+	if (min_time_track == NULL) {
+		g_critical("End of the song.");
+
+		return NULL;
+	}
+
+	return smf_get_next_event_from_track(min_time_track);
 }
 
