@@ -104,20 +104,20 @@ parse_mthd_header(smf_t *smf)
 	mthd = next_chunk(smf);
 
 	if (mthd == NULL) {
-		g_critical("Truncated file.");
+		g_critical("SMF error: file is truncated.");
 
 		return 1;
 	}
 
 	if (!signature_matches(mthd, "MThd")) {
-		g_critical("MThd signature not found, is that a MIDI file?");
+		g_critical("SMF error: MThd signature not found, is that a MIDI file?");
 		
 		return 2;
 	}
 
 	len = ntohl(mthd->length);
 	if (len != 6) {
-		g_critical("MThd chunk length %d, should be 6, please report this.", len);
+		g_critical("SMF error: MThd chunk length %d, should be 6.", len);
 
 		return 3;
 	}
@@ -141,13 +141,13 @@ parse_mthd_chunk(smf_t *smf)
 
 	smf->format = ntohs(mthd->format);
 	if (smf->format < 0 || smf->format > 2) {
-		g_critical("Bad MThd format field value: %d, valid values are (0-2).", smf->format);
+		g_critical("SMF error: bad MThd format field value: %d, valid values are (0-2).", smf->format);
 		return -1;
 	}
 
 	smf->number_of_tracks = ntohs(mthd->number_of_tracks);
 	if (smf->number_of_tracks <= 0) {
-		g_critical("Bad number of tracks: %d, should be greater than zero.", smf->number_of_tracks);
+		g_critical("SMF error: bad number of tracks: %d, should be greater than zero.", smf->number_of_tracks);
 		return -2;
 	}
 
@@ -245,7 +245,7 @@ extract_midi_event(const unsigned char *buf, smf_event_t *event, int *len, int p
 	}
 
 	if ((status & 0x80) == 0) {
-		g_critical("Bad status (MSB is zero).");
+		g_critical("SMF error: bad status byte (MSB is zero).");
 		return -1;
 	}
 
@@ -489,13 +489,13 @@ parse_mtrk_header(smf_track_t *track)
 	mtrk = next_chunk(track->smf);
 
 	if (mtrk == NULL) {
-		g_critical("Truncated file.");
+		g_critical("SMF error: file is truncated.");
 
 		return 1;
 	}
 
 	if (!signature_matches(mtrk, "MTrk")) {
-		g_critical("MTrk signature not found, skipping chunk.");
+		g_critical("SMF error: MTrk signature not found.");
 		
 		return 2;
 	}
@@ -624,7 +624,7 @@ smf_get_next_event_from_track(smf_track_t *track)
 	smf_event_t *event = (smf_event_t *)g_queue_pop_head(track->events_queue);
 	
 	if (event == NULL) {
-		g_critical("End of the track.");
+		g_debug("End of the track.");
 		return NULL;
 	}
 
@@ -655,7 +655,7 @@ smf_get_next_event(smf_t *smf)
 	}
 
 	if (min_time_track == NULL) {
-		g_critical("End of the song.");
+		g_debug("End of the song.");
 
 		return NULL;
 	}
