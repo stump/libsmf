@@ -188,7 +188,7 @@ print_mthd(smf_t *smf)
 /*
  * Puts value extracted from from "buf" into "value" and number of consumed bytes into "len".
  */
-void
+static void
 extract_packed_number(const unsigned char *buf, int *value, int *len)
 {
 	int val = 0;
@@ -204,41 +204,33 @@ extract_packed_number(const unsigned char *buf, int *value, int *len)
 	};
 
 	*value = val;
-	*len = buf - c + 1;
+	*len = c - buf + 1;
 }
 
-static smf_event_t *
-parse_next_event(smf_track_t *track)
+/*
+ * Puts MIDI data extracted from from "buf" into "event" and number of consumed bytes into "len".
+ * In case valid status is not found, it uses "previous_status" (so called "running status").
+ * Returns -1 in case of error.
+ */
+static int
+extract_midi_event(const unsigned char *buf, smf_event_t *event, int *len, int previous_status)
 {
-	int time = 0, status, i, len;
-	unsigned char *c, *start;
-
-	smf_event_t *event = smf_event_new(track);
-	
-	start = (unsigned char *)track->buffer + track->next_event_offset;
-	c = start;
-
-	extract_packed_number(start, &time, &len);
-	c += len;
-
-	event->time = time;
-
-	/* Now, extract the actual event. */
+	int i, status;
+	const unsigned char *c = buf;
 
 	/* Is the first byte the status byte? */
 	if (*c & 0x80) {
 		status = *c;
-		track->last_status = *c;
 		c++;
 
 	} else {
 		/* No, we use running status then. */
-		status = track->last_status;
+		status = previous_status;
 	}
 
 	if ((status & 0x80) == 0) {
 		fprintf(stderr, "Bad status (MSB is zero).\n");
-		return NULL;
+		return -1;
 	}
 
 	event->midi_buffer[0] = status;
@@ -270,7 +262,33 @@ parse_next_event(smf_track_t *track)
 			event->midi_buffer[i] = *c;
 		}
 	}
+
+	*len = c - buf;
+
+	return 0;
+}
+
+static smf_event_t *
+parse_next_event(smf_track_t *track)
+{
+	int time = 0, len;
+	unsigned char *c, *start;
+
+	smf_event_t *event = smf_event_new(track);
 	
+	c = start = (unsigned char *)track->buffer + track->next_event_offset;
+
+	/* First, extract time offset from previous event. */
+	extract_packed_number(c, &time, &len);
+	c += len;
+	event->time = time;
+
+	/* Now, extract the actual event. */
+	if (extract_midi_event(c, event, &len, track->last_status))
+		return NULL;
+
+	c += len;
+	track->last_status = event->midi_buffer[0];
 	track->next_event_offset += c - start;
 
 	return event;
@@ -415,7 +433,9 @@ print_event(smf_event_t *event)
 				break;
 
 			default:
-				fprintf(stderr, "Unknown Event");
+				fprintf(stderr, "Unknown Event: 0xFF 0x%x 0x%x 0x%x", event->midi_buffer[1], event->midi_buffer[2],
+				      event->midi_buffer[3]);
+
 				break;
 		}
 	}
