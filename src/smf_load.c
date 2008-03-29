@@ -459,6 +459,24 @@ print_event(smf_event_t *event)
 	fprintf(stderr, ")\n");
 }
 
+static void
+maybe_update_track(const smf_event_t *event)
+{
+	if (event->midi_buffer[0] != 0xFF)
+		return;
+
+	/* "Tempo" metaevent. */
+	if (event->midi_buffer[1] == 0x51) {
+		assert(event->track != NULL);
+		assert(event->track->smf != NULL);
+
+		event->track->smf->microseconds_per_quarter_note = 
+			(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
+
+		g_debug("Microseconds per quarter note: %d.", event->track->smf->microseconds_per_quarter_note);
+	}
+}
+
 static int
 parse_mtrk_header(smf_track_t *track)
 {
@@ -516,6 +534,8 @@ parse_mtrk_chunk(smf_track_t *track)
 
 		if (is_end_of_track(event))
 			break;
+
+		maybe_update_track(event);
 
 		if (event == NULL)
 			return 2;
@@ -641,5 +661,11 @@ smf_get_next_event(smf_t *smf)
 	}
 
 	return smf_get_next_event_from_track(min_time_track);
+}
+
+double
+smf_milliseconds_per_time_unit(smf_t *smf)
+{
+	return (double)smf->microseconds_per_quarter_note / (double)(smf->ppqn * 1000);
 }
 

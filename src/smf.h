@@ -18,6 +18,7 @@ struct smf_struct {
 	int		ppqn;
 	int		frames_per_second;
 	int		resolution;
+	int		microseconds_per_quarter_note;
 
 	GQueue		*tracks_queue;
 };
@@ -51,6 +52,7 @@ typedef struct smf_event_struct smf_event_t;
 smf_t *smf_load(const char *file_name);
 smf_event_t *smf_get_next_event(smf_t *smf);
 void smf_rewind(smf_t *smf);
+double smf_milliseconds_per_time_unit(smf_t *smf);
 
 #endif /* SMF_H */
 
