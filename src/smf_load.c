@@ -195,8 +195,6 @@ parse_next_event(smf_track_t *track)
 	start = (unsigned char *)track->buffer + track->next_event_offset;
 	c = start;
 
-	//fprintf(stderr, "*c = 0x%x; next *c = 0x%x;\n", *c, *(c + 1));
-	
 	/* First, extract the time. */
 	for (;;) {
 		time = (time << 7) + (*c & 0x7F);
@@ -226,7 +224,7 @@ parse_next_event(smf_track_t *track)
 		status = track->last_status;
 	}
 
-	fprintf(stderr, "time %d; status 0x%x; ", time, status);
+	//fprintf(stderr, "time %d; status 0x%x; ", time, status);
 
 	if ((status & 0x80) == 0) {
 		fprintf(stderr, "Bad status (MSB is zero).\n");
@@ -248,7 +246,7 @@ parse_next_event(smf_track_t *track)
 				continue;
 			}
 
-			fprintf(stderr, "0x%x ", *c);
+	//		fprintf(stderr, "0x%x ", *c);
 			event->midi_buffer[i] = *c;
 		}
 
@@ -262,94 +260,141 @@ parse_next_event(smf_track_t *track)
 				continue;
 			}
 
-			fprintf(stderr, "0x%x ", *c);
+	//		fprintf(stderr, "0x%x ", *c);
 			event->midi_buffer[i] = *c;
 		}
 	}
 	
-	fprintf(stderr, "\ntime length %d; actual event length %d;\n", actual_event_start - start, c - actual_event_start);
+	//fprintf(stderr, "\ntime length %d; actual event length %d;\n", actual_event_start - start, c - actual_event_start);
 
 	track->next_event_offset += c - start;
 
 	return event;
 }
 
+static char *
+make_string(const void *counted_string, int len)
+{
+	char *str = malloc(len + 1);
+	assert(str);
+	memcpy(str, counted_string, len);
+	str[len] = '\0';
+
+	return str;
+}
+
 static void
 print_event(smf_event_t *event)
 {
-	fprintf(stderr, "Event: time %d; status 0x%x;\n", event->time, event->midi_buffer[0]);
+	fprintf(stderr, "Event: time %d; status 0x%x (", event->time, event->midi_buffer[0]);
+	
+	switch (event->midi_buffer[0] & 0xF0) {
+		case 0x80:
+			fprintf(stderr, "Note Off");
+			break;
+
+		case 0x90:
+			fprintf(stderr, "Note On");
+			break;
+
+		case 0xA0:
+			fprintf(stderr, "Aftertouch");
+			break;
+
+		case 0xB0:
+			fprintf(stderr, "Control Change");
+			break;
+
+		case 0xC0:
+			fprintf(stderr, "Program Change");
+			break;
+
+		case 0xD0:
+			fprintf(stderr, "Channel Pressure");
+			break;
+
+		case 0xE0:
+			fprintf(stderr, "Pitch Wheel");
+			break;
+
+		default:
+			break;
+	}
 
 	if (event->midi_buffer[0] == 0xFF) {
 		switch (event->midi_buffer[1]) {
 			case 0x00:
-				fprintf(stderr, "Sequence Number\n");
+				fprintf(stderr, "Sequence Number");
 				break;
 
 			case 0x01:
-				fprintf(stderr, "Text\n");
+				fprintf(stderr, "Text: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
+
 				break;
 
 			case 0x02:
-				fprintf(stderr, "Copyright\n");
+				fprintf(stderr, "Copyright: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
 				break;
 
 			case 0x03:
-				fprintf(stderr, "Sequence/Track Name\n");
+				fprintf(stderr, "Sequence/Track Name: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
 				break;
 
 			case 0x04:
-				fprintf(stderr, "Instrument\n");
+				fprintf(stderr, "Instrument: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
 				break;
 
 			case 0x05:
-				fprintf(stderr, "Lyric\n");
+				fprintf(stderr, "Lyric: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
 				break;
 
 			case 0x06:
-				fprintf(stderr, "Marker\n");
+				fprintf(stderr, "Marker: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
 				break;
 
 			case 0x07:
-				fprintf(stderr, "Cue Point\n");
+				fprintf(stderr, "Cue Point: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
 				break;
 
 			case 0x08:
-				fprintf(stderr, "Program Name\n");
+				fprintf(stderr, "Program Name: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
 				break;
 
 			case 0x09:
-				fprintf(stderr, "Device (Port) Name\n");
+				fprintf(stderr, "Device (Port) Name: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
 				break;
 
 			case 0x2F:
-				fprintf(stderr, "End Of Track\n");
+				fprintf(stderr, "End Of Track");
 				break;
 
 			case 0x51:
-				fprintf(stderr, "Tempo\n");
+				fprintf(stderr, "Tempo");
 				break;
 
 			case 0x54:
-				fprintf(stderr, "SMPTE Offset\n");
+				fprintf(stderr, "SMPTE Offset");
 				break;
 
 			case 0x58:
-				fprintf(stderr, "Time Signature\n");
+				fprintf(stderr, "Time Signature");
 				break;
 
 			case 0x59:
-				fprintf(stderr, "Key Signature\n");
+				fprintf(stderr, "Key Signature");
 				break;
 
 			case 0x7F:
-				fprintf(stderr, "Proprietary Event\n");
+				fprintf(stderr, "Proprietary Event");
 				break;
 
 			default:
-				fprintf(stderr, "Uknown event.\n");
+				fprintf(stderr, "Unknown Event");
 				break;
 		}
 	}
+
+	fprintf(stderr, ")\n");
 }
 
 static int
@@ -402,7 +447,7 @@ parse_mtrk_chunk(smf_track_t *track)
 		smf_event_t *event = parse_next_event(track);
 
 		if (is_end_of_track(event)) {
-		//	print_event(event);
+			print_event(event);
 			free(event);
 			break;
 		}
@@ -410,7 +455,7 @@ parse_mtrk_chunk(smf_track_t *track)
 		if (event == NULL)
 			return 2;
 
-//		print_event(event);
+		print_event(event);
 		free(event);
 	}
 
