@@ -37,7 +37,7 @@ struct smf_event_struct {
 	smf_track_t	*track;
 
 	int		time;
-	unsigned char	midi_buffer[3];
+	unsigned char	midi_buffer[1024];
 };
 
 typedef struct smf_event_struct smf_event_t;

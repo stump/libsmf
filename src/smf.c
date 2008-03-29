@@ -188,52 +188,86 @@ static smf_event_t *
 parse_next_event(smf_track_t *track)
 {
 	int time = 0, status, i;
-	unsigned char *c, *start;
+	unsigned char *c, *start, *actual_event_start;
 
 	smf_event_t *event = smf_event_new(track);
 	
 	start = (unsigned char *)track->buffer + track->next_event_offset;
 	c = start;
+
+	//fprintf(stderr, "*c = 0x%x; next *c = 0x%x;\n", *c, *(c + 1));
 	
 	/* First, extract the time. */
-	do {
+	for (;;) {
 		time = (time << 7) + (*c & 0x7F);
-		c++;
 
-	} while (*c & 0x80);
+		if (*c & 0x80)
+			c++;
+		else
+			break;
+	};
 
 	event->time = time;
 
+	//fprintf(stderr, "time = %d; c - start = %d;\n", time, c - start);
+
 	/* Now, extract the actual event. */
 	c++;
-
-	fprintf(stderr, "c 0x%x\n", *c);
+	actual_event_start = c;
 
 	/* Is the first byte the status byte? */
 	if (*c & 0x80) {
 		status = *c;
-		c++;
 		track->last_status = *c;
+		c++;
 
 	} else {
 		/* No, we use running status then. */
 		status = track->last_status;
 	}
 
-	fprintf(stderr, "status 0x%x\n", status);
+	fprintf(stderr, "time %d; status 0x%x; ", time, status);
+
+	if ((status & 0x80) == 0) {
+		fprintf(stderr, "Bad status (MSB is zero).\n");
+		return NULL;
+	}
 
 	event->midi_buffer[0] = status;
 
-	/* XXX: running status does not really work that way. */
-	/* Copy the rest of the MIDI event into buffer. */
-	for (i = 1; (*c & 0x80) == 0; i++, c++) {
-		if (i > 2) {
-			fprintf(stderr, "MIDI protocol error, midi event too long.\n");
-			return NULL;
+	/* Is this a "meta event"? */
+	if (status == 0xFF) {
+		/* 0xFF 0xwhatever 0xlength + the actual length. */
+		int len = *(c + 1) + 3;
+
+		//fprintf(stderr, "len %d\n", len);
+
+		for (i = 1; i < len; i++, c++) {
+			if (i >= 1024) {
+				fprintf(stderr, "Whoops, meta event too long.\n");
+				continue;
+			}
+
+			fprintf(stderr, "0x%x ", *c);
+			event->midi_buffer[i] = *c;
 		}
 
-		event->midi_buffer[i] = *c;
+	} else {
+
+		/* XXX: running status does not really work that way. */
+		/* Copy the rest of the MIDI event into buffer. */
+		for (i = 1; (*(c + 1) & 0x80) == 0; i++, c++) {
+			if (i >= 1024) {
+				fprintf(stderr, "Whoops, MIDI event too long.\n");
+				continue;
+			}
+
+			fprintf(stderr, "0x%x ", *c);
+			event->midi_buffer[i] = *c;
+		}
 	}
+	
+	fprintf(stderr, "\ntime length %d; actual event length %d;\n", actual_event_start - start, c - actual_event_start);
 
 	track->next_event_offset += c - start;
 
@@ -243,7 +277,79 @@ parse_next_event(smf_track_t *track)
 static void
 print_event(smf_event_t *event)
 {
-	fprintf(stderr, "Event: time %d, status 0x%x\n", event->time, event->midi_buffer[0]);
+	fprintf(stderr, "Event: time %d; status 0x%x;\n", event->time, event->midi_buffer[0]);
+
+	if (event->midi_buffer[0] == 0xFF) {
+		switch (event->midi_buffer[1]) {
+			case 0x00:
+				fprintf(stderr, "Sequence Number\n");
+				break;
+
+			case 0x01:
+				fprintf(stderr, "Text\n");
+				break;
+
+			case 0x02:
+				fprintf(stderr, "Copyright\n");
+				break;
+
+			case 0x03:
+				fprintf(stderr, "Sequence/Track Name\n");
+				break;
+
+			case 0x04:
+				fprintf(stderr, "Instrument\n");
+				break;
+
+			case 0x05:
+				fprintf(stderr, "Lyric\n");
+				break;
+
+			case 0x06:
+				fprintf(stderr, "Marker\n");
+				break;
+
+			case 0x07:
+				fprintf(stderr, "Cue Point\n");
+				break;
+
+			case 0x08:
+				fprintf(stderr, "Program Name\n");
+				break;
+
+			case 0x09:
+				fprintf(stderr, "Device (Port) Name\n");
+				break;
+
+			case 0x2F:
+				fprintf(stderr, "End Of Track\n");
+				break;
+
+			case 0x51:
+				fprintf(stderr, "Tempo\n");
+				break;
+
+			case 0x54:
+				fprintf(stderr, "SMPTE Offset\n");
+				break;
+
+			case 0x58:
+				fprintf(stderr, "Time Signature\n");
+				break;
+
+			case 0x59:
+				fprintf(stderr, "Key Signature\n");
+				break;
+
+			case 0x7F:
+				fprintf(stderr, "Proprietary Event\n");
+				break;
+
+			default:
+				fprintf(stderr, "Uknown event.\n");
+				break;
+		}
+	}
 }
 
 static int
@@ -276,19 +382,35 @@ parse_mtrk_header(smf_track_t *track)
 	return 0;
 }
 
+int
+is_end_of_track(const smf_event_t *event)
+{
+	if (event->midi_buffer[0] == 0xFF && event->midi_buffer[1] == 0x2F)
+		return 1;
+
+	return 0;
+}
+
 static int
 parse_mtrk_chunk(smf_track_t *track)
 {
 	if (parse_mtrk_header(track))
 		return 1;
 
+	fprintf(stderr, "*** Parsing track ***\n");
 	for (;;) {
 		smf_event_t *event = parse_next_event(track);
+
+		if (is_end_of_track(event)) {
+		//	print_event(event);
+			free(event);
+			break;
+		}
 
 		if (event == NULL)
 			return 2;
 
-		print_event(event);
+//		print_event(event);
 		free(event);
 	}
 
