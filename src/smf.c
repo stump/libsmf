@@ -30,6 +30,34 @@ smf_new(void)
 	return smf;
 }
 
+static smf_track_t *
+smf_track_new(smf_t *smf)
+{
+	smf_track_t *track = malloc(sizeof(smf_track_t));
+
+	assert(track != NULL);
+
+	memset(track, 0, sizeof(smf_track_t));
+
+	track->smf = smf;
+
+	return track;
+}
+
+static smf_event_t *
+smf_event_new(smf_track_t *track)
+{
+	smf_event_t *event = malloc(sizeof(smf_event_t));
+
+	assert(event != NULL);
+
+	memset(event, 0, sizeof(smf_event_t));
+
+	event->track = track;
+
+	return event;
+}
+
 static struct chunk_header_struct *
 next_chunk(smf_t *smf)
 {
@@ -123,7 +151,7 @@ parse_mthd_chunk(smf_t *smf)
 	return 0;
 }
 
-void
+static void
 print_mthd(smf_t *smf)
 {
 	fprintf(stderr, "**** Values from MThd ****\n");
@@ -156,16 +184,78 @@ print_mthd(smf_t *smf)
 		fprintf(stderr, "Division: %d FPS, %d resolution\n", smf->frames_per_second, smf->resolution);
 }
 
-static int
-parse_mtrk_header(smf_t *smf)
+static smf_event_t *
+parse_next_event(smf_track_t *track)
 {
-	int len;
+	int time = 0, status, i;
+	unsigned char *c, *start;
+
+	smf_event_t *event = smf_event_new(track);
+	
+	start = (unsigned char *)track->buffer + track->next_event_offset;
+	c = start;
+	
+	/* First, extract the time. */
+	do {
+		time = (time << 7) + (*c & 0x7F);
+		c++;
+
+	} while (*c & 0x80);
+
+	event->time = time;
+
+	/* Now, extract the actual event. */
+	c++;
+
+	fprintf(stderr, "c 0x%x\n", *c);
+
+	/* Is the first byte the status byte? */
+	if (*c & 0x80) {
+		status = *c;
+		c++;
+		track->last_status = *c;
+
+	} else {
+		/* No, we use running status then. */
+		status = track->last_status;
+	}
+
+	fprintf(stderr, "status 0x%x\n", status);
+
+	event->midi_buffer[0] = status;
+
+	/* XXX: running status does not really work that way. */
+	/* Copy the rest of the MIDI event into buffer. */
+	for (i = 1; (*c & 0x80) == 0; i++, c++) {
+		if (i > 2) {
+			fprintf(stderr, "MIDI protocol error, midi event too long.\n");
+			return NULL;
+		}
+
+		event->midi_buffer[i] = *c;
+	}
+
+	track->next_event_offset += c - start;
+
+	return event;
+}
+
+static void
+print_event(smf_event_t *event)
+{
+	fprintf(stderr, "Event: time %d, status 0x%x\n", event->time, event->midi_buffer[0]);
+}
+
+static int
+parse_mtrk_header(smf_track_t *track)
+{
 	struct chunk_header_struct *mtrk;
 
 	/* Make sure compiler didn't do anything stupid. */
 	assert(sizeof(struct chunk_header_struct) == 8);
+	assert(track->smf != NULL);
 
-	mtrk = next_chunk(smf);
+	mtrk = next_chunk(track->smf);
 
 	if (mtrk == NULL) {
 		fprintf(stderr, "Truncated file.\n");
@@ -179,21 +269,33 @@ parse_mtrk_header(smf_t *smf)
 		return 2;
 	}
 
-	len = ntohl(mtrk->length);
+	track->buffer = mtrk;
+	track->buffer_length = sizeof(struct chunk_header_struct) + ntohl(mtrk->length);
+	track->next_event_offset = sizeof(struct chunk_header_struct);
 
 	return 0;
 }
 
 static int
-parse_mtrk_chunk(smf_t *smf)
+parse_mtrk_chunk(smf_track_t *track)
 {
-	if (parse_mtrk_header(smf))
+	if (parse_mtrk_header(track))
 		return 1;
+
+	for (;;) {
+		smf_event_t *event = parse_next_event(track);
+
+		if (event == NULL)
+			return 2;
+
+		print_event(event);
+		free(event);
+	}
 
 	return 0;
 }
 
-int
+static int
 load_file_into_buffer(smf_t *smf, const char *file_name)
 {
 	smf->stream = fopen(file_name, "r");
@@ -254,7 +356,9 @@ smf_open(const char *file_name)
 	print_mthd(smf);
 
 	for (i = 0; i < smf->number_of_tracks; i++) {
-		if (parse_mtrk_chunk(smf))
+		smf_track_t *track = smf_track_new(smf);
+
+		if (parse_mtrk_chunk(track))
 			return NULL;
 	}
 

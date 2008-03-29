@@ -21,6 +21,27 @@ struct smf_struct {
 
 typedef struct smf_struct smf_t;
 
+struct smf_track_struct {
+	smf_t		*smf;
+
+	void		*buffer;
+	int		buffer_length;
+
+	int		next_event_offset;
+	int		last_status; /* Used for "running status". */
+};
+
+typedef struct smf_track_struct smf_track_t;
+
+struct smf_event_struct {
+	smf_track_t	*track;
+
+	int		time;
+	unsigned char	midi_buffer[3];
+};
+
+typedef struct smf_event_struct smf_event_t;
+
 smf_t *smf_open(const char *file_name);
 void smf_close(smf_t *smf);
 
