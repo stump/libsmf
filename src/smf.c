@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 #include <arpa/inet.h>
 #include "smf.h"
 
@@ -283,6 +284,21 @@ make_string(const void *counted_string, int len)
 	return str;
 }
 
+int
+is_real_event(const smf_event_t *event)
+{
+	if (event->midi_buffer[0] != 0xFF)
+		return 1;
+
+	return 0;
+}
+
+char *
+string_from_event(const smf_event_t *event)
+{
+	return make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]);
+}
+
 static void
 print_event(smf_event_t *event)
 {
@@ -328,40 +344,40 @@ print_event(smf_event_t *event)
 				break;
 
 			case 0x01:
-				fprintf(stderr, "Text: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
+				fprintf(stderr, "Text: %s", string_from_event(event));
 
 				break;
 
 			case 0x02:
-				fprintf(stderr, "Copyright: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
+				fprintf(stderr, "Copyright: %s", string_from_event(event));
 				break;
 
 			case 0x03:
-				fprintf(stderr, "Sequence/Track Name: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
+				fprintf(stderr, "Sequence/Track Name: %s", string_from_event(event));
 				break;
 
 			case 0x04:
-				fprintf(stderr, "Instrument: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
+				fprintf(stderr, "Instrument: %s", string_from_event(event));
 				break;
 
 			case 0x05:
-				fprintf(stderr, "Lyric: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
+				fprintf(stderr, "Lyric: %s", string_from_event(event));
 				break;
 
 			case 0x06:
-				fprintf(stderr, "Marker: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
+				fprintf(stderr, "Marker: %s", string_from_event(event));
 				break;
 
 			case 0x07:
-				fprintf(stderr, "Cue Point: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
+				fprintf(stderr, "Cue Point: %s", string_from_event(event));
 				break;
 
 			case 0x08:
-				fprintf(stderr, "Program Name: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
+				fprintf(stderr, "Program Name: %s", string_from_event(event));
 				break;
 
 			case 0x09:
-				fprintf(stderr, "Device (Port) Name: %s", make_string((void *)&event->midi_buffer[3], event->midi_buffer[2]));
+				fprintf(stderr, "Device (Port) Name: %s", string_from_event(event));
 				break;
 
 			case 0x2F:
@@ -369,7 +385,8 @@ print_event(smf_event_t *event)
 				break;
 
 			case 0x51:
-				fprintf(stderr, "Tempo");
+				fprintf(stderr, "Tempo: %d microseconds per quarter note", (event->midi_buffer[3] << 16) +
+						(event->midi_buffer[4] << 8) + event->midi_buffer[5]);
 				break;
 
 			case 0x54:
@@ -377,7 +394,9 @@ print_event(smf_event_t *event)
 				break;
 
 			case 0x58:
-				fprintf(stderr, "Time Signature");
+				fprintf(stderr, "Time Signature: %d/%d, %d clocks per click, %d notated 32nd notes per quarter note",
+						event->midi_buffer[3], (int)pow(2, event->midi_buffer[4]), event->midi_buffer[5],
+						event->midi_buffer[6]);
 				break;
 
 			case 0x59:
