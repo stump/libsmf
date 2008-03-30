@@ -386,6 +386,8 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 
 	*len = c - buf;
 
+	event->buffer_length = message_length;
+
 #if 0
 	fprintf(stderr, "status 0x%x; length %d\n", status, *len);
 #endif

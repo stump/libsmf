@@ -44,13 +44,14 @@ struct smf_track_struct {
 
 typedef struct smf_track_struct smf_track_t;
 
-#define MAX_EVENT_LENGTH 1024
+#define MAX_EVENT_LENGTH 128
 
 struct smf_event_struct {
 	smf_track_t	*track;
 
 	int		time;
 	int		track_number;
+	int		buffer_length; /* Length of the MIDI message in the buffer, in bytes. */
 	unsigned char	midi_buffer[MAX_EVENT_LENGTH];
 };
 
