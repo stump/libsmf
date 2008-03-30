@@ -758,6 +758,7 @@ smf_milliseconds_per_time_unit(smf_t *smf)
 void
 smf_rewind(smf_t *smf)
 {
+	g_critical("*** smf_rewind() is not yet implemented. ***");
 }
 
 int
