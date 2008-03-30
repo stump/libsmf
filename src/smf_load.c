@@ -1,11 +1,18 @@
+/*
+ * This is Standard MIDI File loader.
+ *
+ * For questions and comments, contact Edward Tomasz Napierala <trasz@FreeBSD.org>.
+ * This code is public domain, you can do with it whatever you want.
+ */
+
+/* Reference: http://www.borg.com/~jglatt/tech/midifile.htm */
+
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <math.h>
 #include <arpa/inet.h>
 #include "smf.h"
-
-/* Reference: http://www.borg.com/~jglatt/tech/midifile.htm */
 
 struct chunk_header_struct {
 	char		id[4];
