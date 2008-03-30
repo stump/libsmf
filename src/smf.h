@@ -21,6 +21,7 @@ struct smf_struct {
 	int		microseconds_per_quarter_note;
 
 	GQueue		*tracks_queue;
+	int		last_track_number;
 };
 
 typedef struct smf_struct smf_t;
@@ -30,6 +31,8 @@ struct smf_track_struct {
 
 	void		*buffer;
 	int		buffer_length;
+
+	int		track_number;
 
 	int		next_event_offset;
 	int		last_status; /* Used for "running status". */
@@ -44,12 +47,14 @@ struct smf_event_struct {
 	smf_track_t	*track;
 
 	int		time;
+	int		track_number;
 	unsigned char	midi_buffer[1024];
 };
 
 typedef struct smf_event_struct smf_event_t;
 
 smf_t *smf_load(const char *file_name);
+int smf_get_number_of_tracks(smf_t *smf);
 smf_event_t *smf_get_next_event(smf_t *smf);
 void smf_rewind(smf_t *smf);
 double smf_milliseconds_per_time_unit(smf_t *smf);

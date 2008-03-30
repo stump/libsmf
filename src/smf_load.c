@@ -46,6 +46,8 @@ smf_track_new(smf_t *smf)
 	track->smf = smf;
 	g_queue_push_tail(smf->tracks_queue, (gpointer)track);
 	track->events_queue = g_queue_new();
+	smf->last_track_number++;
+	track->track_number = smf->last_track_number;
 	assert(track->events_queue);
 
 	return track;
@@ -61,6 +63,7 @@ smf_event_new(smf_track_t *track)
 	memset(event, 0, sizeof(smf_event_t));
 
 	event->track = track;
+	event->track_number = track->track_number;
 	g_queue_push_tail(track->events_queue, (gpointer)event);
 
 	return event;
@@ -181,34 +184,41 @@ parse_mthd_chunk(smf_t *smf)
 static void
 print_mthd(smf_t *smf)
 {
-	g_debug("**** Values from MThd ****");
+	int off = 0;
+	char buf[256];
+
+	off += snprintf(buf + off, sizeof(buf) - off, "SMF header contents: format: %d ", smf->format);
 
 	switch (smf->format) {
 		case 0:
-			g_debug("Format: 0 (single track)");
+			off += snprintf(buf + off, sizeof(buf) - off, "(single track)");
 			break;
 
 		case 1:
-			g_debug("Format: 1 (sevaral simultaneous tracks)");
+			off += snprintf(buf + off, sizeof(buf) - off, "(several simultaneous tracks)");
 			break;
 
 		case 2:
-			g_debug("Format: 2 (sevaral independent tracks)");
+			off += snprintf(buf + off, sizeof(buf) - off, "(several independent tracks)");
 			break;
 
 		default:
-			g_debug("Format: %d (INVALID FORMAT)", smf->format);
+			off += snprintf(buf + off, sizeof(buf) - off, "(INVALID FORMAT)");
 			break;
 	}
 
-	g_debug("Number of tracks: %d", smf->number_of_tracks);
+	off += snprintf(buf + off, sizeof(buf) - off, "; number of tracks: %d", smf->number_of_tracks);
+
+	if (smf->ppqn != 0)
+		off += snprintf(buf + off, sizeof(buf) - off, "; division: %d PPN.", smf->ppqn);
+	else
+		off += snprintf(buf + off, sizeof(buf) - off, "; division: %d FPS, %d resolution.", smf->frames_per_second, smf->resolution);
+
+	g_debug("%s", buf);
+
 	if (smf->format == 0 && smf->number_of_tracks != 0)
 		g_warning("Warning: number of tracks is %d, but this is a single track file.", smf->number_of_tracks);
 
-	if (smf->ppqn != 0)
-		g_debug("Division: %d PPQN", smf->ppqn);
-	else
-		g_debug("Division: %d FPS, %d resolution", smf->frames_per_second, smf->resolution);
 }
 
 /*
@@ -601,6 +611,11 @@ smf_load(const char *file_name)
 			return NULL;
 	}
 
+	if (smf->last_track_number != smf->number_of_tracks) {
+		g_warning("SMF error: MThd header declared %d tracks, but only %d found; continuing anyway.",
+				smf->number_of_tracks, smf->last_track_number);
+	}
+
 	return smf;
 }
 
@@ -699,5 +714,11 @@ smf_milliseconds_per_time_unit(smf_t *smf)
 void
 smf_rewind(smf_t *smf)
 {
+}
+
+int
+smf_get_number_of_tracks(smf_t *smf)
+{
+	return smf->number_of_tracks;
 }
 
