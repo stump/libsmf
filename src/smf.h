@@ -34,7 +34,8 @@ struct smf_track_struct {
 	int		next_event_offset;
 	int		last_status; /* Used for "running status". */
 
-	GQueue		*events_queue;
+	GList		*events_list;
+	GList		*next_event;
 	int		time_of_next_event; /* Absolute time of next event on events_queue. */
 };
 
