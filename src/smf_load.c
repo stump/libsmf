@@ -692,16 +692,25 @@ parse_metadata_event(const smf_event_t *event)
 smf_event_t *
 smf_get_next_event_from_track(smf_track_t *track)
 {
-	smf_event_t *event = (smf_event_t *)g_queue_pop_head(track->events_queue);
-	smf_event_t *next_event = (smf_event_t *)g_queue_peek_head(track->events_queue);
-	
-	if (event == NULL) {
-		g_debug("End of the track.");
-		return NULL;
-	}
+	smf_event_t *event, *next_event;
 
-	if (next_event != NULL)
+	assert(!g_queue_is_empty(track->events_queue));
+	assert(track->next_event_number >= 0);
+
+	/* XXX: inefficient; use some different data structure. */
+	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number);
+	next_event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number + 1);
+
+	assert(event != next_event);
+	assert(event != NULL);
+
+	/* Is this the last event in the track? */
+	if (next_event != NULL) {
 		track->time_of_next_event = next_event->time;
+		track->next_event_number++;
+	} else {
+		track->next_event_number = -1;
+	}
 
 	return event;
 }
@@ -720,8 +729,11 @@ smf_get_next_event(smf_t *smf)
 	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
 		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
 
-		if (g_queue_is_empty(track->events_queue))
-				continue;
+		assert(!g_queue_is_empty(track->events_queue));
+
+		/* No more events in this track? */
+		if (track->next_event_number == -1)
+			continue;
 
 		if (track->time_of_next_event < min_time || min_time_track == NULL) {
 			min_time = track->time_of_next_event;
@@ -736,13 +748,15 @@ smf_get_next_event(smf_t *smf)
 	}
 
 	event = smf_get_next_event_from_track(min_time_track);
+	
+	assert(event != NULL);
 
 	if (event_is_metadata(event)) {
 		parse_metadata_event(event);
 
 		return smf_get_next_event(smf);
 	}
-
+	
 	return event;
 }
 
@@ -758,7 +772,19 @@ smf_milliseconds_per_time_unit(smf_t *smf)
 void
 smf_rewind(smf_t *smf)
 {
-	g_critical("*** smf_rewind() is not yet implemented. ***");
+	int i;
+	smf_track_t *track = NULL;
+
+	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
+		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
+
+		assert(track != NULL);
+
+		track->next_event_number = 0;
+		track->time_of_next_event = 0; /* XXX: is this right? */
+	}
+
+	g_debug("Rewinding.");
 }
 
 int

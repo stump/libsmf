@@ -34,7 +34,8 @@ struct smf_track_struct {
 
 	int		track_number;
 
-	int		next_event_offset;
+	int		next_event_offset; /* Offset into buffer, used in parse_next_event(). */
+	int		next_event_number;
 	int		last_status; /* Used for "running status". */
 
 	GQueue		*events_queue;
