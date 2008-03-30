@@ -45,6 +45,8 @@ smf_track_new(smf_t *smf)
 
 	track->smf = smf;
 	g_queue_push_tail(smf->tracks_queue, (gpointer)track);
+	track->events_queue = g_queue_new();
+	assert(track->events_queue);
 
 	return track;
 }
@@ -59,10 +61,7 @@ smf_event_new(smf_track_t *track)
 	memset(event, 0, sizeof(smf_event_t));
 
 	event->track = track;
-	/* XXX: inefficient. */
-	track->events_list = g_list_append(track->events_list, (gpointer)event);
-	if (track->next_event == NULL)
-		track->next_event = g_list_first(track->events_list);
+	g_queue_push_tail(track->events_queue, (gpointer)event);
 
 	return event;
 }
@@ -506,32 +505,6 @@ event_is_end_of_track(const smf_event_t *event)
 }
 
 static int
-event_is_metadata(const smf_event_t *event)
-{
-	if (event->midi_buffer[0] == 0xFF)
-		return 1;
-
-	return 0;
-}
-
-static void
-parse_metadata_event(const smf_event_t *event)
-{
-	assert(event_is_metadata(event));
-
-	/* "Tempo" metaevent. */
-	if (event->midi_buffer[1] == 0x51) {
-		assert(event->track != NULL);
-		assert(event->track->smf != NULL);
-
-		event->track->smf->microseconds_per_quarter_note = 
-			(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
-
-		g_debug("Setting microseconds per quarter note: %d.", event->track->smf->microseconds_per_quarter_note);
-	}
-}
-
-static int
 parse_mtrk_chunk(smf_track_t *track)
 {
 	int time = 0;
@@ -631,38 +604,56 @@ smf_load(const char *file_name)
 	return smf;
 }
 
+static int
+event_is_metadata(const smf_event_t *event)
+{
+	if (event->midi_buffer[0] == 0xFF)
+		return 1;
+
+	return 0;
+}
+
+static void
+parse_metadata_event(const smf_event_t *event)
+{
+	assert(event_is_metadata(event));
+
+	/* "Tempo" metaevent. */
+	if (event->midi_buffer[1] == 0x51) {
+		assert(event->track != NULL);
+		assert(event->track->smf != NULL);
+
+		event->track->smf->microseconds_per_quarter_note = 
+			(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
+
+		g_debug("Setting microseconds per quarter note: %d.", event->track->smf->microseconds_per_quarter_note);
+	}
+}
+
 smf_event_t *
 smf_get_next_event_from_track(smf_track_t *track)
 {
-	GList *next_element;
-	smf_event_t *event, *next_event;
-
-	next_element = g_list_next(track->next_event);
-	event = (smf_event_t *)next_element;
+	smf_event_t *event = (smf_event_t *)g_queue_pop_head(track->events_queue);
+	smf_event_t *next_event = (smf_event_t *)g_queue_peek_head(track->events_queue);
 	
-	next_element = g_list_next(next_element);
-	track->next_event = next_element;
-	next_event = (smf_event_t *)next_element;
-
-	assert(event == NULL || event != next_event);
-
-	if (next_event != NULL)
-		track->time_of_next_event = next_event->time;
-
 	if (event == NULL) {
 		g_debug("End of the track.");
 		return NULL;
 	}
 
+	if (next_event != NULL)
+		track->time_of_next_event = next_event->time;
+
 	return event;
 }
+
 
 smf_event_t *
 smf_get_next_event(smf_t *smf)
 {
 	int i;
-	smf_track_t *track = NULL, *min_time_track = NULL;
 	smf_event_t *event;
+	smf_track_t *track = NULL, *min_time_track = NULL;
 
 	int min_time = 0;
 
@@ -670,12 +661,8 @@ smf_get_next_event(smf_t *smf)
 	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
 		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
 
-		if (track->next_event == NULL) {
-			fprintf(stderr, "no next event\n");
-			continue;
-		}
-
-		fprintf(stderr, "next event\n");
+		if (g_queue_is_empty(track->events_queue))
+				continue;
 
 		if (track->time_of_next_event < min_time || min_time_track == NULL) {
 			min_time = track->time_of_next_event;
@@ -693,9 +680,8 @@ smf_get_next_event(smf_t *smf)
 
 	if (event_is_metadata(event)) {
 		parse_metadata_event(event);
-		
-		/* Do not return metadata events. */
-		return smf_get_next_event(track->smf);
+
+		return smf_get_next_event(smf);
 	}
 
 	return event;
@@ -713,17 +699,5 @@ smf_milliseconds_per_time_unit(smf_t *smf)
 void
 smf_rewind(smf_t *smf)
 {
-	int i;
-	smf_track_t *track;
-
-	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
-		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
-		track->next_event = g_list_first(((smf_track_t *)track)->events_list);
-		
-		if (track->next_event != NULL)
-			track->time_of_next_event = ((smf_event_t *)track->next_event)->time;
-		else
-			track->time_of_next_event = -1;
-	}
 }
 
