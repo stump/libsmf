@@ -261,6 +261,79 @@ extract_packed_number(const unsigned char *buf, const int buffer_length, int *va
 }
 
 /*
+ * Returns expected length of the midi message (including the status byte), in bytes, for the given status byte.
+ * The "second_byte" points to the expected second byte of the MIDI message.  "buffer_length" is the buffer
+ * length limit, counting from "second_byte".
+ */
+int
+expected_message_length(unsigned char status, const unsigned char *second_byte, const int buffer_length)
+{
+	/* Make sure this really is a valid status byte. */
+	assert(status & 0x80);
+	assert(buffer_length > 0);
+
+	/* Is this a metamessage? */
+	if (status == 0xFF) {
+		if (buffer_length < 2) {
+			g_critical("SMF error: end of buffer in expected_message_length.");
+			return -1;
+		}
+
+		/*
+		 * Format of this kind of messages is like this: 0xFF 0xwhatever 0xlength and then "length" bytes.
+		 * Second byte points to this:                        ^^^^^^^^^^
+		 */
+		return *(second_byte + 1) + 3;
+	}
+
+	if ((status & 0xF0) == 0xF0) {
+		switch (status) {
+			case 0xF0: /* System Exclusive. */
+				return -1;
+
+			case 0xF1: /* MTC Quarter Frame. */
+			case 0xF3: /* Song Select. */
+				return 2;
+
+			case 0xF2: /* Song Position Pointer. */
+				return 3;
+
+			case 0xF6: /* Tune Request. */
+			case 0xF8: /* MIDI Clock. */
+			case 0xF9: /* Tick. */
+			case 0xFA: /* MIDI Start. */
+			case 0xFC: /* MIDI Stop. */
+			case 0xFB: /* MIDI Continue. */
+			case 0xFE: /* Active Sense. */
+
+			default:
+				g_critical("SMF error: unknown 0xFx-type status byte '0x%x'.", status);
+				return -2;
+		}
+	}
+
+	/* Filter out the channel. */
+	status &= 0xF0;
+
+	switch (status) {
+		case 0x80: /* Note Off. */
+		case 0x90: /* Note On. */
+		case 0xA0: /* AfterTouch. */
+		case 0xB0: /* Control Change. */
+		case 0xE0: /* Pitch Wheel. */
+			return 3;	
+
+		case 0xC0: /* Program Change. */
+		case 0xD0: /* Channel Pressure. */
+			return 2;
+
+		default:
+			g_critical("SMF error: unknown status byte '0x%x'.", status);
+			return -3;
+	}
+}
+
+/*
  * Puts MIDI data extracted from from "buf" into "event" and number of consumed bytes into "len".
  * In case valid status is not found, it uses "previous_status" (so called "running status").
  * Returns -1 in case of error.
@@ -268,7 +341,7 @@ extract_packed_number(const unsigned char *buf, const int buffer_length, int *va
 static int
 extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_t *event, int *len, int previous_status)
 {
-	int i, status;
+	int i, status, message_length;
 	const unsigned char *c = buf;
 
 	assert(buffer_length > 0);
@@ -290,45 +363,32 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 
 	event->midi_buffer[0] = status;
 
-	/* Is this a "meta event"? */
-	if (status == 0xFF) {
-		/* 0xFF 0xwhatever 0xlength + the actual length. */
-		int len = *(c + 1) + 3;
+	message_length = expected_message_length(status, c, buffer_length - (c - buf));
 
-		for (i = 1; i < len; i++, c++) {
-			if (c >= buf + buffer_length) {
-				g_critical("End of buffer in extract_midi_event.");
-				return -2;
-			}
+	/* XXX: And what am I supposed to do here? ;-/ */
+	if (message_length < 0)
+		return -3;
 
-			if (i >= MAX_EVENT_LENGTH) {
-				g_warning("Whoops, meta event too long.");
-				continue;
-			}
-
-			event->midi_buffer[i] = *c;
+	/* Copy the rest of the MIDI event into buffer. */
+	for (i = 1; i < message_length; i++, c++) {
+		if (c >= buf + buffer_length) {
+			g_critical("End of buffer in extract_midi_event.");
+			return -4;
 		}
 
-	} else {
-
-		/* XXX: running status does not really work that way. */
-		/* Copy the rest of the MIDI event into buffer. */
-		for (i = 1; (*(c + 1) & 0x80) == 0; i++, c++) {
-			if (c >= buf + buffer_length) {
-				g_critical("End of buffer in extract_midi_event.");
-				return -3;
-			}
-
-			if (i >= MAX_EVENT_LENGTH) {
-				g_warning("Whoops, MIDI event too long.");
-				continue;
-			}
-
-			event->midi_buffer[i] = *c;
+		if (i >= MAX_EVENT_LENGTH) {
+			g_warning("Whoops, MIDI event too long.");
+			continue;
 		}
+
+		event->midi_buffer[i] = *c;
 	}
 
 	*len = c - buf;
+
+#if 0
+	fprintf(stderr, "status 0x%x; length %d\n", status, *len);
+#endif
 
 	return 0;
 }
@@ -570,6 +630,9 @@ parse_mtrk_chunk(smf_track_t *track)
 	for (;;) {
 		event = parse_next_event(track);
 
+		if (event == NULL)
+			return 1;
+
 		/* Replace "relative" event time with absolute one, i.e. relative to the start of the track. */
 		event->time += time;
 		time = event->time;
@@ -663,7 +726,7 @@ smf_load(const char *file_name)
 	return smf;
 }
 
-static int
+int
 event_is_metadata(const smf_event_t *event)
 {
 	if (event->midi_buffer[0] == 0xFF)
@@ -761,12 +824,12 @@ smf_get_next_event(smf_t *smf)
 }
 
 double
-smf_milliseconds_per_time_unit(smf_t *smf)
+smf_seconds_per_time_unit(smf_t *smf)
 {
 	if (smf->ppqn == 0)
 		return 0.0;
 
-	return (double)smf->microseconds_per_quarter_note / (double)(smf->ppqn * 1000);
+	return (double)smf->microseconds_per_quarter_note / (double)smf->ppqn;
 }
 
 void
