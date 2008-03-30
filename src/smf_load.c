@@ -76,6 +76,9 @@ smf_event_new(smf_track_t *track)
 	return event;
 }
 
+/*
+ * Returns pointer to the next SMF chunk in smf->buffer, based on length of the previous one.
+ */
 static struct chunk_header_struct *
 next_chunk(smf_t *smf)
 {
@@ -93,6 +96,9 @@ next_chunk(smf_t *smf)
 	return chunk;
 }
 
+/*
+ * Returns 1, iff signature of the "chunk" is the same as string passed as "signature".
+ */
 static int
 signature_matches(const struct chunk_header_struct *chunk, const char *signature)
 {
@@ -102,6 +108,9 @@ signature_matches(const struct chunk_header_struct *chunk, const char *signature
 	return 0;
 }
 
+/*
+ * Verifies if MThd header looks OK.  Returns 0 iff it does.
+ */
 static int
 parse_mthd_header(smf_t *smf)
 {
@@ -135,6 +144,9 @@ parse_mthd_header(smf_t *smf)
 	return 0;
 }
 
+/*
+ * Parses MThd chunk, filling "smf" structure with values extracted from it.  Returns 0 iff everything went OK.
+ */
 static int
 parse_mthd_chunk(smf_t *smf)
 {
@@ -188,6 +200,9 @@ parse_mthd_chunk(smf_t *smf)
 	return 0;
 }
 
+/*
+ * Prints out one-line summary of data extracted from MThd header by parse_mthd_chunk().
+ */
 static void
 print_mthd(smf_t *smf)
 {
@@ -230,7 +245,8 @@ print_mthd(smf_t *smf)
 
 /*
  * Puts value extracted from from "buf" into "value" and number of consumed bytes into "len".
- * Returns -1 in case of error.
+ * Explanation of "packed numbers" is here: http://www.borg.com/~jglatt/tech/midifile/vari.htm
+ * Returns 0 iff everything went OK, different value in case of error.
  */
 static int
 extract_packed_number(const unsigned char *buf, const int buffer_length, int *value, int *len)
@@ -263,7 +279,7 @@ extract_packed_number(const unsigned char *buf, const int buffer_length, int *va
 /*
  * Returns expected length of the midi message (including the status byte), in bytes, for the given status byte.
  * The "second_byte" points to the expected second byte of the MIDI message.  "buffer_length" is the buffer
- * length limit, counting from "second_byte".
+ * length limit, counting from "second_byte".  Returns value < 0 iff there was an error.
  */
 int
 expected_message_length(unsigned char status, const unsigned char *second_byte, const int buffer_length)
@@ -288,15 +304,12 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 
 	if ((status & 0xF0) == 0xF0) {
 		switch (status) {
-			case 0xF0: /* System Exclusive. */
-				return -1;
+			case 0xF2: /* Song Position Pointer. */
+				return 3;
 
 			case 0xF1: /* MTC Quarter Frame. */
 			case 0xF3: /* Song Select. */
 				return 2;
-
-			case 0xF2: /* Song Position Pointer. */
-				return 3;
 
 			case 0xF6: /* Tune Request. */
 			case 0xF8: /* MIDI Clock. */
@@ -305,6 +318,12 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 			case 0xFC: /* MIDI Stop. */
 			case 0xFB: /* MIDI Continue. */
 			case 0xFE: /* Active Sense. */
+				return 1;
+
+			/* XXX: find out length of sysexes instead of returning an error? */
+			case 0xF0: /* System Exclusive. */
+				g_critical("SMF error: SysEx encountered, no support for that yet.", status);
+				return -1;
 
 			default:
 				g_critical("SMF error: unknown 0xFx-type status byte '0x%x'.", status);
@@ -336,7 +355,7 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 /*
  * Puts MIDI data extracted from from "buf" into "event" and number of consumed bytes into "len".
  * In case valid status is not found, it uses "previous_status" (so called "running status").
- * Returns -1 in case of error.
+ * Returns 0 iff everything went OK, value < 0 in case of error.
  */
 static int
 extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_t *event, int *len, int previous_status)
@@ -395,6 +414,11 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 	return 0;
 }
 
+/*
+ * Locates, basing on track->next_event_offset, the next event data in track->buffer,
+ * interprets it, allocates smf_event_t and fills it properly.  Returns smf_event_t
+ * or NULL, if there was an error.
+ */
 static smf_event_t *
 parse_next_event(smf_track_t *track)
 {
@@ -431,6 +455,10 @@ parse_next_event(smf_track_t *track)
 	return event;
 }
 
+/*
+ * Takes "len" characters starting in "buf", making sure it does not access past the length of the buffer,
+ * and makes ordinary, zero-terminated string from it.
+ */ 
 static char *
 make_string(const unsigned char *buf, const int buffer_length, int len)
 {
@@ -450,6 +478,9 @@ make_string(const unsigned char *buf, const int buffer_length, int len)
 	return str;
 }
 
+/*
+ * Returns zero-terminated string extracted from "text events".
+ */
 char *
 string_from_event(const smf_event_t *event)
 {
