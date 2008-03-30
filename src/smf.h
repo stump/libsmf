@@ -43,12 +43,14 @@ struct smf_track_struct {
 
 typedef struct smf_track_struct smf_track_t;
 
+#define MAX_EVENT_LENGTH 1024
+
 struct smf_event_struct {
 	smf_track_t	*track;
 
 	int		time;
 	int		track_number;
-	unsigned char	midi_buffer[1024];
+	unsigned char	midi_buffer[MAX_EVENT_LENGTH];
 };
 
 typedef struct smf_event_struct smf_event_t;

@@ -223,15 +223,22 @@ print_mthd(smf_t *smf)
 
 /*
  * Puts value extracted from from "buf" into "value" and number of consumed bytes into "len".
+ * Returns -1 in case of error.
  */
-/* XXX: verify we're not reading past the buffer. */
-static void
-extract_packed_number(const unsigned char *buf, int *value, int *len)
+static int
+extract_packed_number(const unsigned char *buf, const int buffer_length, int *value, int *len)
 {
 	int val = 0;
 	const unsigned char *c = buf;
 
+	assert(buffer_length > 0);
+
 	for (;;) {
+		if (c >= buf + buffer_length) {
+			g_critical("End of buffer in extract_packed_number.");
+			return -1;
+		}
+
 		val = (val << 7) + (*c & 0x7F);
 
 		if (*c & 0x80)
@@ -242,6 +249,8 @@ extract_packed_number(const unsigned char *buf, int *value, int *len)
 
 	*value = val;
 	*len = c - buf + 1;
+
+	return 0;
 }
 
 /*
@@ -249,12 +258,13 @@ extract_packed_number(const unsigned char *buf, int *value, int *len)
  * In case valid status is not found, it uses "previous_status" (so called "running status").
  * Returns -1 in case of error.
  */
-/* XXX: verify we're not reading past the buffer. */
 static int
-extract_midi_event(const unsigned char *buf, smf_event_t *event, int *len, int previous_status)
+extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_t *event, int *len, int previous_status)
 {
 	int i, status;
 	const unsigned char *c = buf;
+
+	assert(buffer_length > 0);
 
 	/* Is the first byte the status byte? */
 	if (*c & 0x80) {
@@ -279,7 +289,12 @@ extract_midi_event(const unsigned char *buf, smf_event_t *event, int *len, int p
 		int len = *(c + 1) + 3;
 
 		for (i = 1; i < len; i++, c++) {
-			if (i >= 1024) {
+			if (c >= buf + buffer_length) {
+				g_critical("End of buffer in extract_midi_event.");
+				return -2;
+			}
+
+			if (i >= MAX_EVENT_LENGTH) {
 				g_warning("Whoops, meta event too long.");
 				continue;
 			}
@@ -292,7 +307,12 @@ extract_midi_event(const unsigned char *buf, smf_event_t *event, int *len, int p
 		/* XXX: running status does not really work that way. */
 		/* Copy the rest of the MIDI event into buffer. */
 		for (i = 1; (*(c + 1) & 0x80) == 0; i++, c++) {
-			if (i >= 1024) {
+			if (c >= buf + buffer_length) {
+				g_critical("End of buffer in extract_midi_event.");
+				return -3;
+			}
+
+			if (i >= MAX_EVENT_LENGTH) {
 				g_warning("Whoops, MIDI event too long.");
 				continue;
 			}
@@ -306,27 +326,36 @@ extract_midi_event(const unsigned char *buf, smf_event_t *event, int *len, int p
 	return 0;
 }
 
-/* XXX: verify we're not reading past the buffer. */
 static smf_event_t *
 parse_next_event(smf_track_t *track)
 {
-	int time = 0, len;
+	int time = 0, len, buffer_length;
 	unsigned char *c, *start;
 
 	smf_event_t *event = smf_event_new(track);
-	
+
 	c = start = (unsigned char *)track->buffer + track->next_event_offset;
 
-	/* First, extract time offset from previous event. */
-	extract_packed_number(c, &time, &len);
-	c += len;
-	event->time = time;
+	buffer_length = track->buffer_length - track->next_event_offset;
+	assert(buffer_length > 0);
 
-	/* Now, extract the actual event. */
-	if (extract_midi_event(c, event, &len, track->last_status))
+	/* First, extract time offset from previous event. */
+	if (extract_packed_number(c, buffer_length, &time, &len))
 		return NULL;
 
 	c += len;
+	buffer_length -= len;
+	event->time = time;
+
+	if (buffer_length <= 0)
+		return NULL;
+
+	/* Now, extract the actual event. */
+	if (extract_midi_event(c, buffer_length, event, &len, track->last_status))
+		return NULL;
+
+	c += len;
+	buffer_length -= len;
 	track->last_status = event->midi_buffer[0];
 	track->next_event_offset += c - start;
 
@@ -334,11 +363,19 @@ parse_next_event(smf_track_t *track)
 }
 
 static char *
-make_string(const void *counted_string, int len)
+make_string(const unsigned char *buf, const int buffer_length, int len)
 {
-	char *str = malloc(len + 1);
+	char *str;
+
+	if (len > buffer_length) {
+		g_critical("End of buffer in make_string.");
+
+		len = buffer_length;
+	}
+
+	str = malloc(len + 1);
 	assert(str);
-	memcpy(str, counted_string, len);
+	memcpy(str, buf, len);
 	str[len] = '\0';
 
 	return str;
@@ -349,9 +386,9 @@ string_from_event(const smf_event_t *event)
 {
 	int string_length, length_length;
 
-	extract_packed_number((void *)&(event->midi_buffer[2]), &string_length, &length_length);
+	extract_packed_number((void *)&(event->midi_buffer[2]), MAX_EVENT_LENGTH - 3, &string_length, &length_length);
 
-	return make_string((void *)(&event->midi_buffer[2] + length_length), string_length);
+	return make_string((void *)(&event->midi_buffer[2] + length_length), MAX_EVENT_LENGTH - 3 - length_length, string_length);
 }
 
 #if 0
