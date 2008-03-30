@@ -141,14 +141,19 @@ parse_mthd_chunk(smf_t *smf)
 
 	smf->format = ntohs(mthd->format);
 	if (smf->format < 0 || smf->format > 2) {
-		g_critical("SMF error: bad MThd format field value: %d, valid values are (0-2).", smf->format);
+		g_critical("SMF error: bad MThd format field value: %d, valid values are 0-2, inclusive.", smf->format);
 		return -1;
+	}
+
+	if (smf->format == 2) {
+		g_critical("SMF file uses format #2, no support for that yet.");
+		return -2;
 	}
 
 	smf->number_of_tracks = ntohs(mthd->number_of_tracks);
 	if (smf->number_of_tracks <= 0) {
 		g_critical("SMF error: bad number of tracks: %d, should be greater than zero.", smf->number_of_tracks);
-		return -2;
+		return -3;
 	}
 
 	/* XXX: endianess? */
@@ -163,6 +168,11 @@ parse_mthd_chunk(smf_t *smf)
 		smf->ppqn = 0;
 		smf->frames_per_second = - first_byte_of_division;
 		smf->resolution = second_byte_of_division;
+	}
+
+	if (smf->ppqn == 0) {
+		g_critical("SMF file uses FPS timing instead of PPQN, no support for that yet.");
+		return -4;
 	}
 	
 	return 0;
@@ -204,6 +214,7 @@ print_mthd(smf_t *smf)
 /*
  * Puts value extracted from from "buf" into "value" and number of consumed bytes into "len".
  */
+/* XXX: verify we're not reading past the buffer. */
 static void
 extract_packed_number(const unsigned char *buf, int *value, int *len)
 {
@@ -228,6 +239,7 @@ extract_packed_number(const unsigned char *buf, int *value, int *len)
  * In case valid status is not found, it uses "previous_status" (so called "running status").
  * Returns -1 in case of error.
  */
+/* XXX: verify we're not reading past the buffer. */
 static int
 extract_midi_event(const unsigned char *buf, smf_event_t *event, int *len, int previous_status)
 {
@@ -284,6 +296,7 @@ extract_midi_event(const unsigned char *buf, smf_event_t *event, int *len, int p
 	return 0;
 }
 
+/* XXX: verify we're not reading past the buffer. */
 static smf_event_t *
 parse_next_event(smf_track_t *track)
 {
@@ -321,15 +334,6 @@ make_string(const void *counted_string, int len)
 	return str;
 }
 
-int
-is_real_event(const smf_event_t *event)
-{
-	if (event->midi_buffer[0] != 0xFF)
-		return 1;
-
-	return 0;
-}
-
 char *
 string_from_event(const smf_event_t *event)
 {
@@ -340,6 +344,7 @@ string_from_event(const smf_event_t *event)
 	return make_string((void *)(&event->midi_buffer[2] + length_length), string_length);
 }
 
+#if 0
 static void
 print_event(smf_event_t *event)
 {
@@ -458,24 +463,7 @@ print_event(smf_event_t *event)
 
 	fprintf(stderr, ")\n");
 }
-
-static void
-maybe_update_track(const smf_event_t *event)
-{
-	if (event->midi_buffer[0] != 0xFF)
-		return;
-
-	/* "Tempo" metaevent. */
-	if (event->midi_buffer[1] == 0x51) {
-		assert(event->track != NULL);
-		assert(event->track->smf != NULL);
-
-		event->track->smf->microseconds_per_quarter_note = 
-			(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
-
-		g_debug("Microseconds per quarter note: %d.", event->track->smf->microseconds_per_quarter_note);
-	}
-}
+#endif
 
 static int
 parse_mtrk_header(smf_track_t *track)
@@ -507,13 +495,39 @@ parse_mtrk_header(smf_track_t *track)
 	return 0;
 }
 
-int
-is_end_of_track(const smf_event_t *event)
+static int
+event_is_end_of_track(const smf_event_t *event)
 {
 	if (event->midi_buffer[0] == 0xFF && event->midi_buffer[1] == 0x2F)
 		return 1;
 
 	return 0;
+}
+
+static int
+event_is_metadata(const smf_event_t *event)
+{
+	if (event->midi_buffer[0] == 0xFF)
+		return 1;
+
+	return 0;
+}
+
+static void
+parse_metadata_event(const smf_event_t *event)
+{
+	assert(event_is_metadata(event));
+
+	/* "Tempo" metaevent. */
+	if (event->midi_buffer[1] == 0x51) {
+		assert(event->track != NULL);
+		assert(event->track->smf != NULL);
+
+		event->track->smf->microseconds_per_quarter_note = 
+			(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
+
+		g_debug("Setting microseconds per quarter note: %d.", event->track->smf->microseconds_per_quarter_note);
+	}
 }
 
 static int
@@ -532,10 +546,8 @@ parse_mtrk_chunk(smf_track_t *track)
 		event->time += time;
 		time = event->time;
 
-		if (is_end_of_track(event))
+		if (event_is_end_of_track(event))
 			break;
-
-		maybe_update_track(event);
 
 		if (event == NULL)
 			return 2;
@@ -622,13 +634,18 @@ smf_event_t *
 smf_get_next_event_from_track(smf_track_t *track)
 {
 	smf_event_t *event = (smf_event_t *)g_queue_pop_head(track->events_queue);
+	smf_event_t *next_event = (smf_event_t *)g_queue_peek_head(track->events_queue);
 	
 	if (event == NULL) {
 		g_debug("End of the track.");
 		return NULL;
 	}
 
-	track->time_of_next_event = event->time;
+	if (next_event != NULL)
+		track->time_of_next_event = next_event->time;
+
+	if (event_is_metadata(event))
+		parse_metadata_event(event);
 
 	return event;
 }
@@ -666,6 +683,9 @@ smf_get_next_event(smf_t *smf)
 double
 smf_milliseconds_per_time_unit(smf_t *smf)
 {
+	if (smf->ppqn == 0)
+		return 0.0;
+
 	return (double)smf->microseconds_per_quarter_note / (double)(smf->ppqn * 1000);
 }
 
