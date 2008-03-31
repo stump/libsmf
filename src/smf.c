@@ -277,13 +277,29 @@ extract_packed_number(const unsigned char *buf, const int buffer_length, int *va
 }
 
 int
-is_status_byte(unsigned char status)
+is_status_byte(const unsigned char status)
 {
 	return (status & 0x80);
 }
 
 int
-expected_sysex_length(unsigned char status, const unsigned char *second_byte, const int buffer_length)
+is_realtime_byte(const unsigned char status)
+{
+	if (status >= 0xF8 && status <= 0xFE)
+		return 1;
+
+	return 0;
+}
+
+void
+parse_realtime_event(const unsigned char status)
+{
+	/* XXX: implement it. */
+	g_warning("SMF warning: Realtime message 0x%x ignored.\n", status);
+}
+
+int
+expected_sysex_length(const unsigned char status, const unsigned char *second_byte, const int buffer_length)
 {
 	int i;
 
@@ -348,8 +364,8 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 			case 0xF8: /* MIDI Clock. */
 			case 0xF9: /* Tick. */
 			case 0xFA: /* MIDI Start. */
-			case 0xFC: /* MIDI Stop. */
 			case 0xFB: /* MIDI Continue. */
+			case 0xFC: /* MIDI Stop. */
 			case 0xFE: /* Active Sense. */
 				return 1;
 
@@ -437,7 +453,17 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 			return -5;
 		}
 
-		/* XXX: Support realtime messages. */
+		/* Realtime message may occur anywhere, even in the middle of normal MIDI message. */
+		if (is_realtime_byte(*c)) {
+			parse_realtime_event(*c);
+
+			if (c >= buf + buffer_length) {
+				g_critical("End of buffer in extract_midi_event.");
+				return -6;
+			}
+
+			c++;
+		}
 
 		event->midi_buffer[i] = *c;
 	}
