@@ -66,30 +66,39 @@ static int
 parse_mthd_header(smf_t *smf)
 {
 	int len;
-	struct chunk_header_struct *mthd;
+	struct chunk_header_struct *mthd, *tmp_mthd;
 
 	/* Make sure compiler didn't do anything stupid. */
 	assert(sizeof(struct chunk_header_struct) == 8);
 
-	mthd = next_chunk(smf);
+	/*
+	 * We could just do "mthd = smf->buffer;" here, but this way we wouldn't
+	 * get useful error messages.
+	 */
+	if (smf->buffer_length < 6) {
+		g_critical("SMF error: file is too short, it cannot be a MIDI file.");
 
-	if (mthd == NULL) {
-		g_critical("SMF error: file is truncated.");
-
-		return 1;
+		return -1;
 	}
 
-	if (!chunk_signature_matches(mthd, "MThd")) {
+	tmp_mthd = smf->buffer;
+
+	if (!chunk_signature_matches(tmp_mthd, "MThd")) {
 		g_critical("SMF error: MThd signature not found, is that a MIDI file?");
 		
-		return 2;
+		return -2;
 	}
+
+	/* Ok, now use next_chunk(). */
+	mthd = next_chunk(smf);
+
+	assert(mthd == tmp_mthd);
 
 	len = ntohl(mthd->length);
 	if (len != 6) {
 		g_critical("SMF error: MThd chunk length %d, should be 6.", len);
 
-		return 3;
+		return -3;
 	}
 
 	return 0;
