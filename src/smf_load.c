@@ -198,7 +198,7 @@ print_mthd(smf_t *smf)
 
 	g_debug("%s", buf);
 
-	if (smf->format == 0 && smf->number_of_tracks != 0)
+	if (smf->format == 0 && smf->number_of_tracks != 1)
 		g_warning("Warning: number of tracks is %d, but this is a single track file.", smf->number_of_tracks);
 
 }
