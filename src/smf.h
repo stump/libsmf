@@ -62,5 +62,15 @@ void smf_rewind(smf_t *smf);
 double smf_seconds_per_time_unit(smf_t *smf);
 int event_is_metadata(const smf_event_t *event);
 
+/* These are private. */
+smf_t *smf_new(void);
+void smf_free(smf_t *smf);
+smf_track_t *smf_track_new(smf_t *smf);
+void smf_track_free(smf_track_t *track);
+smf_event_t *smf_event_new(smf_track_t *track);
+void smf_event_free(smf_event_t *event);
+
+char *smf_string_from_event(const smf_event_t *event);
+
 #endif /* SMF_H */
 

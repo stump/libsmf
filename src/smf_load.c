@@ -27,133 +27,6 @@ struct mthd_chunk_struct {
 } __attribute__((__packed__));
 
 /*
- * Allocates new smf_t structure.
- */
-static smf_t *
-smf_new(void)
-{
-	smf_t *smf = malloc(sizeof(smf_t));
-
-	assert(smf != NULL);
-
-	memset(smf, 0, sizeof(smf_t));
-
-	smf->tracks_queue = g_queue_new();
-	assert(smf->tracks_queue);
-
-	return smf;
-}
-
-/*
- * Frees smf and all it's descendant structures.
- */
-void
-smf_free(smf_t *smf)
-{
-	smf_track_t *track;
-	while ((track = (smf_track_t)g_queue_pop_head(smf->tracks_queue)) != NULL)
-		smf_track_free(track);
-
-	assert(g_queue_is_empty(smf->tracks_queue));
-	assert(smf->number_of_tracks == 0);
-	g_queue_free(smf->tracks_queue);
-
-	memset(smf, 0, sizeof(smf_t));
-	free(smf);
-}
-
-/*
- * Allocates new smf_track_t structure and attaches it to the given smf.
- */
-static smf_track_t *
-smf_track_new(smf_t *smf)
-{
-	smf_track_t *track = malloc(sizeof(smf_track_t));
-
-	assert(track != NULL);
-
-	memset(track, 0, sizeof(smf_track_t));
-
-	track->smf = smf;
-	g_queue_push_tail(smf->tracks_queue, (gpointer)track);
-
-	track->events_queue = g_queue_new();
-	assert(track->events_queue);
-
-	smf->last_track_number++;
-	track->track_number = smf->last_track_number;
-
-	return track;
-}
-
-/*
- * Detaches track from its smf and frees it.
- */
-void
-smf_track_free(smf_track_t *track)
-{
-	smf_event_t *event;
-
-	assert(track);
-	assert(track->events_queue);
-
-	/* Remove all the events. */
-	while ((event = (smf_event_t *)g_queue_pop_head(track->events_queue)) != NULL)
-		smf_event_free(event);
-
-	assert(g_queue_is_empty(track->events_queue));
-	g_queue_free(track->events_queue);
-
-	/* Detach itself from smf. */
-	assert(track->smf);
-	assert(track->smf->tracks_queue);
-	g_queue_remove(track->smf->tracks_queue, (gpointer)track);
-	smf->last_track_number--;
-
-	memset(track, 0, sizeof(smf_track_t));
-	free(track);
-}
-
-/*
- * Allocates new smf_event_t structure and attaches it to the given track.
- */
-static smf_event_t *
-smf_event_new(smf_track_t *track)
-{
-	smf_event_t *event = malloc(sizeof(smf_event_t));
-
-	assert(event != NULL);
-
-	memset(event, 0, sizeof(smf_event_t));
-
-	/* Add new event to its track. */
-	event->track = track;
-	event->track_number = track->track_number;
-	g_queue_push_tail(track->events_queue, (gpointer)event);
-
-	return event;
-}
-
-/*
- * Detaches event from its track and frees it.
- */
-static void
-smf_event_free(smf_event_t *event)
-{
-	assert(event->track != NULL);
-	assert(event->track->events_queue != NULL);
-
-	/* Remove event from its track. */
-	g_queue_remove(event->track->events_queue, (gpointer)event);
-
-	if (event->midi_buffer != NULL)
-		free(event->midi_buffer);
-
-	memset(event, 0, sizeof(smf_event_t));
-	free(event);
-}
-
-/*
  * Returns pointer to the next SMF chunk in smf->buffer, based on length of the previous one.
  */
 static struct chunk_header_struct *
@@ -664,7 +537,7 @@ make_string(const unsigned char *buf, const int buffer_length, int len)
  * Returns zero-terminated string extracted from "text events" or NULL, if there was any problem.
  */
 char *
-string_from_event(const smf_event_t *event)
+smf_string_from_event(const smf_event_t *event)
 {
 	int string_length, length_length;
 
@@ -907,8 +780,23 @@ load_file_into_buffer(smf_t *smf, const char *file_name)
 
 		return 6;
 	}
+	
+	if (fclose(smf->stream)) {
+		perror("fclose failed");
+
+		return 7;
+	}
+
+	smf->stream = NULL;
 
 	return 0;
+}
+
+void
+free_buffer(smf_t *smf)
+{
+	free(smf->buffer);
+	smf->buffer_length = 0;
 }
 
 smf_t *
@@ -938,235 +826,8 @@ smf_load(const char *file_name)
 				smf->number_of_tracks, smf->last_track_number);
 	}
 
+	free_buffer(smf);
+
 	return smf;
-}
-
-int
-event_is_metadata(const smf_event_t *event)
-{
-	if (event->midi_buffer[0] == 0xFF)
-		return 1;
-
-	return 0;
-}
-
-static void
-print_metadata_event(const smf_event_t *event)
-{
-	int off = 0;
-	char buf[256];
-
-	/* XXX: string_from_event() may return NULL. */
-	switch (event->midi_buffer[1]) {
-		case 0x00:
-			off += snprintf(buf + off, sizeof(buf) - off, "Sequence number");
-			break;
-
-		case 0x01:
-			off += snprintf(buf + off, sizeof(buf) - off, "Text: %s", string_from_event(event));
-			break;
-
-		case 0x02:
-			off += snprintf(buf + off, sizeof(buf) - off, "Copyright: %s", string_from_event(event));
-			break;
-
-		case 0x03:
-			off += snprintf(buf + off, sizeof(buf) - off, "Sequence/Track Name: %s", string_from_event(event));
-			break;
-
-		case 0x04:
-			off += snprintf(buf + off, sizeof(buf) - off, "Instrument: %s", string_from_event(event));
-			break;
-
-		case 0x05:
-			off += snprintf(buf + off, sizeof(buf) - off, "Lyric: %s", string_from_event(event));
-			break;
-
-		case 0x06:
-			off += snprintf(buf + off, sizeof(buf) - off, "Marker: %s", string_from_event(event));
-			break;
-
-		case 0x07:
-			off += snprintf(buf + off, sizeof(buf) - off, "Cue Point: %s", string_from_event(event));
-			break;
-
-		case 0x08:
-			off += snprintf(buf + off, sizeof(buf) - off, "Program Name: %s", string_from_event(event));
-			break;
-
-		case 0x09:
-			off += snprintf(buf + off, sizeof(buf) - off, "Device (Port) Name: %s", string_from_event(event));
-			break;
-
-		/* http://music.columbia.edu/pipermail/music-dsp/2004-August/061196.html */
-		case 0x20:
-			off += snprintf(buf + off, sizeof(buf) - off, "Channel Prefix: %d.", event->midi_buffer[3]);
-			break;
-
-		case 0x21:
-			off += snprintf(buf + off, sizeof(buf) - off, "Midi Port: %d.", event->midi_buffer[3]);
-			break;
-
-		case 0x2F:
-			off += snprintf(buf + off, sizeof(buf) - off, "End Of Track");
-			break;
-
-		case 0x51:
-			off += snprintf(buf + off, sizeof(buf) - off, "Tempo: %d microseconds per quarter note",
-				(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5]);
-			break;
-
-		case 0x54:
-			off += snprintf(buf + off, sizeof(buf) - off, "SMPTE Offset");
-			break;
-
-		case 0x58:
-			off += snprintf(buf + off, sizeof(buf) - off,
-				"Time Signature: %d/%d, %d clocks per click, %d notated 32nd notes per quarter note",
-				event->midi_buffer[3], (int)pow(2, event->midi_buffer[4]), event->midi_buffer[5],
-				event->midi_buffer[6]);
-			break;
-
-		case 0x59:
-			off += snprintf(buf + off, sizeof(buf) - off, "Key Signature");
-			break;
-
-		case 0x7F:
-			off += snprintf(buf + off, sizeof(buf) - off, "Proprietary Event");
-			break;
-
-		default:
-			off += snprintf(buf + off, sizeof(buf) - off, "Unknown Event: 0xFF 0x%x 0x%x 0x%x",
-				event->midi_buffer[1], event->midi_buffer[2], event->midi_buffer[3]);
-
-			break;
-	}
-
-	g_debug("Metadata event: %s", buf);
-}
-
-static void
-parse_metadata_event(const smf_event_t *event)
-{
-	assert(event_is_metadata(event));
-
-	/* "Tempo" metaevent. */
-	if (event->midi_buffer[1] == 0x51) {
-		assert(event->track != NULL);
-		assert(event->track->smf != NULL);
-
-		event->track->smf->microseconds_per_quarter_note = 
-			(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
-
-		g_debug("Setting microseconds per quarter note: %d.", event->track->smf->microseconds_per_quarter_note);
-
-		return;
-	}
-
-	print_metadata_event(event);
-}
-
-smf_event_t *
-smf_get_next_event_from_track(smf_track_t *track)
-{
-	smf_event_t *event, *next_event;
-
-	assert(!g_queue_is_empty(track->events_queue));
-	assert(track->next_event_number >= 0);
-
-	/* XXX: inefficient; use some different data structure. */
-	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number);
-	next_event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number + 1);
-
-	assert(event != next_event);
-	assert(event != NULL);
-
-	/* Is this the last event in the track? */
-	if (next_event != NULL) {
-		track->time_of_next_event = next_event->time;
-		track->next_event_number++;
-	} else {
-		track->next_event_number = -1;
-	}
-
-	return event;
-}
-
-
-smf_event_t *
-smf_get_next_event(smf_t *smf)
-{
-	int i;
-	smf_event_t *event;
-	smf_track_t *track = NULL, *min_time_track = NULL;
-
-	int min_time = 0;
-
-	/* Find track with event that should be played next. */
-	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
-		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
-
-		assert(!g_queue_is_empty(track->events_queue));
-
-		/* No more events in this track? */
-		if (track->next_event_number == -1)
-			continue;
-
-		if (track->time_of_next_event < min_time || min_time_track == NULL) {
-			min_time = track->time_of_next_event;
-			min_time_track = track;
-		}
-	}
-
-	if (min_time_track == NULL) {
-		g_debug("End of the song.");
-
-		return NULL;
-	}
-
-	event = smf_get_next_event_from_track(min_time_track);
-	
-	assert(event != NULL);
-
-	if (event_is_metadata(event)) {
-		parse_metadata_event(event);
-
-		return smf_get_next_event(smf);
-	}
-	
-	return event;
-}
-
-double
-smf_seconds_per_time_unit(smf_t *smf)
-{
-	if (smf->ppqn == 0)
-		return 0.0;
-
-	return (double)smf->microseconds_per_quarter_note / (double)smf->ppqn;
-}
-
-void
-smf_rewind(smf_t *smf)
-{
-	int i;
-	smf_track_t *track = NULL;
-
-	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
-		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
-
-		assert(track != NULL);
-
-		track->next_event_number = 0;
-		track->time_of_next_event = 0; /* XXX: is this right? */
-	}
-
-	g_debug("Rewinding.");
-}
-
-int
-smf_get_number_of_tracks(smf_t *smf)
-{
-	return smf->number_of_tracks;
 }
 
