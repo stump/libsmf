@@ -45,6 +45,24 @@ smf_new(void)
 }
 
 /*
+ * Frees smf and all it's descendant structures.
+ */
+void
+smf_free(smf_t *smf)
+{
+	smf_track_t *track;
+	while ((track = (smf_track_t)g_queue_pop_head(smf->tracks_queue)) != NULL)
+		smf_track_free(track);
+
+	assert(g_queue_is_empty(smf->tracks_queue));
+	assert(smf->number_of_tracks == 0);
+	g_queue_free(smf->tracks_queue);
+
+	memset(smf, 0, sizeof(smf_t));
+	free(smf);
+}
+
+/*
  * Allocates new smf_track_t structure and attaches it to the given smf.
  */
 static smf_track_t *
@@ -58,12 +76,42 @@ smf_track_new(smf_t *smf)
 
 	track->smf = smf;
 	g_queue_push_tail(smf->tracks_queue, (gpointer)track);
+
 	track->events_queue = g_queue_new();
-	smf->last_track_number++;
-	track->track_number = smf->last_track_number;
 	assert(track->events_queue);
 
+	smf->last_track_number++;
+	track->track_number = smf->last_track_number;
+
 	return track;
+}
+
+/*
+ * Detaches track from its smf and frees it.
+ */
+void
+smf_track_free(smf_track_t *track)
+{
+	smf_event_t *event;
+
+	assert(track);
+	assert(track->events_queue);
+
+	/* Remove all the events. */
+	while ((event = (smf_event_t *)g_queue_pop_head(track->events_queue)) != NULL)
+		smf_event_free(event);
+
+	assert(g_queue_is_empty(track->events_queue));
+	g_queue_free(track->events_queue);
+
+	/* Detach itself from smf. */
+	assert(track->smf);
+	assert(track->smf->tracks_queue);
+	g_queue_remove(track->smf->tracks_queue, (gpointer)track);
+	smf->last_track_number--;
+
+	memset(track, 0, sizeof(smf_track_t));
+	free(track);
 }
 
 /*
