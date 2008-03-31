@@ -244,13 +244,15 @@ print_metadata_event(const smf_event_t *event)
 			break;
 	}
 
-	g_debug("Metadata event: %s", buf);
+	g_debug("Metadata: %s", buf);
 }
 
 static void
 parse_metadata_event(const smf_event_t *event)
 {
 	assert(event_is_metadata(event));
+
+	print_metadata_event(event);
 
 	/* "Tempo" metaevent. */
 	if (event->midi_buffer[1] == 0x51) {
@@ -264,8 +266,6 @@ parse_metadata_event(const smf_event_t *event)
 
 		return;
 	}
-
-	print_metadata_event(event);
 }
 
 smf_event_t *
