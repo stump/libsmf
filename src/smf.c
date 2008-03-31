@@ -276,6 +276,12 @@ extract_packed_number(const unsigned char *buf, const int buffer_length, int *va
 	return 0;
 }
 
+int
+is_status_byte(unsigned char status)
+{
+	return (status & 0x80);
+}
+
 /*
  * Returns expected length of the midi message (including the status byte), in bytes, for the given status byte.
  * The "second_byte" points to the expected second byte of the MIDI message.  "buffer_length" is the buffer
@@ -285,7 +291,7 @@ int
 expected_message_length(unsigned char status, const unsigned char *second_byte, const int buffer_length)
 {
 	/* Make sure this really is a valid status byte. */
-	assert(status & 0x80);
+	assert(is_status_byte(status));
 	assert(buffer_length > 0);
 
 	/* Is this a metamessage? */
@@ -366,7 +372,7 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 	assert(buffer_length > 0);
 
 	/* Is the first byte the status byte? */
-	if (*c & 0x80) {
+	if (is_status_byte(*c)) {
 		status = *c;
 		c++;
 
@@ -375,7 +381,7 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 		status = previous_status;
 	}
 
-	if ((status & 0x80) == 0) {
+	if (!is_status_byte(status)) {
 		g_critical("SMF error: bad status byte (MSB is zero).");
 		return -1;
 	}
