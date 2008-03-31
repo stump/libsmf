@@ -49,7 +49,7 @@ struct smf_event_struct {
 
 	int		time;
 	int		track_number;
-	int		buffer_length; /* Length of the MIDI message in the buffer, in bytes. */
+	int		midi_buffer_length; /* Length of the MIDI message in the buffer, in bytes. */
 	unsigned char	*midi_buffer;
 };
 

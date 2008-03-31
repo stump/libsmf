@@ -408,7 +408,7 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 
 	*len = c - buf;
 
-	event->buffer_length = message_length;
+	event->midi_buffer_length = message_length;
 
 #if 0
 	fprintf(stderr, "status 0x%x; length %d\n", status, *len);
@@ -489,9 +489,9 @@ string_from_event(const smf_event_t *event)
 {
 	int string_length, length_length;
 
-	extract_packed_number((void *)&(event->midi_buffer[2]), event->buffer_length - 2, &string_length, &length_length);
+	extract_packed_number((void *)&(event->midi_buffer[2]), event->midi_buffer_length - 2, &string_length, &length_length);
 
-	return make_string((void *)(&event->midi_buffer[1] + length_length), event->buffer_length - 2 - length_length, string_length);
+	return make_string((void *)(&event->midi_buffer[1] + length_length), event->midi_buffer_length - 2 - length_length, string_length);
 }
 
 #if 0
