@@ -11,6 +11,7 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
+#include <errno.h>
 #include <arpa/inet.h>
 #include "smf.h"
 
@@ -209,7 +210,7 @@ extract_packed_number(const unsigned char *buf, const int buffer_length, int *va
 
 	for (;;) {
 		if (c >= buf + buffer_length) {
-			g_critical("End of buffer in extract_packed_number.");
+			g_critical("End of buffer in extract_packed_number().");
 			return -1;
 		}
 
@@ -260,7 +261,7 @@ parse_realtime_event(const unsigned char status, smf_track_t *track)
 	
 	event->midi_buffer = malloc(1);
 	if (event->midi_buffer == NULL) {
-		g_critical("Cannot allocate memory in parse_realtime_event.");
+		g_critical("Cannot allocate memory in parse_realtime_event().");
 		smf_event_free(event);
 
 		return -1;
@@ -285,14 +286,14 @@ expected_sysex_length(const unsigned char status, const unsigned char *second_by
 	assert(status == 0xF0);
 
 	if (buffer_length < 2) {
-		g_critical("SMF error: end of buffer in expected_sysex_length.");
+		g_critical("SMF error: end of buffer in expected_sysex_length().");
 		return -1;
 	}
 
 	/* Any status byte terminates the SysEx. */
 	for (i = 0; !is_status_byte(second_byte[i]); i++) {
 		if (i >= buffer_length) {
-			g_critical("SMF error: end of buffer in expected_sysex_length.");
+			g_critical("SMF error: end of buffer in expected_sysex_length().");
 			return -2;
 		}
 	}
@@ -319,7 +320,7 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 	/* Is this a metamessage? */
 	if (status == 0xFF) {
 		if (buffer_length < 2) {
-			g_critical("SMF error: end of buffer in expected_message_length.");
+			g_critical("SMF error: end of buffer in expected_message_length().");
 			return -1;
 		}
 
@@ -419,7 +420,7 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 
 	event->midi_buffer = malloc(message_length);
 	if (event->midi_buffer == NULL) {
-		g_critical("Cannot allocate memory");
+		g_critical("Cannot allocate memory in extract_midi_event().");
 		return -4;
 	}
 
@@ -428,7 +429,7 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 	/* Copy the rest of the MIDI event into buffer. */
 	for (i = 1; i < message_length; i++, c++) {
 		if (c >= buf + buffer_length) {
-			g_critical("End of buffer in extract_midi_event.");
+			g_critical("End of buffer in extract_midi_event().");
 			return -5;
 		}
 
@@ -440,7 +441,7 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 			c++;
 
 			if (c >= buf + buffer_length) {
-				g_critical("End of buffer in extract_midi_event.");
+				g_critical("End of buffer in extract_midi_event().");
 				return -7;
 			}
 		}
@@ -516,7 +517,7 @@ make_string(const unsigned char *buf, const int buffer_length, int len)
 	char *str;
 
 	if (len > buffer_length) {
-		g_critical("End of buffer in make_string.");
+		g_critical("End of buffer in make_string().");
 
 		len = buffer_length;
 	}
@@ -744,45 +745,45 @@ load_file_into_buffer(smf_t *smf, const char *file_name)
 {
 	smf->stream = fopen(file_name, "r");
 	if (smf->stream == NULL) {
-		perror("Cannot open input file");
+		g_critical("Cannot open input file: %s", strerror(errno));
 
 		return 1;
 	}
 
 	if (fseek(smf->stream, 0, SEEK_END)) {
-		perror("fseek(3) failed");
+		g_critical("fseek(3) failed: %s", strerror(errno));
 
 		return 2;
 	}
 
 	smf->buffer_length = ftell(smf->stream);
 	if (smf->buffer_length == -1) {
-		perror("ftell(3) failed");
+		g_critical("ftell(3) failed: %s", strerror(errno));
 
 		return 3;
 	}
 
 	if (fseek(smf->stream, 0, SEEK_SET)) {
-		perror("fseek(3) failed");
+		g_critical("fseek(3) failed: %s", strerror(errno));
 
 		return 4;
 	}
 
 	smf->buffer = malloc(smf->buffer_length);
 	if (smf->buffer == NULL) {
-		perror("malloc(3) failed");
+		g_critical("malloc(3) failed: %s", strerror(errno));
 
 		return 5;
 	}
 
 	if (fread(smf->buffer, 1, smf->buffer_length, smf->stream) != smf->buffer_length) {
-		perror("fread(3) failed");
+		g_critical("fread(3) failed: %s", strerror(errno));
 
 		return 6;
 	}
 	
 	if (fclose(smf->stream)) {
-		perror("fclose failed");
+		g_critical("fclose(3) failed: %s", strerror(errno));
 
 		return 7;
 	}
@@ -792,9 +793,11 @@ load_file_into_buffer(smf_t *smf, const char *file_name)
 	return 0;
 }
 
-void
+static void
 free_buffer(smf_t *smf)
 {
+	memset(smf->buffer, 0, smf->buffer_length);
+
 	free(smf->buffer);
 	smf->buffer_length = 0;
 }
