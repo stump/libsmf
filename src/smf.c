@@ -69,11 +69,28 @@ smf_event_new(smf_track_t *track)
 
 	memset(event, 0, sizeof(smf_event_t));
 
+	/* Add new event to its track. */
 	event->track = track;
 	event->track_number = track->track_number;
 	g_queue_push_tail(track->events_queue, (gpointer)event);
 
 	return event;
+}
+
+static void
+smf_event_free(smf_event_t *event)
+{
+	assert(event->track != NULL);
+	assert(event->track->events_queue != NULL);
+
+	/* Remove event from its track. */
+	g_queue_remove(event->track->events_queue, (gpointer)event);
+
+	if (event->midi_buffer != NULL)
+		free(event->midi_buffer);
+
+	memset(event, 0, sizeof(smf_event_t));
+	free(event);
 }
 
 /*
@@ -276,13 +293,13 @@ extract_packed_number(const unsigned char *buf, const int buffer_length, int *va
 	return 0;
 }
 
-int
+static int
 is_status_byte(const unsigned char status)
 {
 	return (status & 0x80);
 }
 
-int
+static int
 is_realtime_byte(const unsigned char status)
 {
 	if (status >= 0xF8 && status <= 0xFE)
@@ -291,14 +308,28 @@ is_realtime_byte(const unsigned char status)
 	return 0;
 }
 
-void
-parse_realtime_event(const unsigned char status)
+static int
+parse_realtime_event(const unsigned char status, smf_track_t *track)
 {
-	/* XXX: implement it. */
-	g_warning("SMF warning: Realtime message 0x%x ignored.\n", status);
+	smf_event_t *event = smf_event_new(track);
+	
+	event->midi_buffer = malloc(1);
+	if (event->midi_buffer == NULL) {
+		g_critical("Cannot allocate memory in parse_realtime_event.");
+		smf_event_free(event);
+
+		return -1;
+	}
+
+	event->midi_buffer[0] = status;
+	event->midi_buffer_length = 1;
+
+	/* We don't need to do anything more; smf_event_new() already added the new event to the track. */
+
+	return 0;
 }
 
-int
+static int
 expected_sysex_length(const unsigned char status, const unsigned char *second_byte, const int buffer_length)
 {
 	int i;
@@ -330,7 +361,7 @@ expected_sysex_length(const unsigned char status, const unsigned char *second_by
  * The "second_byte" points to the expected second byte of the MIDI message.  "buffer_length" is the buffer
  * length limit, counting from "second_byte".  Returns value < 0 iff there was an error.
  */
-int
+static int
 expected_message_length(unsigned char status, const unsigned char *second_byte, const int buffer_length)
 {
 	/* Make sure this really is a valid status byte. */
@@ -455,14 +486,14 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 
 		/* Realtime message may occur anywhere, even in the middle of normal MIDI message. */
 		if (is_realtime_byte(*c)) {
-			parse_realtime_event(*c);
+			parse_realtime_event(*c, event->track);
+
+			c++;
 
 			if (c >= buf + buffer_length) {
 				g_critical("End of buffer in extract_midi_event.");
 				return -6;
 			}
-
-			c++;
 		}
 
 		event->midi_buffer[i] = *c;
@@ -482,7 +513,8 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 /*
  * Locates, basing on track->next_event_offset, the next event data in track->buffer,
  * interprets it, allocates smf_event_t and fills it properly.  Returns smf_event_t
- * or NULL, if there was an error.
+ * or NULL, if there was an error.  Allocating event means adding it to the track;
+ * see smf_event_new().
  */
 static smf_event_t *
 parse_next_event(smf_track_t *track)
@@ -499,18 +531,18 @@ parse_next_event(smf_track_t *track)
 
 	/* First, extract time offset from previous event. */
 	if (extract_packed_number(c, buffer_length, &time, &len))
-		return NULL;
+		goto error;
 
 	c += len;
 	buffer_length -= len;
 	event->time = time;
 
 	if (buffer_length <= 0)
-		return NULL;
+		goto error;
 
 	/* Now, extract the actual event. */
 	if (extract_midi_event(c, buffer_length, event, &len, track->last_status))
-		return NULL;
+		goto error;
 
 	c += len;
 	buffer_length -= len;
@@ -518,11 +550,16 @@ parse_next_event(smf_track_t *track)
 	track->next_event_offset += c - start;
 
 	return event;
+
+error:
+	smf_event_free(event);
+
+	return NULL;
 }
 
 /*
  * Takes "len" characters starting in "buf", making sure it does not access past the length of the buffer,
- * and makes ordinary, zero-terminated string from it.
+ * and makes ordinary, zero-terminated string from it.  May return NULL if there was any problem.
  */ 
 static char *
 make_string(const unsigned char *buf, const int buffer_length, int len)
@@ -536,7 +573,11 @@ make_string(const unsigned char *buf, const int buffer_length, int len)
 	}
 
 	str = malloc(len + 1);
-	assert(str);
+	if (str == NULL) {
+		g_critical("Cannot allocate memory in make_string().");
+		return NULL;
+	}
+
 	memcpy(str, buf, len);
 	str[len] = '\0';
 
@@ -544,7 +585,7 @@ make_string(const unsigned char *buf, const int buffer_length, int len)
 }
 
 /*
- * Returns zero-terminated string extracted from "text events".
+ * Returns zero-terminated string extracted from "text events" or NULL, if there was any problem.
  */
 char *
 string_from_event(const smf_event_t *event)
@@ -839,6 +880,7 @@ print_metadata_event(const smf_event_t *event)
 	int off = 0;
 	char buf[256];
 
+	/* XXX: string_from_event() may return NULL. */
 	switch (event->midi_buffer[1]) {
 		case 0x00:
 			off += snprintf(buf + off, sizeof(buf) - off, "Sequence number");
