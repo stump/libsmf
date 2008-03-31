@@ -294,7 +294,6 @@ smf_get_next_event_from_track(smf_track_t *track)
 	return event;
 }
 
-
 smf_event_t *
 smf_get_next_event(smf_t *smf)
 {
@@ -335,7 +334,7 @@ smf_get_next_event(smf_t *smf)
 
 		return smf_get_next_event(smf);
 	}
-	
+
 	return event;
 }
 

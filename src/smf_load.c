@@ -722,6 +722,24 @@ event_is_end_of_track(const smf_event_t *event)
 	return 0;
 }
 
+/*
+ * Returns 1 if MIDI data in the event is valid, 0 otherwise.
+ */
+static int
+event_is_valid(const smf_event_t *event)
+{
+	assert(event);
+	assert(event->midi_buffer);
+	assert(event->midi_buffer_length >= 1);
+	assert(event->midi_buffer_length == expected_message_length(event->midi_buffer[0],
+		&(event->midi_buffer[1]), event->midi_buffer_length - 1));
+
+	return 1;
+}
+
+/*
+ * Parse events and put it on the track.
+ */
 static int
 parse_mtrk_chunk(smf_track_t *track)
 {
@@ -741,9 +759,11 @@ parse_mtrk_chunk(smf_track_t *track)
 		event->time += time;
 		time = event->time;
 
+		assert(event_is_valid(event));
+
 		if (event_is_end_of_track(event))
 			break;
-
+	
 #if 0
 		print_event(event);
 #endif
