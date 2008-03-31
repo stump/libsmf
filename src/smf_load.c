@@ -26,6 +26,9 @@ struct mthd_chunk_struct {
 	uint16_t			division;
 } __attribute__((__packed__));
 
+/*
+ * Allocates new smf_t structure.
+ */
 static smf_t *
 smf_new(void)
 {
@@ -41,6 +44,9 @@ smf_new(void)
 	return smf;
 }
 
+/*
+ * Allocates new smf_track_t structure and attaches it to the given smf.
+ */
 static smf_track_t *
 smf_track_new(smf_t *smf)
 {
@@ -60,6 +66,9 @@ smf_track_new(smf_t *smf)
 	return track;
 }
 
+/*
+ * Allocates new smf_event_t structure and attaches it to the given track.
+ */
 static smf_event_t *
 smf_event_new(smf_track_t *track)
 {
@@ -77,6 +86,9 @@ smf_event_new(smf_track_t *track)
 	return event;
 }
 
+/*
+ * Detaches event from its track and frees it.
+ */
 static void
 smf_event_free(smf_event_t *event)
 {
@@ -117,7 +129,7 @@ next_chunk(smf_t *smf)
  * Returns 1, iff signature of the "chunk" is the same as string passed as "signature".
  */
 static int
-signature_matches(const struct chunk_header_struct *chunk, const char *signature)
+chunk_signature_matches(const struct chunk_header_struct *chunk, const char *signature)
 {
 	if (chunk->id[0] == signature[0] && chunk->id[1] == signature[1] && chunk->id[2] == signature[2] && chunk->id[3] == signature[3])
 		return 1;
@@ -145,7 +157,7 @@ parse_mthd_header(smf_t *smf)
 		return 1;
 	}
 
-	if (!signature_matches(mthd, "MThd")) {
+	if (!chunk_signature_matches(mthd, "MThd")) {
 		g_critical("SMF error: MThd signature not found, is that a MIDI file?");
 		
 		return 2;
@@ -261,7 +273,8 @@ print_mthd(smf_t *smf)
 }
 
 /*
- * Puts value extracted from from "buf" into "value" and number of consumed bytes into "len".
+ * Puts value extracted from from "buf" into "value" and number of bytes consumed into "len",
+ * making sure it does not read past "buf" + "buffer_length".
  * Explanation of "packed numbers" is here: http://www.borg.com/~jglatt/tech/midifile/vari.htm
  * Returns 0 iff everything went OK, different value in case of error.
  */
@@ -293,12 +306,18 @@ extract_packed_number(const unsigned char *buf, const int buffer_length, int *va
 	return 0;
 }
 
+/*
+ * Returns 1 if the given byte is a valid status byte, 0 otherwise.
+ */
 static int
 is_status_byte(const unsigned char status)
 {
 	return (status & 0x80);
 }
 
+/*
+ * Returns 1 if the given byte is status byte for realtime message, 0 otherwise.
+ */
 static int
 is_realtime_byte(const unsigned char status)
 {
@@ -308,10 +327,15 @@ is_realtime_byte(const unsigned char status)
 	return 0;
 }
 
+/*
+ * Creates new realtime event and attaches it to "track".  Returns 0 iff everything went OK, < 0 otherwise.
+ */
 static int
 parse_realtime_event(const unsigned char status, smf_track_t *track)
 {
 	smf_event_t *event = smf_event_new(track);
+
+	assert(is_realtime_byte(status));
 	
 	event->midi_buffer = malloc(1);
 	if (event->midi_buffer == NULL) {
@@ -329,6 +353,9 @@ parse_realtime_event(const unsigned char status, smf_track_t *track)
 	return 0;
 }
 
+/*
+ * Just like expected_message_length(), but only for System Exclusive messages.
+ */
 static int
 expected_sysex_length(const unsigned char status, const unsigned char *second_byte, const int buffer_length)
 {
@@ -486,13 +513,14 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 
 		/* Realtime message may occur anywhere, even in the middle of normal MIDI message. */
 		if (is_realtime_byte(*c)) {
-			parse_realtime_event(*c, event->track);
+			if (parse_realtime_event(*c, event->track))
+				return -6;
 
 			c++;
 
 			if (c >= buf + buffer_length) {
 				g_critical("End of buffer in extract_midi_event.");
-				return -6;
+				return -7;
 			}
 		}
 
@@ -735,7 +763,7 @@ parse_mtrk_header(smf_track_t *track)
 		return 1;
 	}
 
-	if (!signature_matches(mtrk, "MTrk")) {
+	if (!chunk_signature_matches(mtrk, "MTrk")) {
 		g_critical("SMF error: MTrk signature not found.");
 		
 		return 2;
@@ -858,7 +886,7 @@ smf_load(const char *file_name)
 	}
 
 	if (smf->last_track_number != smf->number_of_tracks) {
-		g_warning("SMF error: MThd header declared %d tracks, but only %d found; continuing anyway.",
+		g_warning("SMF warning: MThd header declared %d tracks, but only %d found; continuing anyway.",
 				smf->number_of_tracks, smf->last_track_number);
 	}
 
