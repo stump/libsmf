@@ -393,7 +393,7 @@ smf_event_time(const smf_event_t *event)
 	if (event->track->smf->ppqn == 0)
 		return 0.0;
 
-	return event->time / ((double)event->track->smf->microseconds_per_quarter_note / (double)event->track->smf->ppqn);
+	return event->time * ((double)event->track->smf->microseconds_per_quarter_note / ((double)event->track->smf->ppqn * 1000000.0));
 }
 
 void

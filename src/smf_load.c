@@ -192,7 +192,7 @@ print_mthd(smf_t *smf)
 	off += snprintf(buf + off, sizeof(buf) - off, "; number of tracks: %d", smf->number_of_tracks);
 
 	if (smf->ppqn != 0)
-		off += snprintf(buf + off, sizeof(buf) - off, "; division: %d PPN.", smf->ppqn);
+		off += snprintf(buf + off, sizeof(buf) - off, "; division: %d PPQN.", smf->ppqn);
 	else
 		off += snprintf(buf + off, sizeof(buf) - off, "; division: %d FPS, %d resolution.", smf->frames_per_second, smf->resolution);
 
