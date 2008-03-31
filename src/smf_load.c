@@ -322,7 +322,7 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 
 			/* XXX: find out length of sysexes instead of returning an error? */
 			case 0xF0: /* System Exclusive. */
-				g_critical("SMF error: SysEx encountered, no support for that yet.", status);
+				g_critical("SMF error: SysEx encountered, no support for that yet.");
 				return -1;
 
 			default:
@@ -769,6 +769,91 @@ event_is_metadata(const smf_event_t *event)
 }
 
 static void
+print_metadata_event(const smf_event_t *event)
+{
+	int off = 0;
+	char buf[256];
+
+	switch (event->midi_buffer[1]) {
+		case 0x00:
+			off += snprintf(buf + off, sizeof(buf) - off, "Sequence number");
+			break;
+
+		case 0x01:
+			off += snprintf(buf + off, sizeof(buf) - off, "Text: %s", string_from_event(event));
+			break;
+
+		case 0x02:
+			off += snprintf(buf + off, sizeof(buf) - off, "Copyright: %s", string_from_event(event));
+			break;
+
+		case 0x03:
+			off += snprintf(buf + off, sizeof(buf) - off, "Sequence/Track Name: %s", string_from_event(event));
+			break;
+
+		case 0x04:
+			off += snprintf(buf + off, sizeof(buf) - off, "Instrument: %s", string_from_event(event));
+			break;
+
+		case 0x05:
+			off += snprintf(buf + off, sizeof(buf) - off, "Lyric: %s", string_from_event(event));
+			break;
+
+		case 0x06:
+			off += snprintf(buf + off, sizeof(buf) - off, "Marker: %s", string_from_event(event));
+			break;
+
+		case 0x07:
+			off += snprintf(buf + off, sizeof(buf) - off, "Cue Point: %s", string_from_event(event));
+			break;
+
+		case 0x08:
+			off += snprintf(buf + off, sizeof(buf) - off, "Program Name: %s", string_from_event(event));
+			break;
+
+		case 0x09:
+			off += snprintf(buf + off, sizeof(buf) - off, "Device (Port) Name: %s", string_from_event(event));
+			break;
+
+		case 0x2F:
+			off += snprintf(buf + off, sizeof(buf) - off, "End Of Track");
+			break;
+
+		case 0x51:
+			off += snprintf(buf + off, sizeof(buf) - off, "Tempo: %d microseconds per quarter note",
+				(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5]);
+			break;
+
+		case 0x54:
+			off += snprintf(buf + off, sizeof(buf) - off, "SMPTE Offset");
+			break;
+
+		case 0x58:
+			off += snprintf(buf + off, sizeof(buf) - off,
+				"Time Signature: %d/%d, %d clocks per click, %d notated 32nd notes per quarter note",
+				event->midi_buffer[3], (int)pow(2, event->midi_buffer[4]), event->midi_buffer[5],
+				event->midi_buffer[6]);
+			break;
+
+		case 0x59:
+			off += snprintf(buf + off, sizeof(buf) - off, "Key Signature");
+			break;
+
+		case 0x7F:
+			off += snprintf(buf + off, sizeof(buf) - off, "Proprietary Event");
+			break;
+
+		default:
+			off += snprintf(buf + off, sizeof(buf) - off, "Unknown Event: 0xFF 0x%x 0x%x 0x%x",
+				event->midi_buffer[1], event->midi_buffer[2], event->midi_buffer[3]);
+
+			break;
+	}
+
+	g_debug("Metadata event: %s", buf);
+}
+
+static void
 parse_metadata_event(const smf_event_t *event)
 {
 	assert(event_is_metadata(event));
@@ -782,7 +867,11 @@ parse_metadata_event(const smf_event_t *event)
 			(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
 
 		g_debug("Setting microseconds per quarter note: %d.", event->track->smf->microseconds_per_quarter_note);
+
+		return;
 	}
+
+	print_metadata_event(event);
 }
 
 smf_event_t *
