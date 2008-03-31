@@ -295,13 +295,28 @@ smf_get_next_event_from_track(smf_track_t *track)
 }
 
 smf_event_t *
-smf_get_next_event(smf_t *smf)
+smf_peek_next_event_from_track(smf_track_t *track)
 {
-	int i;
-	smf_event_t *event;
-	smf_track_t *track = NULL, *min_time_track = NULL;
+	smf_event_t *event, *next_event;
 
-	int min_time = 0;
+	assert(!g_queue_is_empty(track->events_queue));
+	assert(track->next_event_number >= 0);
+
+	/* XXX: inefficient; use some different data structure. */
+	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number);
+	next_event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number + 1);
+
+	assert(event != next_event);
+	assert(event != NULL);
+
+	return event;
+}
+
+smf_track_t *
+smf_find_track_with_next_event(smf_t *smf)
+{
+	int i, min_time = 0;
+	smf_track_t *track = NULL, *min_time_track = NULL;
 
 	/* Find track with event that should be played next. */
 	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
@@ -319,13 +334,22 @@ smf_get_next_event(smf_t *smf)
 		}
 	}
 
-	if (min_time_track == NULL) {
+	return min_time_track;
+}
+
+smf_event_t *
+smf_get_next_event(smf_t *smf)
+{
+	smf_event_t *event;
+	smf_track_t *track = smf_find_track_with_next_event(smf);
+
+	if (track == NULL) {
 		g_debug("End of the song.");
 
 		return NULL;
 	}
 
-	event = smf_get_next_event_from_track(min_time_track);
+	event = smf_get_next_event_from_track(track);
 	
 	assert(event != NULL);
 
@@ -338,13 +362,38 @@ smf_get_next_event(smf_t *smf)
 	return event;
 }
 
-double
-smf_seconds_per_time_unit(smf_t *smf)
+smf_event_t *
+smf_peek_next_event(smf_t *smf)
 {
-	if (smf->ppqn == 0)
+	smf_event_t *event;
+	smf_track_t *track = smf_find_track_with_next_event(smf);
+
+	if (track == NULL) {
+		g_debug("End of the song.");
+
+		return NULL;
+	}
+
+	event = smf_peek_next_event_from_track(track);
+	
+	assert(event != NULL);
+
+	/* XXX: we cannot do the metadata trick described above. */
+
+	return event;
+}
+
+double
+smf_event_time(const smf_event_t *event)
+{
+	assert(event);
+	assert(event->track);
+	assert(event->track->smf);
+
+	if (event->track->smf->ppqn == 0)
 		return 0.0;
 
-	return (double)smf->microseconds_per_quarter_note / (double)smf->ppqn;
+	return event->time / ((double)event->track->smf->microseconds_per_quarter_note / (double)event->track->smf->ppqn);
 }
 
 void
@@ -352,6 +401,10 @@ smf_rewind(smf_t *smf)
 {
 	int i;
 	smf_track_t *track = NULL;
+
+	assert(smf);
+
+	g_debug("Rewinding.");
 
 	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
 		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
@@ -362,7 +415,33 @@ smf_rewind(smf_t *smf)
 		track->time_of_next_event = 0; /* XXX: is this right? */
 	}
 
-	g_debug("Rewinding.");
+}
+
+void
+smf_seek_to(smf_t *smf, double seconds)
+{
+	smf_event_t *event;
+	double time;
+
+	smf_rewind(smf);
+
+	g_debug("Seeking to %f.", seconds);
+
+	for (;;) {
+		event = smf_peek_next_event(smf);
+
+		if (event == NULL) {
+			g_critical("Trying to seek past end of song.");
+			return;
+		}
+
+		time = smf_event_time(event);
+
+		if (time < seconds)
+			smf_get_next_event(smf);
+		else
+			break;
+	}
 }
 
 int
