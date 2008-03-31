@@ -307,11 +307,15 @@ expected_sysex_length(const unsigned char status, const unsigned char *second_by
 		}
 	}
 
-	if (second_byte[i] != 0xF7)
+	if (second_byte[i] != 0xF7) {
 		g_warning("SMF warning: SysEx terminated by 0x%x instead of 0xF7.", second_byte[i]);
 
-	/* "i" is the length minus starting (0xF0) status byte. */
-	return (i + 1);
+		/* "i" is the length minus starting (0xF0) status byte; terminating status is a part of another MIDI message. */
+		return (i + 1);
+	}
+
+	/* "i" is the length minus starting (0xF0) and ending (0xF7) status byte. */
+	return (i + 2);
 }
 
 /*
