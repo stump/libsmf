@@ -358,7 +358,6 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 			case 0xFE: /* Active Sense. */
 				return 1;
 
-			/* XXX: find out length of sysexes instead of returning an error? */
 			case 0xF0: /* System Exclusive. */
 				return expected_sysex_length(status, second_byte, buffer_length);
 
@@ -423,7 +422,6 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 
 	message_length = expected_message_length(status, c, buffer_length - (c - buf));
 
-	/* XXX: And what am I supposed to do here? ;-/ */
 	if (message_length < 0)
 		return -3;
 
