@@ -282,6 +282,33 @@ is_status_byte(unsigned char status)
 	return (status & 0x80);
 }
 
+int
+expected_sysex_length(unsigned char status, const unsigned char *second_byte, const int buffer_length)
+{
+	int i;
+
+	assert(status == 0xF0);
+
+	if (buffer_length < 2) {
+		g_critical("SMF error: end of buffer in expected_sysex_length.");
+		return -1;
+	}
+
+	/* Any status byte terminates the SysEx. */
+	for (i = 0; !is_status_byte(second_byte[i]); i++) {
+		if (i >= buffer_length) {
+			g_critical("SMF error: end of buffer in expected_sysex_length.");
+			return -2;
+		}
+	}
+
+	if (second_byte[i] != 0xF7)
+		g_warning("SMF warning: SysEx terminated by 0x%x instead of 0xF7.", second_byte[i]);
+
+	/* "i" is the length minus starting (0xF0) status byte. */
+	return (i + 1);
+}
+
 /*
  * Returns expected length of the midi message (including the status byte), in bytes, for the given status byte.
  * The "second_byte" points to the expected second byte of the MIDI message.  "buffer_length" is the buffer
@@ -328,12 +355,15 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 
 			/* XXX: find out length of sysexes instead of returning an error? */
 			case 0xF0: /* System Exclusive. */
-				g_critical("SMF error: SysEx encountered, no support for that yet.");
-				return -1;
+				return expected_sysex_length(status, second_byte, buffer_length);
+
+			case 0xF7: /* End of SysEx. */
+				g_warning("SMF warning: status 0xF7 (End of SysEx) encountered without matching 0xF0 (Start of SysEx).");
+				return 1; /* Ignore it. */
 
 			default:
 				g_critical("SMF error: unknown 0xFx-type status byte '0x%x'.", status);
-				return -2;
+				return -3;
 		}
 	}
 
