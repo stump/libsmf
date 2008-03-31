@@ -677,6 +677,10 @@ print_event(smf_event_t *event)
 }
 #endif
 
+/*
+ * Verify if the next chunk really is MTrk chunk, and if so, initialize some track variables and return 0.
+ * Return different value otherwise.
+ */
 static int
 parse_mtrk_header(smf_track_t *track)
 {
@@ -695,7 +699,8 @@ parse_mtrk_header(smf_track_t *track)
 	}
 
 	if (!chunk_signature_matches(mtrk, "MTrk")) {
-		g_critical("SMF error: MTrk signature not found.");
+		g_warning("SMF warning: Expected MTrk signature, got %c%c%c%c instead; ignoring this chunk.",
+				mtrk->id[0], mtrk->id[1], mtrk->id[2], mtrk->id[3]);
 		
 		return 2;
 	}
@@ -707,6 +712,9 @@ parse_mtrk_header(smf_track_t *track)
 	return 0;
 }
 
+/*
+ * Return 1 if event is end-of-the-track, 0 otherwise.
+ */
 static int
 event_is_end_of_track(const smf_event_t *event)
 {
@@ -738,9 +746,6 @@ parse_mtrk_chunk(smf_track_t *track)
 		if (event_is_end_of_track(event))
 			break;
 
-		if (event == NULL)
-			return 2;
-
 #if 0
 		print_event(event);
 #endif
@@ -749,6 +754,9 @@ parse_mtrk_chunk(smf_track_t *track)
 	return 0;
 }
 
+/*
+ * Allocate buffer of proper size and read file contents into it.  Close file afterwards.
+ */
 static int
 load_file_into_buffer(smf_t *smf, const char *file_name)
 {
@@ -802,6 +810,9 @@ load_file_into_buffer(smf_t *smf, const char *file_name)
 	return 0;
 }
 
+/*
+ * smf->buffer is not needed after parsing; free it.
+ */
 static void
 free_buffer(smf_t *smf)
 {
@@ -811,6 +822,9 @@ free_buffer(smf_t *smf)
 	smf->buffer_length = 0;
 }
 
+/*
+ * Takes a filename, loads it, parses and returns smf or NULL if there was an error.
+ */
 smf_t *
 smf_load(const char *file_name)
 {
@@ -829,8 +843,12 @@ smf_load(const char *file_name)
 	for (i = 0; i < smf->number_of_tracks; i++) {
 		smf_track_t *track = smf_track_new(smf);
 
-		if (parse_mtrk_chunk(track))
-			return NULL;
+		/* Skip unparseable chunks. */
+		if (parse_mtrk_chunk(track)) {
+			smf_track_free(track);
+
+			continue;
+		}
 	}
 
 	if (smf->last_track_number != smf->number_of_tracks) {
