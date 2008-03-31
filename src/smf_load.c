@@ -380,25 +380,28 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 		return -1;
 	}
 
-	event->midi_buffer[0] = status;
-
 	message_length = expected_message_length(status, c, buffer_length - (c - buf));
 
 	/* XXX: And what am I supposed to do here? ;-/ */
 	if (message_length < 0)
 		return -3;
 
+	event->midi_buffer = malloc(message_length);
+	if (event->midi_buffer == NULL) {
+		g_critical("Cannot allocate memory");
+		return -4;
+	}
+
+	event->midi_buffer[0] = status;
+
 	/* Copy the rest of the MIDI event into buffer. */
 	for (i = 1; i < message_length; i++, c++) {
 		if (c >= buf + buffer_length) {
 			g_critical("End of buffer in extract_midi_event.");
-			return -4;
+			return -5;
 		}
 
-		if (i >= MAX_EVENT_LENGTH) {
-			g_warning("Whoops, MIDI event too long.");
-			continue;
-		}
+		/* XXX: Support realtime messages. */
 
 		event->midi_buffer[i] = *c;
 	}
@@ -486,9 +489,9 @@ string_from_event(const smf_event_t *event)
 {
 	int string_length, length_length;
 
-	extract_packed_number((void *)&(event->midi_buffer[2]), MAX_EVENT_LENGTH - 3, &string_length, &length_length);
+	extract_packed_number((void *)&(event->midi_buffer[2]), event->buffer_length - 2, &string_length, &length_length);
 
-	return make_string((void *)(&event->midi_buffer[2] + length_length), MAX_EVENT_LENGTH - 3 - length_length, string_length);
+	return make_string((void *)(&event->midi_buffer[1] + length_length), event->buffer_length - 2 - length_length, string_length);
 }
 
 #if 0
@@ -813,6 +816,15 @@ print_metadata_event(const smf_event_t *event)
 
 		case 0x09:
 			off += snprintf(buf + off, sizeof(buf) - off, "Device (Port) Name: %s", string_from_event(event));
+			break;
+
+		/* http://music.columbia.edu/pipermail/music-dsp/2004-August/061196.html */
+		case 0x20:
+			off += snprintf(buf + off, sizeof(buf) - off, "Channel Prefix: %d.", event->midi_buffer[3]);
+			break;
+
+		case 0x21:
+			off += snprintf(buf + off, sizeof(buf) - off, "Midi Port: %d.", event->midi_buffer[3]);
 			break;
 
 		case 0x2F:
