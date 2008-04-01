@@ -396,7 +396,7 @@ smf_event_time(const smf_event_t *event)
 	return event->time * ((double)event->track->smf->microseconds_per_quarter_note / ((double)event->track->smf->ppqn * 1000000.0));
 }
 
-void
+static void
 smf_rewind(smf_t *smf)
 {
 	int i;
@@ -417,11 +417,13 @@ smf_rewind(smf_t *smf)
 
 }
 
-void
+int
 smf_seek_to(smf_t *smf, double seconds)
 {
 	smf_event_t *event;
 	double time;
+
+	assert(seconds >= 0.0);
 
 	smf_rewind(smf);
 
@@ -432,7 +434,7 @@ smf_seek_to(smf_t *smf, double seconds)
 
 		if (event == NULL) {
 			g_critical("Trying to seek past end of song.");
-			return;
+			return -1;
 		}
 
 		time = smf_event_time(event);
@@ -442,6 +444,8 @@ smf_seek_to(smf_t *smf, double seconds)
 		else
 			break;
 	}
+
+	return 0;
 }
 
 int

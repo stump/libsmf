@@ -59,8 +59,7 @@ smf_t *smf_load(const char *file_name);
 int smf_get_number_of_tracks(smf_t *smf);
 smf_event_t *smf_get_next_event(smf_t *smf);
 smf_event_t *smf_peek_next_event(smf_t *smf);
-void smf_rewind(smf_t *smf);
-void smf_seek_to(smf_t *smf, double seconds);
+int smf_seek_to(smf_t *smf, double seconds);
 double smf_event_time(const smf_event_t *event);
 int event_is_metadata(const smf_event_t *event);
 
