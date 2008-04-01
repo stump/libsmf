@@ -877,12 +877,11 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 smf_t *
 smf_load(const char *file_name)
 {
-	int ret, file_buffer_length;
+	int file_buffer_length;
 	void *file_buffer;
 	smf_t *smf;
 
-	ret = load_file_into_buffer(&file_buffer, &file_buffer_length, file_name);
-	if (ret)
+	if (load_file_into_buffer(&file_buffer, &file_buffer_length, file_name))
 		return NULL;
 
 	smf = smf_load_from_memory(file_buffer, file_buffer_length);
