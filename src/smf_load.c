@@ -34,8 +34,13 @@ static struct chunk_header_struct *
 next_chunk(smf_t *smf)
 {
 	struct chunk_header_struct *chunk;
+	void *next_chunk_ptr;
 
-	void *next_chunk_ptr = (unsigned char *)smf->file_buffer + smf->next_chunk_offset;
+	assert(smf->file_buffer != NULL);
+	assert(smf->file_buffer_length > 0);
+	assert(smf->next_chunk_offset >= 0);
+
+	next_chunk_ptr = (unsigned char *)smf->file_buffer + smf->next_chunk_offset;
 
 	chunk = (struct chunk_header_struct *)next_chunk_ptr;
 
@@ -836,6 +841,8 @@ load_file_into_buffer(smf_t *smf, const char *file_name)
 	}
 
 	smf->stream = NULL;
+	
+	smf->next_chunk_offset = 0;
 
 	return 0;
 }
@@ -850,6 +857,7 @@ free_file_buffer(smf_t *smf)
 
 	free(smf->file_buffer);
 	smf->file_buffer_length = 0;
+	smf->next_chunk_offset = -1;
 }
 
 /*
