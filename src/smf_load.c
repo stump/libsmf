@@ -15,18 +15,6 @@
 #include <arpa/inet.h>
 #include "smf.h"
 
-struct chunk_header_struct {
-	char		id[4];
-	uint32_t	length; 
-} __attribute__((__packed__));
-
-struct mthd_chunk_struct {
-	struct chunk_header_struct	mthd_header;
-	uint16_t			format;
-	uint16_t			number_of_tracks;
-	uint16_t			division;
-} __attribute__((__packed__));
-
 /*
  * Returns pointer to the next SMF chunk in smf->buffer, based on length of the previous one.
  */
@@ -793,85 +781,67 @@ parse_mtrk_chunk(smf_track_t *track)
  * Allocate buffer of proper size and read file contents into it.  Close file afterwards.
  */
 static int
-load_file_into_buffer(smf_t *smf, const char *file_name)
+load_file_into_buffer(void **file_buffer, int *file_buffer_length, const char *file_name)
 {
-	smf->stream = fopen(file_name, "r");
-	if (smf->stream == NULL) {
+	FILE *stream = fopen(file_name, "r");
+
+	if (stream == NULL) {
 		g_critical("Cannot open input file: %s", strerror(errno));
 
 		return 1;
 	}
 
-	if (fseek(smf->stream, 0, SEEK_END)) {
+	if (fseek(stream, 0, SEEK_END)) {
 		g_critical("fseek(3) failed: %s", strerror(errno));
 
 		return 2;
 	}
 
-	smf->file_buffer_length = ftell(smf->stream);
-	if (smf->file_buffer_length == -1) {
+	*file_buffer_length = ftell(stream);
+	if (*file_buffer_length == -1) {
 		g_critical("ftell(3) failed: %s", strerror(errno));
 
 		return 3;
 	}
 
-	if (fseek(smf->stream, 0, SEEK_SET)) {
+	if (fseek(stream, 0, SEEK_SET)) {
 		g_critical("fseek(3) failed: %s", strerror(errno));
 
 		return 4;
 	}
 
-	smf->file_buffer = malloc(smf->file_buffer_length);
-	if (smf->file_buffer == NULL) {
+	*file_buffer = malloc(*file_buffer_length);
+	if (*file_buffer == NULL) {
 		g_critical("malloc(3) failed: %s", strerror(errno));
 
 		return 5;
 	}
 
-	if (fread(smf->file_buffer, 1, smf->file_buffer_length, smf->stream) != smf->file_buffer_length) {
+	if (fread(*file_buffer, 1, *file_buffer_length, stream) != *file_buffer_length) {
 		g_critical("fread(3) failed: %s", strerror(errno));
 
 		return 6;
 	}
 	
-	if (fclose(smf->stream)) {
+	if (fclose(stream)) {
 		g_critical("fclose(3) failed: %s", strerror(errno));
 
 		return 7;
 	}
 
-	smf->stream = NULL;
-	
-	smf->next_chunk_offset = 0;
-
 	return 0;
 }
 
-/*
- * smf->buffer is not needed after parsing; free it.
- */
-static void
-free_file_buffer(smf_t *smf)
-{
-	memset(smf->file_buffer, 0, smf->file_buffer_length);
-
-	free(smf->file_buffer);
-	smf->file_buffer_length = 0;
-	smf->next_chunk_offset = -1;
-}
-
-/*
- * Takes a filename, loads it, parses and returns smf or NULL if there was an error.
- */
 smf_t *
-smf_load(const char *file_name)
+smf_load_from_memory(const void *buffer, const int buffer_length)
 {
 	int i;
 
 	smf_t *smf = smf_new();
 
-	if (load_file_into_buffer(smf, file_name))
-		return NULL;
+	smf->file_buffer = (void *)buffer;
+	smf->file_buffer_length = buffer_length;
+	smf->next_chunk_offset = 0;
 
 	if (parse_mthd_chunk(smf))
 		return NULL;
@@ -894,7 +864,30 @@ smf_load(const char *file_name)
 				smf->number_of_tracks, smf->last_track_number);
 	}
 
-	free_file_buffer(smf);
+	smf->file_buffer = NULL;
+	smf->file_buffer_length = 0;
+	smf->next_chunk_offset = -1;
+
+	return smf;
+}
+
+/*
+ * Takes a filename, loads it, parses and returns smf or NULL if there was an error.
+ */
+smf_t *
+smf_load(const char *file_name)
+{
+	int ret, file_buffer_length;
+	void *file_buffer;
+	smf_t *smf;
+
+	ret = load_file_into_buffer(&file_buffer, &file_buffer_length, file_name);
+	if (ret)
+		return NULL;
+
+	smf = smf_load_from_memory(file_buffer, file_buffer_length);
+
+	free(file_buffer);
 
 	return smf;
 }

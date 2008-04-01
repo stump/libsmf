@@ -56,12 +56,18 @@ struct smf_event_struct {
 typedef struct smf_event_struct smf_event_t;
 
 smf_t *smf_load(const char *file_name);
+smf_t *smf_load_from_memory(const void *buffer, const int buffer_length);
+
 int smf_get_number_of_tracks(smf_t *smf);
+
 smf_event_t *smf_get_next_event(smf_t *smf);
 smf_event_t *smf_peek_next_event(smf_t *smf);
+
 int smf_seek_to(smf_t *smf, double seconds);
 double smf_event_time(const smf_event_t *event);
-int event_is_metadata(const smf_event_t *event);
+int event_is_metadata(const smf_event_t *event); /* XXX: Needed for assertion in jack-smf-player.c. */
+
+int smf_save(smf_t *smf, const char *file_name);
 
 /* These are private. */
 smf_t *smf_new(void);
@@ -72,6 +78,21 @@ smf_event_t *smf_event_new(smf_track_t *track);
 void smf_event_free(smf_event_t *event);
 
 char *smf_string_from_event(const smf_event_t *event);
+
+void free_file_buffer(smf_t *smf);
+
+/* Definitions used in smf_load.c and smf_save.c. */
+struct chunk_header_struct {
+	char		id[4];
+	uint32_t	length; 
+} __attribute__((__packed__));
+
+struct mthd_chunk_struct {
+	struct chunk_header_struct	mthd_header;
+	uint16_t			format;
+	uint16_t			number_of_tracks;
+	uint16_t			division;
+} __attribute__((__packed__));
 
 #endif /* SMF_H */
 
