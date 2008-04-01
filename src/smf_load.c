@@ -487,6 +487,10 @@ parse_next_event(smf_track_t *track)
 
 	c = start = (unsigned char *)track->file_buffer + track->next_event_offset;
 
+	assert(track->file_buffer != NULL);
+	assert(track->file_buffer_length > 0);
+	assert(track->next_event_offset > 0);
+
 	buffer_length = track->file_buffer_length - track->next_event_offset;
 	assert(buffer_length > 0);
 
@@ -772,6 +776,10 @@ parse_mtrk_chunk(smf_track_t *track)
 		print_event(event);
 #endif
 	}
+
+	track->file_buffer = NULL;
+	track->file_buffer_length = 0;
+	track->next_event_offset = -1;
 
 	return 0;
 }
