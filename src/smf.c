@@ -285,7 +285,7 @@ smf_get_next_event_from_track(smf_track_t *track)
 
 	/* Is this the last event in the track? */
 	if (next_event != NULL) {
-		track->time_of_next_event = next_event->time;
+		track->time_of_next_event = next_event->time_pulses;
 		track->next_event_number++;
 	} else {
 		track->next_event_number = -1;
@@ -337,6 +337,20 @@ smf_find_track_with_next_event(smf_t *smf)
 	return min_time_track;
 }
 
+void
+smf_compute_time(smf_event_t *event)
+{
+	assert(event);
+	assert(event->track);
+	assert(event->track->smf);
+
+	if (event->track->smf->ppqn == 0)
+		event->time_seconds = 0.0;
+
+	event->time_seconds = event->time_pulses *
+		((double)event->track->smf->microseconds_per_quarter_note / ((double)event->track->smf->ppqn * 1000000.0));
+}
+
 smf_event_t *
 smf_get_next_event(smf_t *smf)
 {
@@ -359,6 +373,8 @@ smf_get_next_event(smf_t *smf)
 		return smf_get_next_event(smf);
 	}
 
+	smf_compute_time(event);
+
 	return event;
 }
 
@@ -380,20 +396,9 @@ smf_peek_next_event(smf_t *smf)
 
 	/* XXX: we cannot do the metadata trick described above. */
 
+	smf_compute_time(event);
+
 	return event;
-}
-
-double
-smf_event_time(const smf_event_t *event)
-{
-	assert(event);
-	assert(event->track);
-	assert(event->track->smf);
-
-	if (event->track->smf->ppqn == 0)
-		return 0.0;
-
-	return event->time * ((double)event->track->smf->microseconds_per_quarter_note / ((double)event->track->smf->ppqn * 1000000.0));
 }
 
 static void
@@ -437,7 +442,7 @@ smf_seek_to(smf_t *smf, double seconds)
 			return -1;
 		}
 
-		time = smf_event_time(event);
+		time = event->time_seconds;
 
 		if (time < seconds)
 			smf_get_next_event(smf);

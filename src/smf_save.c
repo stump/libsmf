@@ -66,8 +66,6 @@ write_mthd_header(smf_t *smf)
 int
 smf_save(smf_t *smf, const char *file_name)
 {
-	int ret;
-
 	if (allocate_buffer(smf))
 		return -1;
 

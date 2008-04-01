@@ -47,7 +47,8 @@ typedef struct smf_track_struct smf_track_t;
 struct smf_event_struct {
 	smf_track_t	*track;
 
-	int		time;
+	int		time_pulses;
+	double		time_seconds;
 	int		track_number;
 	unsigned char	*midi_buffer;
 	int		midi_buffer_length; /* Length of the MIDI message in the buffer, in bytes. */
@@ -64,7 +65,6 @@ smf_event_t *smf_get_next_event(smf_t *smf);
 smf_event_t *smf_peek_next_event(smf_t *smf);
 
 int smf_seek_to(smf_t *smf, double seconds);
-double smf_event_time(const smf_event_t *event);
 int event_is_metadata(const smf_event_t *event); /* XXX: Needed for assertion in jack-smf-player.c. */
 
 int smf_save(smf_t *smf, const char *file_name);
