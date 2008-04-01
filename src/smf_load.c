@@ -290,7 +290,7 @@ parse_realtime_event(const unsigned char status, smf_track_t *track)
 static int
 expected_sysex_length(const unsigned char status, const unsigned char *second_byte, const int buffer_length)
 {
-	int i;
+	int len;
 
 	assert(status == 0xF0);
 
@@ -300,22 +300,22 @@ expected_sysex_length(const unsigned char status, const unsigned char *second_by
 	}
 
 	/* Any status byte terminates the SysEx. */
-	for (i = 0; !is_status_byte(second_byte[i]); i++) {
-		if (i >= buffer_length) {
+	for (len = 0; !is_status_byte(second_byte[len]); len++) {
+		if (len >= buffer_length) {
 			g_critical("SMF error: end of buffer in expected_sysex_length().");
 			return -2;
 		}
 	}
 
-	if (second_byte[i] != 0xF7) {
-		g_warning("SMF warning: SysEx terminated by 0x%x instead of 0xF7.", second_byte[i]);
+	if (second_byte[len] != 0xF7) {
+		g_warning("SMF warning: SysEx terminated by 0x%x instead of 0xF7.", second_byte[len]);
 
-		/* "i" is the length minus starting (0xF0) status byte; terminating status is a part of another MIDI message. */
-		return (i + 1);
+		/* "i" is the length minus starting (0xF0) status byte; terminating status byte is a part of another MIDI message. */
+		return (len + 1);
 	}
 
-	/* "i" is the length minus starting (0xF0) and ending (0xF7) status byte. */
-	return (i + 2);
+	/* "i" is the length minus starting (0xF0) status byte and second byte. */
+	return (len + 2);
 }
 
 /*
