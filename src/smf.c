@@ -262,7 +262,7 @@ parse_metadata_event(const smf_event_t *event)
 		event->track->smf->microseconds_per_quarter_note = 
 			(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
 
-		g_debug("Setting microseconds per quarter note: %d.", event->track->smf->microseconds_per_quarter_note);
+		g_debug("Setting microseconds per quarter note: %d", event->track->smf->microseconds_per_quarter_note);
 
 		return;
 	}
