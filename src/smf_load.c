@@ -35,13 +35,13 @@ next_chunk(smf_t *smf)
 {
 	struct chunk_header_struct *chunk;
 
-	void *next_chunk_ptr = (unsigned char *)smf->buffer + smf->next_chunk_offset;
+	void *next_chunk_ptr = (unsigned char *)smf->file_buffer + smf->next_chunk_offset;
 
 	chunk = (struct chunk_header_struct *)next_chunk_ptr;
 
 	smf->next_chunk_offset += sizeof(struct chunk_header_struct) + ntohl(chunk->length);
 
-	if (smf->next_chunk_offset > smf->buffer_length)
+	if (smf->next_chunk_offset > smf->file_buffer_length)
 		return NULL;
 
 	return chunk;
@@ -72,16 +72,16 @@ parse_mthd_header(smf_t *smf)
 	assert(sizeof(struct chunk_header_struct) == 8);
 
 	/*
-	 * We could just do "mthd = smf->buffer;" here, but this way we wouldn't
+	 * We could just do "mthd = smf->file_buffer;" here, but this way we wouldn't
 	 * get useful error messages.
 	 */
-	if (smf->buffer_length < 6) {
+	if (smf->file_buffer_length < 6) {
 		g_critical("SMF error: file is too short, it cannot be a MIDI file.");
 
 		return -1;
 	}
 
-	tmp_mthd = smf->buffer;
+	tmp_mthd = smf->file_buffer;
 
 	if (!chunk_signature_matches(tmp_mthd, "MThd")) {
 		g_critical("SMF error: MThd signature not found, is that a MIDI file?");
@@ -119,7 +119,7 @@ parse_mthd_chunk(smf_t *smf)
 	if (parse_mthd_header(smf))
 		return 1;
 
-	mthd = (struct mthd_chunk_struct *)smf->buffer;
+	mthd = (struct mthd_chunk_struct *)smf->file_buffer;
 
 	smf->format = ntohs(mthd->format);
 	if (smf->format < 0 || smf->format > 2) {
@@ -485,9 +485,9 @@ parse_next_event(smf_track_t *track)
 
 	smf_event_t *event = smf_event_new(track);
 
-	c = start = (unsigned char *)track->buffer + track->next_event_offset;
+	c = start = (unsigned char *)track->file_buffer + track->next_event_offset;
 
-	buffer_length = track->buffer_length - track->next_event_offset;
+	buffer_length = track->file_buffer_length - track->next_event_offset;
 	assert(buffer_length > 0);
 
 	/* First, extract time offset from previous event. */
@@ -707,8 +707,8 @@ parse_mtrk_header(smf_track_t *track)
 		return 2;
 	}
 
-	track->buffer = mtrk;
-	track->buffer_length = sizeof(struct chunk_header_struct) + ntohl(mtrk->length);
+	track->file_buffer = mtrk;
+	track->file_buffer_length = sizeof(struct chunk_header_struct) + ntohl(mtrk->length);
 	track->next_event_offset = sizeof(struct chunk_header_struct);
 
 	return 0;
@@ -795,8 +795,8 @@ load_file_into_buffer(smf_t *smf, const char *file_name)
 		return 2;
 	}
 
-	smf->buffer_length = ftell(smf->stream);
-	if (smf->buffer_length == -1) {
+	smf->file_buffer_length = ftell(smf->stream);
+	if (smf->file_buffer_length == -1) {
 		g_critical("ftell(3) failed: %s", strerror(errno));
 
 		return 3;
@@ -808,14 +808,14 @@ load_file_into_buffer(smf_t *smf, const char *file_name)
 		return 4;
 	}
 
-	smf->buffer = malloc(smf->buffer_length);
-	if (smf->buffer == NULL) {
+	smf->file_buffer = malloc(smf->file_buffer_length);
+	if (smf->file_buffer == NULL) {
 		g_critical("malloc(3) failed: %s", strerror(errno));
 
 		return 5;
 	}
 
-	if (fread(smf->buffer, 1, smf->buffer_length, smf->stream) != smf->buffer_length) {
+	if (fread(smf->file_buffer, 1, smf->file_buffer_length, smf->stream) != smf->file_buffer_length) {
 		g_critical("fread(3) failed: %s", strerror(errno));
 
 		return 6;
@@ -836,12 +836,12 @@ load_file_into_buffer(smf_t *smf, const char *file_name)
  * smf->buffer is not needed after parsing; free it.
  */
 static void
-free_buffer(smf_t *smf)
+free_file_buffer(smf_t *smf)
 {
-	memset(smf->buffer, 0, smf->buffer_length);
+	memset(smf->file_buffer, 0, smf->file_buffer_length);
 
-	free(smf->buffer);
-	smf->buffer_length = 0;
+	free(smf->file_buffer);
+	smf->file_buffer_length = 0;
 }
 
 /*
@@ -878,7 +878,7 @@ smf_load(const char *file_name)
 				smf->number_of_tracks, smf->last_track_number);
 	}
 
-	free_buffer(smf);
+	free_file_buffer(smf);
 
 	return smf;
 }

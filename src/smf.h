@@ -6,8 +6,8 @@
 
 struct smf_struct {
 	FILE		*stream;
-	void		*buffer;
-	int		buffer_length;
+	void		*file_buffer;
+	int		file_buffer_length;
 
 	int		next_chunk_offset;
 
@@ -29,8 +29,8 @@ typedef struct smf_struct smf_t;
 struct smf_track_struct {
 	smf_t		*smf;
 
-	void		*buffer;
-	int		buffer_length;
+	void		*file_buffer;
+	int		file_buffer_length;
 
 	int		track_number;
 
@@ -49,8 +49,8 @@ struct smf_event_struct {
 
 	int		time;
 	int		track_number;
-	int		midi_buffer_length; /* Length of the MIDI message in the buffer, in bytes. */
 	unsigned char	*midi_buffer;
+	int		midi_buffer_length; /* Length of the MIDI message in the buffer, in bytes. */
 };
 
 typedef struct smf_event_struct smf_event_t;
