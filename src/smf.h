@@ -22,6 +22,8 @@ struct smf_struct {
 
 	GQueue		*tracks_queue;
 	int		last_track_number;
+
+	double		last_seek_position;
 };
 
 typedef struct smf_struct smf_t;

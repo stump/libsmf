@@ -375,6 +375,8 @@ smf_get_next_event(smf_t *smf)
 
 	smf_compute_time(event);
 
+	event->track->smf->last_seek_position = -1.0;
+
 	return event;
 }
 
@@ -411,6 +413,8 @@ smf_rewind(smf_t *smf)
 
 	g_debug("Rewinding.");
 
+	smf->last_seek_position = 0.0;
+
 	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
 		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
 
@@ -419,7 +423,6 @@ smf_rewind(smf_t *smf)
 		track->next_event_number = 0;
 		track->time_of_next_event = 0; /* XXX: is this right? */
 	}
-
 }
 
 int
@@ -430,9 +433,14 @@ smf_seek_to(smf_t *smf, double seconds)
 
 	assert(seconds >= 0.0);
 
+	if (seconds == smf->last_seek_position) {
+		g_debug("Avoiding seek to %f seconds.", seconds);
+		return 0;
+	}
+
 	smf_rewind(smf);
 
-	g_debug("Seeking to %f.", seconds);
+	g_debug("Seeking to %f seconds.", seconds);
 
 	for (;;) {
 		event = smf_peek_next_event(smf);
@@ -449,6 +457,8 @@ smf_seek_to(smf_t *smf, double seconds)
 		else
 			break;
 	}
+
+	smf->last_seek_position = seconds;
 
 	return 0;
 }
