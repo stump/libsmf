@@ -46,7 +46,7 @@ next_chunk(smf_t *smf)
 static int
 chunk_signature_matches(const struct chunk_header_struct *chunk, const char *signature)
 {
-	if (chunk->id[0] == signature[0] && chunk->id[1] == signature[1] && chunk->id[2] == signature[2] && chunk->id[3] == signature[3])
+	if (!memcmp(chunk->id, signature, 4))
 		return 1;
 
 	return 0;
