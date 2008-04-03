@@ -2,7 +2,7 @@
 #define SMF_H
 
 #include <stdio.h>
-#include <gdk/gdk.h>
+#include <glib.h>
 
 struct smf_struct {
 	FILE		*stream;
