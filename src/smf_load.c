@@ -784,45 +784,45 @@ load_file_into_buffer(void **file_buffer, int *file_buffer_length, const char *f
 	if (stream == NULL) {
 		g_critical("Cannot open input file: %s", strerror(errno));
 
-		return 1;
+		return -1;
 	}
 
 	if (fseek(stream, 0, SEEK_END)) {
 		g_critical("fseek(3) failed: %s", strerror(errno));
 
-		return 2;
+		return -2;
 	}
 
 	*file_buffer_length = ftell(stream);
 	if (*file_buffer_length == -1) {
 		g_critical("ftell(3) failed: %s", strerror(errno));
 
-		return 3;
+		return -3;
 	}
 
 	if (fseek(stream, 0, SEEK_SET)) {
 		g_critical("fseek(3) failed: %s", strerror(errno));
 
-		return 4;
+		return -4;
 	}
 
 	*file_buffer = malloc(*file_buffer_length);
 	if (*file_buffer == NULL) {
 		g_critical("malloc(3) failed: %s", strerror(errno));
 
-		return 5;
+		return -5;
 	}
 
 	if (fread(*file_buffer, 1, *file_buffer_length, stream) != *file_buffer_length) {
 		g_critical("fread(3) failed: %s", strerror(errno));
 
-		return 6;
+		return -6;
 	}
 	
 	if (fclose(stream)) {
 		g_critical("fclose(3) failed: %s", strerror(errno));
 
-		return 7;
+		return -7;
 	}
 
 	return 0;
