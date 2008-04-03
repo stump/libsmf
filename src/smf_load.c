@@ -28,6 +28,9 @@ next_chunk(smf_t *smf)
 	assert(smf->file_buffer_length > 0);
 	assert(smf->next_chunk_offset >= 0);
 
+	if (smf->next_chunk_offset + sizeof(struct chunk_header_struct) >= smf->file_buffer_length)
+		return NULL;
+
 	next_chunk_ptr = (unsigned char *)smf->file_buffer + smf->next_chunk_offset;
 
 	chunk = (struct chunk_header_struct *)next_chunk_ptr;
@@ -694,14 +697,14 @@ parse_mtrk_header(smf_track_t *track)
 	if (mtrk == NULL) {
 		g_critical("SMF error: file is truncated.");
 
-		return 1;
+		return -1;
 	}
 
 	if (!chunk_signature_matches(mtrk, "MTrk")) {
 		g_warning("SMF warning: Expected MTrk signature, got %c%c%c%c instead; ignoring this chunk.",
 				mtrk->id[0], mtrk->id[1], mtrk->id[2], mtrk->id[3]);
 		
-		return 2;
+		return -2;
 	}
 
 	track->file_buffer = mtrk;
