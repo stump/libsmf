@@ -869,6 +869,8 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 	if (smf->last_track_number != smf->number_of_tracks) {
 		g_warning("SMF warning: MThd header declared %d tracks, but only %d found; continuing anyway.",
 				smf->number_of_tracks, smf->last_track_number);
+
+		smf->number_of_tracks = smf->last_track_number;
 	}
 
 	smf->file_buffer = NULL;
