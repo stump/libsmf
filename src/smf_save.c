@@ -18,10 +18,14 @@
 static void *
 smf_extend(smf_t *smf, const int length)
 {
+	int i;
+	smf_track_t *track;
+	char *prev;
+
 	int previous_length = smf->file_buffer_length;
+	prev = smf->file_buffer;
 
 	assert(length < 1000);
-	assert(smf->file_buffer_length < 1000000);
 
 	/* XXX: Not terribly efficient. */
 	smf->file_buffer_length += length;
@@ -32,10 +36,14 @@ smf_extend(smf_t *smf, const int length)
 		return NULL;
 	}
 
-	if (previous_length == 0)
-		return smf->file_buffer;
+	/* Fix up pointers.  XXX: omgwtf. */
+	for (i = 0; i < smf->number_of_tracks; i++) {
+		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
+		if (track->file_buffer != NULL)
+			track->file_buffer = (char *)track->file_buffer + ((char *)smf->file_buffer - prev);
+	}
 
-	return (char *)smf->file_buffer - length;
+	return (char *)smf->file_buffer + previous_length;
 }
 
 static int
@@ -189,7 +197,6 @@ write_track(smf_track_t *track)
 		return ret;
 
 	while ((event = smf_get_next_event_from_track(track)) != NULL) {
-		assert(event->midi_buffer_length < 10000);
 		ret = write_event(event);
 		if (ret)
 			return ret;
