@@ -2,6 +2,7 @@
 #define SMF_H
 
 #include <stdio.h>
+#include <arpa/inet.h>
 #include <glib.h>
 
 struct smf_struct {

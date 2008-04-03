@@ -15,49 +15,26 @@
 #include <arpa/inet.h>
 #include "smf.h"
 
-#define INITIAL_FILE_BUFFER_SIZE	1024*1024
-
-static int
-extend_buffer(smf_t *smf)
+static void *
+smf_extend(smf_t *smf, const int length)
 {
-	assert(smf->file_buffer == NULL);
-	assert(smf->file_buffer_length > 0);
+	void *new_space;
 
-	smf->file_buffer_length *= 2;
+	/* XXX: Not really efficient. */
+	new_space = (char *)smf->file_buffer + smf->file_buffer_length;
+
+	smf->file_buffer_length += length;
 	smf->file_buffer = realloc(smf->file_buffer, smf->file_buffer_length);
 	if (smf->file_buffer == NULL) {
 		g_critical("realloc(3) failed.");
 		smf->file_buffer_length = 0;
-		return -1;
+		return NULL;
 	}
 
-	return 0;
-}
+	if (smf->file_buffer == NULL)
+		smf->file_buffer = new_space;
 
-static int
-allocate_buffer(smf_t *smf)
-{
-	assert(smf->file_buffer == NULL);
-	assert(smf->file_buffer_length == 0);
-
-	smf->file_buffer_length = INITIAL_FILE_BUFFER_SIZE;
-	smf->file_buffer = malloc(smf->file_buffer_length);
-
-	if (smf->file_buffer == NULL) {
-		g_critical("malloc(3) failed: %s", strerror(errno));
-
-		return 5;
-	}
-
-	return 0;
-}
-
-static void *
-smf_extend(smf_t *smf, const int length)
-{
-	/* XXX: implement. */
-
-	return NULL;
+	return new_space;
 }
 
 static int
@@ -93,8 +70,19 @@ write_mthd_header(smf_t *smf)
 static void *
 track_extend(smf_track_t *track, const int length)
 {
-	/* XXX: implement. */
-	return NULL;
+	void *buf;
+
+	assert(track->smf);
+
+	buf = smf_extend(track->smf, length);
+	if (buf == NULL)
+		return NULL;
+
+	track->file_buffer_length += length;
+	if (track->file_buffer == NULL)
+		track->file_buffer = buf;
+
+	return buf;
 }
 
 static int
@@ -178,7 +166,13 @@ write_mtrd_header(smf_track_t *track)
 static int
 write_mtrd_length(smf_track_t *track)
 {
-	/* XXX: implement. */
+	struct chunk_header_struct *mtrd_header;
+
+	assert(track->file_buffer != NULL);
+	assert(track->file_buffer_length >= 6);
+
+	mtrd_header = (struct chunk_header_struct *)track->file_buffer;
+	mtrd_header->length = htonl(track->file_buffer_length);
 
 	return 0;
 }
@@ -236,18 +230,35 @@ write_file_and_free_buffer(smf_t *smf, const char *file_name)
 	return 0;
 }
 
+static int
+pointers_are_clear(smf_t *smf)
+{
+	int i;
+
+	smf_track_t *track;
+	assert(smf->file_buffer == NULL);
+	assert(smf->file_buffer_length = 0);
+
+	for (i = 0; i < smf->number_of_tracks; i++) {
+		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
+
+		assert(track != NULL);
+		assert(track->file_buffer == NULL);
+		assert(track->file_buffer_length == 0);
+	}
+
+	return 0;
+}
+
 int
 smf_save(smf_t *smf, const char *file_name)
 {
 	int i, ret;
 	smf_track_t *track;
 
-	if (allocate_buffer(smf))
-		return -1;
-
-	/* XXX: setup pointers. */
-
 	smf_rewind(smf);
+
+	assert(pointers_are_clear(smf));
 
 	if (write_mthd_header(smf))
 		return -2;
