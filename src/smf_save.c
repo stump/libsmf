@@ -163,25 +163,25 @@ write_event(smf_event_t *event)
 }
 
 static int
-write_mtrd_header(smf_track_t *track)
+write_mtrk_header(smf_track_t *track)
 {
-	struct chunk_header_struct mtrd_header;
+	struct chunk_header_struct mtrk_header;
 
-	memcpy(mtrd_header.id, "MTrd", 4);
+	memcpy(mtrk_header.id, "MTrk", 4);
 
-	return track_append(track, &mtrd_header, sizeof(mtrd_header));
+	return track_append(track, &mtrk_header, sizeof(mtrk_header));
 }
 
 static int
-write_mtrd_length(smf_track_t *track)
+write_mtrk_length(smf_track_t *track)
 {
-	struct chunk_header_struct *mtrd_header;
+	struct chunk_header_struct *mtrk_header;
 
 	assert(track->file_buffer != NULL);
 	assert(track->file_buffer_length >= 6);
 
-	mtrd_header = (struct chunk_header_struct *)track->file_buffer;
-	mtrd_header->length = htonl(track->file_buffer_length);
+	mtrk_header = (struct chunk_header_struct *)track->file_buffer;
+	mtrk_header->length = htonl(track->file_buffer_length);
 
 	return 0;
 }
@@ -192,7 +192,7 @@ write_track(smf_track_t *track)
 	int ret;
 	smf_event_t *event;
 
-	ret = write_mtrd_header(track);
+	ret = write_mtrk_header(track);
 	if (ret)
 		return ret;
 
@@ -202,7 +202,7 @@ write_track(smf_track_t *track)
 			return ret;
 	}
 
-	ret = write_mtrd_length(track);
+	ret = write_mtrk_length(track);
 	if (ret)
 		return ret;
 
