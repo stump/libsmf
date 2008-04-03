@@ -113,7 +113,7 @@ track_append(smf_track_t *track, const void *buffer, const int buffer_length)
 static int
 write_event_time(smf_event_t *event)
 {
-	unsigned long value = event->time_pulses, buffer;
+	unsigned long value = event->delta_time_pulses, buffer;
 	int ret;
 
 	/* Taken from http://www.borg.com/~jglatt/tech/midifile/vari.htm */

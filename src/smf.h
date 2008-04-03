@@ -50,6 +50,7 @@ typedef struct smf_track_struct smf_track_t;
 struct smf_event_struct {
 	smf_track_t	*track;
 
+	int		delta_time_pulses;
 	int		time_pulses;
 	double		time_seconds;
 	int		track_number;

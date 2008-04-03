@@ -489,7 +489,7 @@ parse_next_event(smf_track_t *track)
 
 	c += len;
 	buffer_length -= len;
-	event->time_pulses = time;
+	event->delta_time_pulses = time;
 
 	if (buffer_length <= 0)
 		goto error;
@@ -753,7 +753,7 @@ parse_mtrk_chunk(smf_track_t *track)
 			return 1;
 
 		/* Replace "relative" event time with absolute one, i.e. relative to the start of the track. */
-		event->time_pulses += time;
+		event->time_pulses = time + event->delta_time_pulses;
 		time = event->time_pulses;
 
 		assert(event_is_valid(event));
