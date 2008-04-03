@@ -55,6 +55,8 @@ allocate_buffer(smf_t *smf)
 static void *
 smf_extend(smf_t *smf, const int length)
 {
+	/* XXX: implement. */
+
 	return NULL;
 }
 
@@ -91,6 +93,7 @@ write_mthd_header(smf_t *smf)
 static void *
 track_extend(smf_track_t *track, const int length)
 {
+	/* XXX: implement. */
 	return NULL;
 }
 
@@ -111,23 +114,12 @@ track_append(smf_track_t *track, const void *buffer, const int buffer_length)
 }
 
 static int
-write_mtrd_header(smf_track_t *track)
+write_event_time(smf_event_t *event)
 {
-	struct chunk_header_struct mtrd_header;
+	unsigned long value = event->time_pulses, buffer;
+	int ret;
 
-	memcpy(mtrd_header.id, "MTrd", 4);
-
-	/* XXX: where is the chunk length saved? */
-	return track_append(track, &mtrd_header, sizeof(mtrd_header));
-}
-
-
-#if 0
-void 
-WriteVarLen(unsigned long value)
-{
 	/* Taken from http://www.borg.com/~jglatt/tech/midifile/vari.htm */
-	unsigned long buffer;
 	buffer = value & 0x7F;
 
 	while ((value >>= 7)) {
@@ -136,18 +128,18 @@ WriteVarLen(unsigned long value)
 	}
 
 	while (TRUE) {
-		putc(buffer, outfile);
+		ret = track_append(event->track, &buffer, 1);
+		if (ret)
+			return ret;
+
 		if (buffer & 0x80)
 			buffer >>= 8;
 		else
 			break;
 	}
-}
-#endif
 
-static int
-write_event_time(smf_event_t *event)
-{
+	/* XXX: verify. */
+
 	return 0;
 }
 
@@ -174,10 +166,32 @@ write_event(smf_event_t *event)
 }
 
 static int
-write_mtrd_contents(smf_track_t *track)
+write_mtrd_header(smf_track_t *track)
+{
+	struct chunk_header_struct mtrd_header;
+
+	memcpy(mtrd_header.id, "MTrd", 4);
+
+	return track_append(track, &mtrd_header, sizeof(mtrd_header));
+}
+
+static int
+write_mtrd_length(smf_track_t *track)
+{
+	/* XXX: implement. */
+
+	return 0;
+}
+
+static int
+write_track(smf_track_t *track)
 {
 	int ret;
 	smf_event_t *event;
+
+	ret = write_mtrd_header(track);
+	if (ret)
+		return ret;
 
 	while ((event = smf_get_next_event_from_track(track)) != NULL) {
 		ret = write_event(event);
@@ -185,12 +199,10 @@ write_mtrd_contents(smf_track_t *track)
 			return ret;
 	}
 
-	return 0;
-}
+	ret = write_mtrd_length(track);
+	if (ret)
+		return ret;
 
-static int
-write_mtrd_length(smf_track_t *track)
-{
 	return 0;
 }
 
@@ -227,7 +239,7 @@ write_file_and_free_buffer(smf_t *smf, const char *file_name)
 int
 smf_save(smf_t *smf, const char *file_name)
 {
-	int i;
+	int i, ret;
 	smf_track_t *track;
 
 	if (allocate_buffer(smf))
@@ -243,9 +255,11 @@ smf_save(smf_t *smf, const char *file_name)
 	for (i = 0; i < smf->number_of_tracks; i++) {
 		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
 
-		write_mtrd_header(track);
-		write_mtrd_contents(track);
-		write_mtrd_length(track);
+		assert(track != NULL);
+
+		ret = write_track(track);
+		if (ret)
+			return ret;
 	}
 
 	if (write_file_and_free_buffer(smf, file_name))
