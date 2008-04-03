@@ -15,7 +15,7 @@
 #include <arpa/inet.h>
 #include "smf.h"
 
-#define FILE_BUFFER_SIZE	1024*1024
+#define INITIAL_FILE_BUFFER_SIZE	1024*1024
 
 static int
 extend_buffer(smf_t *smf)
@@ -40,7 +40,7 @@ allocate_buffer(smf_t *smf)
 	assert(smf->file_buffer == NULL);
 	assert(smf->file_buffer_length == 0);
 
-	smf->file_buffer_length = FILE_BUFFER_SIZE;
+	smf->file_buffer_length = INITIAL_FILE_BUFFER_SIZE;
 	smf->file_buffer = malloc(smf->file_buffer_length);
 
 	if (smf->file_buffer == NULL) {
@@ -49,6 +49,148 @@ allocate_buffer(smf_t *smf)
 		return 5;
 	}
 
+	return 0;
+}
+
+static void *
+smf_extend(smf_t *smf, const int length)
+{
+	return NULL;
+}
+
+static int
+smf_append(smf_t *smf, const void *buffer, const int buffer_length)
+{
+	void *dest;
+
+	dest = smf_extend(smf, buffer_length);
+	if (dest == NULL) {
+		g_critical("Cannot extend track buffer.");
+		return -1;
+	}
+
+	memcpy(dest, buffer, buffer_length);
+
+	return 0;
+}
+
+static int
+write_mthd_header(smf_t *smf)
+{
+	struct mthd_chunk_struct mthd_chunk;
+
+	memcpy(mthd_chunk.mthd_header.id, "MThd", 4);
+	mthd_chunk.mthd_header.length = 6;
+	mthd_chunk.format = htons(smf->format);
+	mthd_chunk.number_of_tracks = htons(smf->number_of_tracks);
+	mthd_chunk.division = htons(smf->ppqn);
+
+	return smf_append(smf, &mthd_chunk, sizeof(mthd_chunk));
+}
+
+static void *
+track_extend(smf_track_t *track, const int length)
+{
+	return NULL;
+}
+
+static int
+track_append(smf_track_t *track, const void *buffer, const int buffer_length)
+{
+	void *dest;
+
+	dest = track_extend(track, buffer_length);
+	if (dest == NULL) {
+		g_critical("Cannot extend track buffer.");
+		return -1;
+	}
+
+	memcpy(dest, buffer, buffer_length);
+
+	return 0;
+}
+
+static int
+write_mtrd_header(smf_track_t *track)
+{
+	struct chunk_header_struct mtrd_header;
+
+	memcpy(mtrd_header.id, "MTrd", 4);
+
+	/* XXX: where is the chunk length saved? */
+	return track_append(track, &mtrd_header, sizeof(mtrd_header));
+}
+
+
+#if 0
+void 
+WriteVarLen(unsigned long value)
+{
+	/* Taken from http://www.borg.com/~jglatt/tech/midifile/vari.htm */
+	unsigned long buffer;
+	buffer = value & 0x7F;
+
+	while ((value >>= 7)) {
+		buffer <<= 8;
+		buffer |= ((value & 0x7F) | 0x80);
+	}
+
+	while (TRUE) {
+		putc(buffer, outfile);
+		if (buffer & 0x80)
+			buffer >>= 8;
+		else
+			break;
+	}
+}
+#endif
+
+static int
+write_event_time(smf_event_t *event)
+{
+	return 0;
+}
+
+static int
+write_event_midi_buffer(smf_event_t *event)
+{
+	return track_append(event->track, event->midi_buffer, event->midi_buffer_length);
+}
+
+static int
+write_event(smf_event_t *event)
+{
+	int ret;
+
+	ret = write_event_time(event);
+	if (ret)
+		return ret;
+
+	ret = write_event_midi_buffer(event);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+static int
+write_mtrd_contents(smf_track_t *track)
+{
+	int ret;
+	smf_event_t *event;
+
+	while ((event = smf_get_next_event_from_track(track)) != NULL) {
+		ret = write_event(event);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+static int
+write_mtrd_length(smf_track_t *track)
+{
 	return 0;
 }
 
@@ -82,53 +224,6 @@ write_file_and_free_buffer(smf_t *smf, const char *file_name)
 	return 0;
 }
 
-static int
-write_mthd_header(smf_t *smf)
-{
-	struct mthd_chunk_struct *mthd_chunk;
-
-	assert(smf->file_buffer != NULL);
-	assert(smf->file_buffer_length >= 6);
-
-	mthd_chunk = smf->file_buffer;
-
-	memcpy(mthd_chunk->mthd_header.id, "MThd", 4);
-	mthd_chunk->mthd_header.length = 6;
-	mthd_chunk->format = htons(smf->format);
-	mthd_chunk->number_of_tracks = htons(smf->number_of_tracks);
-	mthd_chunk->division = htons(smf->ppqn);
-
-	return 0;
-}
-
-static int
-write_mtrd_header(smf_track_t *track)
-{
-	struct chunk_header_struct *mtrd_chunk;
-
-	assert(track->file_buffer != NULL);
-	assert(track->file_buffer_length >= 6);
-
-	mtrd_chunk = track->file_buffer;
-	memcpy(mtrd_chunk->id, "MTrd", 4);
-
-	/* XXX: where is the chunk length saved? */
-
-	return 0;
-}
-
-static int
-write_mtrd_contents(smf_track_t *track)
-{
-	return 0;
-}
-
-static int
-write_mtrd_length(smf_track_t *track)
-{
-	return 0;
-}
-
 int
 smf_save(smf_t *smf, const char *file_name)
 {
@@ -137,6 +232,10 @@ smf_save(smf_t *smf, const char *file_name)
 
 	if (allocate_buffer(smf))
 		return -1;
+
+	/* XXX: setup pointers. */
+
+	smf_rewind(smf);
 
 	if (write_mthd_header(smf))
 		return -2;

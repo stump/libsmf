@@ -80,8 +80,8 @@ smf_event_t *smf_event_new(smf_track_t *track);
 void smf_event_free(smf_event_t *event);
 
 char *smf_string_from_event(const smf_event_t *event);
-
-void free_file_buffer(smf_t *smf);
+void smf_rewind(smf_t *smf);
+smf_event_t *smf_get_next_event_from_track(smf_track_t *track);
 
 /* Definitions used in smf_load.c and smf_save.c. */
 struct chunk_header_struct {

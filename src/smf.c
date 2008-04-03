@@ -407,7 +407,7 @@ smf_peek_next_event(smf_t *smf)
 	return event;
 }
 
-static void
+void
 smf_rewind(smf_t *smf)
 {
 	int i;
