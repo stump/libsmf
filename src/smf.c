@@ -375,6 +375,10 @@ smf_get_next_event(smf_t *smf)
 
 	smf_compute_time(event);
 
+#if 0
+	fprintf(stderr, "smf_get_next_event: next event time = %f;\n", event->time_seconds);
+#endif
+
 	event->track->smf->last_seek_position = -1.0;
 
 	return event;
@@ -408,6 +412,7 @@ smf_rewind(smf_t *smf)
 {
 	int i;
 	smf_track_t *track = NULL;
+	smf_event_t *event;
 
 	assert(smf);
 
@@ -421,7 +426,14 @@ smf_rewind(smf_t *smf)
 		assert(track != NULL);
 
 		track->next_event_number = 0;
-		track->time_of_next_event = 0; /* XXX: is this right? */
+
+		event = smf_peek_next_event_from_track(track);
+		if (event) {
+			track->time_of_next_event = event->time_pulses;
+		} else {
+			g_warning("Warning: empty track.");
+			track->time_of_next_event = 0;
+		}
 	}
 }
 
