@@ -68,7 +68,7 @@ write_mthd_header(smf_t *smf)
 	struct mthd_chunk_struct mthd_chunk;
 
 	memcpy(mthd_chunk.mthd_header.id, "MThd", 4);
-	mthd_chunk.mthd_header.length = 6;
+	mthd_chunk.mthd_header.length = htonl(6);
 	mthd_chunk.format = htons(smf->format);
 	mthd_chunk.number_of_tracks = htons(smf->number_of_tracks);
 	mthd_chunk.division = htons(smf->ppqn);
