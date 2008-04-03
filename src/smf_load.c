@@ -84,6 +84,10 @@ parse_mthd_header(smf_t *smf)
 
 	/* Ok, now use next_chunk(). */
 	mthd = next_chunk(smf);
+	if (mthd == NULL) {
+		g_critical("SMF error: malformed chunk; probably a broken file?");
+		return -3;
+	}
 
 	assert(mthd == tmp_mthd);
 
@@ -91,7 +95,7 @@ parse_mthd_header(smf_t *smf)
 	if (len != 6) {
 		g_critical("SMF error: MThd chunk length %d, must be 6.", len);
 
-		return -3;
+		return -4;
 	}
 
 	return 0;
