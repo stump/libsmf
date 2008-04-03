@@ -1,5 +1,5 @@
 /*
- * This is Standard MIDI File loader.
+ * This is Standard MIDI File format implementation.
  *
  * For questions and comments, contact Edward Tomasz Napierala <trasz@FreeBSD.org>.
  * This code is public domain, you can do with it whatever you want.
@@ -273,8 +273,11 @@ smf_get_next_event_from_track(smf_track_t *track)
 {
 	smf_event_t *event, *next_event;
 
+	/* End of track? */
+	if (track->next_event_number < 0)
+		return NULL;
+
 	assert(!g_queue_is_empty(track->events_queue));
-	assert(track->next_event_number >= 0);
 
 	/* XXX: inefficient; use some different data structure. */
 	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number);
@@ -299,8 +302,12 @@ smf_peek_next_event_from_track(smf_track_t *track)
 {
 	smf_event_t *event, *next_event;
 
+
+	/* End of track? */
+	if (track->next_event_number < 0)
+		return NULL;
+
 	assert(!g_queue_is_empty(track->events_queue));
-	assert(track->next_event_number >= 0);
 
 	/* XXX: inefficient; use some different data structure. */
 	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number);

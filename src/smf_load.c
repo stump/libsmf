@@ -853,6 +853,10 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 
 			continue;
 		}
+
+		track->file_buffer = NULL;
+		track->file_buffer_length = 0;
+		track->next_event_offset = -1;
 	}
 
 	if (smf->last_track_number != smf->number_of_tracks) {

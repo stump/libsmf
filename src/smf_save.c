@@ -1,5 +1,5 @@
 /*
- * This is Standard MIDI File loader.
+ * This is Standard MIDI File writer.
  *
  * For questions and comments, contact Edward Tomasz Napierala <trasz@FreeBSD.org>.
  * This code is public domain, you can do with it whatever you want.
@@ -18,11 +18,12 @@
 static void *
 smf_extend(smf_t *smf, const int length)
 {
-	void *new_space;
+	int previous_length = smf->file_buffer_length;
 
-	/* XXX: Not really efficient. */
-	new_space = (char *)smf->file_buffer + smf->file_buffer_length;
+	assert(length < 1000);
+	assert(smf->file_buffer_length < 1000000);
 
+	/* XXX: Not terribly efficient. */
 	smf->file_buffer_length += length;
 	smf->file_buffer = realloc(smf->file_buffer, smf->file_buffer_length);
 	if (smf->file_buffer == NULL) {
@@ -31,10 +32,10 @@ smf_extend(smf_t *smf, const int length)
 		return NULL;
 	}
 
-	if (smf->file_buffer == NULL)
-		smf->file_buffer = new_space;
+	if (previous_length == 0)
+		return smf->file_buffer;
 
-	return new_space;
+	return (char *)smf->file_buffer - length;
 }
 
 static int
@@ -188,6 +189,7 @@ write_track(smf_track_t *track)
 		return ret;
 
 	while ((event = smf_get_next_event_from_track(track)) != NULL) {
+		assert(event->midi_buffer_length < 10000);
 		ret = write_event(event);
 		if (ret)
 			return ret;
@@ -237,7 +239,7 @@ pointers_are_clear(smf_t *smf)
 
 	smf_track_t *track;
 	assert(smf->file_buffer == NULL);
-	assert(smf->file_buffer_length = 0);
+	assert(smf->file_buffer_length == 0);
 
 	for (i = 0; i < smf->number_of_tracks; i++) {
 		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
@@ -247,7 +249,7 @@ pointers_are_clear(smf_t *smf)
 		assert(track->file_buffer_length == 0);
 	}
 
-	return 0;
+	return 1;
 }
 
 int
