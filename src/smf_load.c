@@ -89,7 +89,7 @@ parse_mthd_header(smf_t *smf)
 
 	len = ntohl(mthd->length);
 	if (len != 6) {
-		g_critical("SMF error: MThd chunk length %d, should be 6.", len);
+		g_critical("SMF error: MThd chunk length %d, must be 6.", len);
 
 		return -3;
 	}
@@ -127,7 +127,7 @@ parse_mthd_chunk(smf_t *smf)
 
 	smf->number_of_tracks = ntohs(mthd->number_of_tracks);
 	if (smf->number_of_tracks <= 0) {
-		g_critical("SMF error: bad number of tracks: %d, should be greater than zero.", smf->number_of_tracks);
+		g_critical("SMF error: bad number of tracks: %d, must be greater than zero.", smf->number_of_tracks);
 		return -3;
 	}
 
