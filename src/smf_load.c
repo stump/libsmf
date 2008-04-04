@@ -18,6 +18,7 @@
 
 /*
  * Returns pointer to the next SMF chunk in smf->buffer, based on length of the previous one.
+ * Returns NULL in case of error.
  */
 static struct chunk_header_struct *
 next_chunk(smf_t *smf)
