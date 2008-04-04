@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <math.h>
 #include <errno.h>
+#include <ctype.h>
 #include <arpa/inet.h>
 #include "smf.h"
 
@@ -36,6 +37,11 @@ next_chunk(smf_t *smf)
 	next_chunk_ptr = (unsigned char *)smf->file_buffer + smf->next_chunk_offset;
 
 	chunk = (struct chunk_header_struct *)next_chunk_ptr;
+
+	if (!isalpha(chunk->id[0]) || !isalpha(chunk->id[1]) || !isalpha(chunk->id[2]) || !isalpha(chunk->id[3])) {
+		g_critical("SMF error: chunk signature contains at least non-alphanumeric byte.");
+		return NULL;
+	}
 
 	smf->next_chunk_offset += sizeof(struct chunk_header_struct) + ntohl(chunk->length);
 
