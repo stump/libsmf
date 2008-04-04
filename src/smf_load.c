@@ -141,9 +141,9 @@ parse_mthd_chunk(smf_t *smf)
 		return -2;
 	}
 
-	smf->number_of_tracks = ntohs(mthd->number_of_tracks);
-	if (smf->number_of_tracks <= 0) {
-		g_critical("SMF error: bad number of tracks: %d, must be greater than zero.", smf->number_of_tracks);
+	smf->expected_number_of_tracks = ntohs(mthd->number_of_tracks);
+	if (smf->expected_number_of_tracks <= 0) {
+		g_critical("SMF error: bad number of tracks: %d, must be greater than zero.", smf->expected_number_of_tracks);
 		return -3;
 	}
 
@@ -198,7 +198,7 @@ print_mthd(smf_t *smf)
 			break;
 	}
 
-	off += snprintf(buf + off, sizeof(buf) - off, "; number of tracks: %d", smf->number_of_tracks);
+	off += snprintf(buf + off, sizeof(buf) - off, "; number of tracks: %d", smf->expected_number_of_tracks);
 
 	if (smf->ppqn != 0)
 		off += snprintf(buf + off, sizeof(buf) - off, "; division: %d PPQN.", smf->ppqn);
@@ -207,8 +207,8 @@ print_mthd(smf_t *smf)
 
 	g_debug("%s", buf);
 
-	if (smf->format == 0 && smf->number_of_tracks != 1)
-		g_warning("Warning: number of tracks is %d, but this is a single track file.", smf->number_of_tracks);
+	if (smf->format == 0 && smf->expected_number_of_tracks != 1)
+		g_warning("Warning: number of tracks is %d, but this is a single track file.", smf->expected_number_of_tracks);
 
 }
 
@@ -862,7 +862,7 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 
 	print_mthd(smf);
 
-	for (i = 0; i < smf->number_of_tracks; i++) {
+	for (i = 1; i <= smf->expected_number_of_tracks; i++) {
 		smf_track_t *track = smf_track_new(smf);
 
 		/* Skip unparseable chunks. */
@@ -876,11 +876,11 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 		track->next_event_offset = -1;
 	}
 
-	if (smf->last_track_number != smf->number_of_tracks) {
+	if (smf->expected_number_of_tracks != smf->number_of_tracks) {
 		g_warning("SMF warning: MThd header declared %d tracks, but only %d found; continuing anyway.",
-				smf->number_of_tracks, smf->last_track_number);
+				smf->expected_number_of_tracks, smf->number_of_tracks);
 
-		smf->number_of_tracks = smf->last_track_number;
+		smf->expected_number_of_tracks = smf->number_of_tracks;
 	}
 
 	smf->file_buffer = NULL;

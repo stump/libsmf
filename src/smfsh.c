@@ -64,7 +64,7 @@ cmd_track(smf_t *smf, char *arg)
 		g_message("Currently selected is track number %d.", current_track->track_number);
 	} else {
 		num = atoi(arg);
-		if (num < 0 || num >= smf->number_of_tracks) {
+		if (num < 1 || num > smf->number_of_tracks) {
 			g_critical("Invalid track number specified; valid choices are 1 - %d.", smf->number_of_tracks);
 			return -1;
 		}
@@ -91,6 +91,7 @@ cmd_trackrm(smf_t *smf, char *notused)
 {
 	/* XXX: Obviously. */
 	smf_track_free(current_track);
+	current_track = smf_get_track_by_number(smf, 1);
 
 	return 0;
 }

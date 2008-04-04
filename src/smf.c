@@ -74,8 +74,8 @@ smf_track_new(smf_t *smf)
 	track->events_queue = g_queue_new();
 	assert(track->events_queue);
 
-	smf->last_track_number++;
-	track->track_number = smf->last_track_number;
+	smf->number_of_tracks++;
+	track->track_number = smf->number_of_tracks;
 
 	return track;
 }
@@ -103,7 +103,7 @@ smf_track_free(smf_track_t *track)
 	/* Detach itself from smf. */
 	assert(track->smf);
 	smf = track->smf;
-	track->smf->last_track_number--;
+	track->smf->number_of_tracks--;
 
 	assert(track->smf->tracks_queue);
 	g_queue_remove(track->smf->tracks_queue, (gpointer)track);
