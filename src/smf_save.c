@@ -181,7 +181,7 @@ write_mtrk_length(smf_track_t *track)
 	assert(track->file_buffer_length >= 6);
 
 	mtrk_header = (struct chunk_header_struct *)track->file_buffer;
-	mtrk_header->length = htonl(track->file_buffer_length);
+	mtrk_header->length = htonl(track->file_buffer_length - sizeof(struct chunk_header_struct));
 
 	return 0;
 }
