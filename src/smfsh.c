@@ -6,6 +6,7 @@
 #include "smf.h"
 
 smf_track_t *current_track;
+smf_event_t *current_event;
 
 void
 usage(void)
@@ -24,7 +25,7 @@ log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *mess
 int
 cmd_save(smf_t *smf, char *file_name)
 {
-	if (strlen(file_name) == 0) {
+	if (file_name == NULL) {
 		g_critical("Please specify file name.");
 		return -1;
 	}
@@ -35,7 +36,7 @@ cmd_save(smf_t *smf, char *file_name)
 int
 cmd_ppqn(smf_t *smf, char *new_ppqn)
 {
-	if (strlen(new_ppqn) == 0) {
+	if (new_ppqn == NULL) {
 		g_message("Pulses Per Quarter Note is %d.", smf->ppqn);
 	} else {
 		/* XXX: Use strtol. */
@@ -55,13 +56,73 @@ cmd_tracks(smf_t *smf, char *notused)
 }
 
 int
-cmd_track(smf_t *smf, char *number)
+cmd_track(smf_t *smf, char *arg)
 {
-	if (strlen(number) == 0) {
-		g_message("Currently selected track is number %d.", current_track->track_number);
+	int num;
+
+	if (arg == NULL) {
+		g_message("Currently selected is track number %d.", current_track->track_number);
 	} else {
-		/* XXX */
+		num = atoi(arg);
+		if (num < 0 || num >= smf->number_of_tracks) {
+			g_critical("Invalid track number specified; valid choices are 1 - %d.", smf->number_of_tracks);
+			return -1;
+		}
+
+		current_track = smf_get_track_by_number(smf, num);
+		g_message("Track number %d selected.", current_track->track_number);
 	}
+
+	return 0;
+}
+
+int
+cmd_trackadd(smf_t *smf, char *notused)
+{
+	current_track = smf_track_new(smf);
+	/* XXX: Error handling? */
+	g_message("Created new track; track number %d selected.", current_track->track_number);
+
+	return 0;
+}
+
+int
+cmd_trackrm(smf_t *smf, char *notused)
+{
+	/* XXX: Obviously. */
+	smf_track_free(current_track);
+
+	return 0;
+}
+
+int
+show_event(smf_event_t *event)
+{
+	g_message("Time offset from previous event: %d pulses.", event->delta_time_pulses);
+	g_message("Time since start of the song: %f seconds.", event->time_seconds);
+	g_message("MIDI message length: %d bytes.", event->midi_buffer_length);
+	/* XXX: Don't read past the end of the buffer. */
+	g_message("First three bytes of MIDI message: 0x%x 0x%x 0x%x",
+			event->midi_buffer[0], event->midi_buffer[1], event->midi_buffer[2]);
+
+	return 0;
+}
+
+int
+cmd_events(smf_t *smf, char *notused)
+{
+	smf_event_t *event;
+
+	smf_rewind(smf);
+
+	while ((event = smf_get_next_event_from_track(current_track)) != NULL) {
+		g_message("----------------------------------");
+		show_event(event);
+	}
+
+	g_message("----------------------------------");
+
+	smf_rewind(smf);
 
 	return 0;
 }
@@ -84,6 +145,9 @@ struct command_struct {
 		{"ppqn", cmd_ppqn, "show ppqn, or set ppqn if used with parameter."},
 		{"tracks", cmd_tracks, "show number of tracks."},
 		{"track", cmd_track, "show number of currently selected track, or select a track."},
+		{"trackadd", cmd_trackadd, "add a track, making it the current one."},
+		{"trackrm", cmd_trackrm, "remove current track, making first track a current one."},
+		{"events", cmd_events, "show events in the current track."},
 		{"exit", cmd_exit, "exit to shell."},
 		{"quit", cmd_exit, NULL},
 		{"bye", cmd_exit, NULL},
@@ -171,11 +235,9 @@ execute_command(smf_t *smf, char *line)
 	args = line;
 	command = strsep(&args, " ");
 
-	g_debug("Command '%s', args '%s'.", command, args);
-
 	for (tmp = commands; tmp->name != NULL; tmp++) {
 		if (strcmp(tmp->name, command) == 0)
-			return (tmp->function)(smf, command);
+			return (tmp->function)(smf, args);
 	}
 
 	g_warning("No such command: '%s'.  Type 'help' to see available commands.", command);

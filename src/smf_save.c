@@ -36,9 +36,9 @@ smf_extend(smf_t *smf, const int length)
 	}
 
 	/* Fix up pointers.  XXX: omgwtf. */
-	for (i = 0; i < smf->number_of_tracks; i++) {
+	for (i = 1; i <= smf->number_of_tracks; i++) {
 		smf_track_t *track;
-		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
+		track = smf_get_track_by_number(smf, i);
 		if (track->file_buffer != NULL)
 			track->file_buffer = (char *)track->file_buffer + ((char *)smf->file_buffer - previous_file_buffer);
 	}
@@ -288,8 +288,8 @@ pointers_are_clear(smf_t *smf)
 	assert(smf->file_buffer == NULL);
 	assert(smf->file_buffer_length == 0);
 
-	for (i = 0; i < smf->number_of_tracks; i++) {
-		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
+	for (i = 1; i <= smf->number_of_tracks; i++) {
+		track = smf_get_track_by_number(smf, i);
 
 		assert(track != NULL);
 		assert(track->file_buffer == NULL);
@@ -312,8 +312,8 @@ smf_save(smf_t *smf, const char *file_name)
 	if (write_mthd_header(smf))
 		return -2;
 
-	for (i = 0; i < smf->number_of_tracks; i++) {
-		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
+	for (i = 1; i <= smf->number_of_tracks; i++) {
+		track = smf_get_track_by_number(smf, i);
 
 		assert(track != NULL);
 

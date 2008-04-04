@@ -86,7 +86,9 @@ smf_track_new(smf_t *smf)
 void
 smf_track_free(smf_track_t *track)
 {
+	int i;
 	smf_event_t *event;
+	smf_t *smf;
 
 	assert(track);
 	assert(track->events_queue);
@@ -100,6 +102,7 @@ smf_track_free(smf_track_t *track)
 
 	/* Detach itself from smf. */
 	assert(track->smf);
+	smf = track->smf;
 	track->smf->last_track_number--;
 
 	assert(track->smf->tracks_queue);
@@ -107,6 +110,12 @@ smf_track_free(smf_track_t *track)
 
 	memset(track, 0, sizeof(smf_track_t));
 	free(track);
+
+	/* Renumber the rest of the tracks, so they are consecutively numbered. */
+	for (i = 1; i <= g_queue_get_length(smf->tracks_queue); i++) {
+		track = smf_get_track_by_number(smf, i);
+		track->track_number = i;
+	}
 }
 
 /*
@@ -327,14 +336,29 @@ smf_peek_next_event_from_track(smf_track_t *track)
 }
 
 smf_track_t *
+smf_get_track_by_number(smf_t *smf, int track_number)
+{
+	smf_track_t *track;
+
+	assert(track_number >= 1);
+	assert(track_number <= smf->number_of_tracks);
+
+	track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, track_number - 1);
+
+	assert(track);
+
+	return track;
+}
+
+smf_track_t *
 smf_find_track_with_next_event(smf_t *smf)
 {
 	int i, min_time = 0;
 	smf_track_t *track = NULL, *min_time_track = NULL;
 
 	/* Find track with event that should be played next. */
-	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
-		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
+	for (i = 1; i <= g_queue_get_length(smf->tracks_queue); i++) {
+		track = smf_get_track_by_number(smf, i);
 
 		assert(!g_queue_is_empty(track->events_queue));
 
@@ -434,8 +458,8 @@ smf_rewind(smf_t *smf)
 
 	smf->last_seek_position = 0.0;
 
-	for (i = 0; i < g_queue_get_length(smf->tracks_queue); i++) {
-		track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, i);
+	for (i = 1; i <= g_queue_get_length(smf->tracks_queue); i++) {
+		track = smf_get_track_by_number(smf, i);
 
 		assert(track != NULL);
 
