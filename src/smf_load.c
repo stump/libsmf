@@ -28,8 +28,10 @@ next_chunk(smf_t *smf)
 	assert(smf->file_buffer_length > 0);
 	assert(smf->next_chunk_offset >= 0);
 
-	if (smf->next_chunk_offset + sizeof(struct chunk_header_struct) >= smf->file_buffer_length)
+	if (smf->next_chunk_offset + sizeof(struct chunk_header_struct) >= smf->file_buffer_length) {
+		g_critical("SMF warning: no more chunks left.");
 		return NULL;
+	}
 
 	next_chunk_ptr = (unsigned char *)smf->file_buffer + smf->next_chunk_offset;
 
@@ -37,8 +39,10 @@ next_chunk(smf_t *smf)
 
 	smf->next_chunk_offset += sizeof(struct chunk_header_struct) + ntohl(chunk->length);
 
-	if (smf->next_chunk_offset > smf->file_buffer_length)
+	if (smf->next_chunk_offset > smf->file_buffer_length) {
+		g_critical("SMF error: malformed chunk; truncated file?");
 		return NULL;
+	}
 
 	return chunk;
 }
@@ -87,10 +91,8 @@ parse_mthd_header(smf_t *smf)
 
 	/* Ok, now use next_chunk(). */
 	mthd = next_chunk(smf);
-	if (mthd == NULL) {
-		g_critical("SMF error: malformed chunk; probably a broken file?");
+	if (mthd == NULL)
 		return -3;
-	}
 
 	assert(mthd == tmp_mthd);
 
@@ -694,11 +696,8 @@ parse_mtrk_header(smf_track_t *track)
 
 	mtrk = next_chunk(track->smf);
 
-	if (mtrk == NULL) {
-		g_critical("SMF error: file is truncated.");
-
+	if (mtrk == NULL)
 		return -1;
-	}
 
 	if (!chunk_signature_matches(mtrk, "MTrk")) {
 		g_warning("SMF warning: Expected MTrk signature, got %c%c%c%c instead; ignoring this chunk.",
@@ -856,9 +855,8 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 
 		/* Skip unparseable chunks. */
 		if (parse_mtrk_chunk(track)) {
+			g_warning("SMF warning: Cannot load track.");
 			smf_track_free(track);
-
-			continue;
 		}
 
 		track->file_buffer = NULL;
