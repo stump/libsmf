@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sysexits.h>
 #include <string.h>
+#include <ctype.h>
 #include "smf.h"
 
 smf_track_t *current_track;
@@ -18,23 +19,6 @@ void
 log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer notused)
 {
 	fprintf(stderr, "%s: %s\n", log_domain, message);
-}
-
-int
-cmd_help(smf_t *smf, char *notused)
-{
-	g_message("Available commands (arguments in square brackets are optional):");
-	g_message("help                 - show this help.");
-	g_message("save file_name       - save to a named file.");
-	g_message("ppqn [pulses]        - show ppqn, or set ppqn if used with parameter.");
-	g_message("tracks               - show number of tracks.");
-	g_message("track [track_number] - show number of currently selected track, or select a track.");
-	g_message("trackadd             - add another track.");
-	g_message("trackrm track_number - remove given track.");
-	g_message("events               - shows events on currently selected track.");
-	g_message("exit                 - exit to shell.");
-
-	return 0;
 }
 
 int
@@ -89,18 +73,67 @@ cmd_exit(smf_t *smf, char *notused)
 	exit(0);
 }
 
+int cmd_help(smf_t *smf, char *notused);
+
 struct command_struct {
 	char *name;
 	int (*function)(smf_t *smf, char *command);
-} commands[] = {{"help", cmd_help},
-		{"save", cmd_save},
-		{"ppqn", cmd_ppqn},
-		{"tracks", cmd_tracks},
-		{"track", cmd_track},
-		{"exit", cmd_exit},
-		{"quit", cmd_exit},
-		{"bye", cmd_exit},
-		{NULL, NULL}};
+	char *help;
+} commands[] = {{"help", cmd_help, "show this help."},
+		{"save", cmd_save, "save to named file."},
+		{"ppqn", cmd_ppqn, "show ppqn, or set ppqn if used with parameter."},
+		{"tracks", cmd_tracks, "show number of tracks."},
+		{"track", cmd_track, "show number of currently selected track, or select a track."},
+		{"exit", cmd_exit, "exit to shell."},
+		{"quit", cmd_exit, NULL},
+		{"bye", cmd_exit, NULL},
+		{NULL, NULL, NULL}};
+
+int
+cmd_help(smf_t *smf, char *notused)
+{
+	struct command_struct *tmp;
+
+	g_message("Available commands:");
+
+	for (tmp = commands; tmp->name != NULL; tmp++) {
+		/* Skip commands with no help string. */
+		if (tmp->help == NULL)
+			continue;
+		g_message("%s: %s", tmp->name, tmp->help);
+	}
+
+	return 0;
+}
+
+void
+strip_unneeded_whitespace(char *str, int len)
+{
+	char *src, *dest;
+	int skip_white = 1;
+
+	for (src = str, dest = str; src < dest + len; src++) {
+		if (*src == '\n') {
+			*dest = '\0';
+			break;
+		}
+
+		if (*src == '\0')
+			break;
+
+		if (isspace(*src)) {
+			if (skip_white)
+				continue;
+
+			skip_white = 1;
+		} else {
+			skip_white = 0;
+		}
+
+		*dest = *src;
+		dest++;
+	}
+}
 
 char *
 read_command(void)
@@ -119,23 +152,28 @@ read_command(void)
 		return "exit";
 	}
 
+	strip_unneeded_whitespace(buf, 1024);
+
 	len = strlen(buf);
 
-	if (len == 1)
+	if (len == 0)
 		return read_command();
-
-	if (buf[len - 1] == '\n')
-		buf[len - 1] = '\0';
 
 	return buf;
 }
 
 int
-execute_command(smf_t *smf, char *command)
+execute_command(smf_t *smf, char *line)
 {
+	char *command, *args;
 	struct command_struct *tmp;
 
-	for (tmp = commands; tmp->name; tmp++) {
+	args = line;
+	command = strsep(&args, " ");
+
+	g_debug("Command '%s', args '%s'.", command, args);
+
+	for (tmp = commands; tmp->name != NULL; tmp++) {
 		if (strcmp(tmp->name, command) == 0)
 			return (tmp->function)(smf, command);
 	}

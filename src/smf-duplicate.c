@@ -1,3 +1,9 @@
+/*
+ * This is a simple program to read in (parse) contents of SMF file
+ * and write it out.  Contents of the output file should be exactly
+ * the same as the input.
+ */
+
 #include <stdlib.h>
 #include <sysexits.h>
 #include "smf.h"
