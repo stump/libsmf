@@ -74,6 +74,11 @@ write_mthd_header(smf_t *smf)
 {
 	struct mthd_chunk_struct mthd_chunk;
 
+	if (smf->number_of_tracks < 1) {
+		g_critical("Cannot write MThd header, because the number of tracks is zero.");
+		return -1;
+	}
+
 	memcpy(mthd_chunk.mthd_header.id, "MThd", 4);
 	mthd_chunk.mthd_header.length = htonl(6);
 	mthd_chunk.format = htons(smf->format);

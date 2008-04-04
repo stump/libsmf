@@ -50,7 +50,10 @@ cmd_ppqn(smf_t *smf, char *new_ppqn)
 int
 cmd_tracks(smf_t *smf, char *notused)
 {
-	g_message("There are %d tracks, numbered from 1 to %d.", smf->number_of_tracks, smf->number_of_tracks);
+	if (smf->number_of_tracks > 0)
+		g_message("There are %d tracks, numbered from 1 to %d.", smf->number_of_tracks, smf->number_of_tracks);
+	else
+		g_message("There are no tracks.");
 
 	return 0;
 }
