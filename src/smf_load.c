@@ -39,7 +39,7 @@ next_chunk(smf_t *smf)
 	chunk = (struct chunk_header_struct *)next_chunk_ptr;
 
 	if (!isalpha(chunk->id[0]) || !isalpha(chunk->id[1]) || !isalpha(chunk->id[2]) || !isalpha(chunk->id[3])) {
-		g_critical("SMF error: chunk signature contains at least non-alphanumeric byte.");
+		g_critical("SMF error: chunk signature contains at least one non-alphanumeric byte.");
 		return NULL;
 	}
 
