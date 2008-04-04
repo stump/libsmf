@@ -25,7 +25,7 @@ smf_extend(smf_t *smf, const int length)
 	smf->file_buffer_length += length;
 	smf->file_buffer = realloc(smf->file_buffer, smf->file_buffer_length);
 	if (smf->file_buffer == NULL) {
-		g_critical("realloc(3) failed.");
+		g_critical("realloc(3) failed: %s", strerror(errno));
 		smf->file_buffer_length = 0;
 		return NULL;
 	}

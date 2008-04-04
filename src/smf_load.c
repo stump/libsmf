@@ -206,13 +206,13 @@ print_mthd(smf_t *smf)
 }
 
 /*
- * Puts value extracted from from "buf" into "value" and number of bytes consumed into "len",
- * making sure it does not read past "buf" + "buffer_length".
- * Explanation of "packed numbers" is here: http://www.borg.com/~jglatt/tech/midifile/vari.htm
+ * Interprets Variable Length Quantity pointed at by "buf" and puts its value into "value" and number
+ * of bytes consumed into "len", making sure it does not read past "buf" + "buffer_length".
+ * Explanation of Variable Length Quantities is here: http://www.borg.com/~jglatt/tech/midifile/vari.htm
  * Returns 0 iff everything went OK, different value in case of error.
  */
 static int
-extract_packed_number(const unsigned char *buf, const int buffer_length, int *value, int *len)
+extract_vlq(const unsigned char *buf, const int buffer_length, int *value, int *len)
 {
 	int val = 0;
 	const unsigned char *c = buf;
@@ -221,7 +221,7 @@ extract_packed_number(const unsigned char *buf, const int buffer_length, int *va
 
 	for (;;) {
 		if (c >= buf + buffer_length) {
-			g_critical("End of buffer in extract_packed_number().");
+			g_critical("End of buffer in extract_vlq().");
 			return -1;
 		}
 
@@ -235,6 +235,11 @@ extract_packed_number(const unsigned char *buf, const int buffer_length, int *va
 
 	*value = val;
 	*len = c - buf + 1;
+
+	if (*len > 4) {
+		g_critical("SMF error: Variable Length Quantities longer than four bytes are not supported yet.");
+		return -2;
+	}
 
 	return 0;
 }
@@ -272,7 +277,7 @@ parse_realtime_event(const unsigned char status, smf_track_t *track)
 	
 	event->midi_buffer = malloc(1);
 	if (event->midi_buffer == NULL) {
-		g_critical("Cannot allocate memory in parse_realtime_event().");
+		g_critical("Cannot allocate memory in parse_realtime_event(): %s", strerror(errno));
 		smf_event_free(event);
 
 		return -1;
@@ -433,7 +438,7 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 
 	event->midi_buffer = malloc(message_length);
 	if (event->midi_buffer == NULL) {
-		g_critical("Cannot allocate memory in extract_midi_event().");
+		g_critical("Cannot allocate memory in extract_midi_event(): %s", strerror(errno));
 		return -4;
 	}
 
@@ -493,7 +498,7 @@ parse_next_event(smf_track_t *track)
 	assert(buffer_length > 0);
 
 	/* First, extract time offset from previous event. */
-	if (extract_packed_number(c, buffer_length, &time, &len))
+	if (extract_vlq(c, buffer_length, &time, &len))
 		goto error;
 
 	c += len;
@@ -555,7 +560,7 @@ smf_string_from_event(const smf_event_t *event)
 {
 	int string_length, length_length;
 
-	extract_packed_number((void *)&(event->midi_buffer[2]), event->midi_buffer_length - 2, &string_length, &length_length);
+	extract_vlq((void *)&(event->midi_buffer[2]), event->midi_buffer_length - 2, &string_length, &length_length);
 
 	return make_string((void *)(&event->midi_buffer[2] + length_length), event->midi_buffer_length - 2 - length_length, string_length);
 }
