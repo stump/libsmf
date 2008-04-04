@@ -11,6 +11,7 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
+#include <errno.h>
 #include <arpa/inet.h>
 #include "smf.h"
 
@@ -21,8 +22,10 @@ smf_t *
 smf_new(void)
 {
 	smf_t *smf = malloc(sizeof(smf_t));
-
-	assert(smf != NULL);
+	if (smf == NULL) {
+		g_critical("Cannot allocate smf_t structure: %s", strerror(errno));
+		return NULL;
+	}
 
 	memset(smf, 0, sizeof(smf_t));
 
@@ -58,8 +61,10 @@ smf_track_t *
 smf_track_new(smf_t *smf)
 {
 	smf_track_t *track = malloc(sizeof(smf_track_t));
-
-	assert(track != NULL);
+	if (track == NULL) {
+		g_critical("Cannot allocate smf_track_t structure: %s", strerror(errno));
+		return NULL;
+	}
 
 	memset(track, 0, sizeof(smf_track_t));
 
@@ -111,8 +116,10 @@ smf_event_t *
 smf_event_new(smf_track_t *track)
 {
 	smf_event_t *event = malloc(sizeof(smf_event_t));
-
-	assert(event != NULL);
+	if (event == NULL) {
+		g_critical("Cannot allocate smf_event_t structure: %s", strerror(errno));
+		return NULL;
+	}
 
 	memset(event, 0, sizeof(smf_event_t));
 
