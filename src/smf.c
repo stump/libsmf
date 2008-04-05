@@ -77,6 +77,8 @@ smf_track_new(smf_t *smf)
 	smf->number_of_tracks++;
 	track->track_number = smf->number_of_tracks;
 
+	track->next_event_number = -1;
+
 	return track;
 }
 
@@ -138,6 +140,9 @@ smf_event_new(smf_track_t *track)
 	event->track_number = track->track_number;
 	g_queue_push_tail(track->events_queue, (gpointer)event);
 	event->track->number_of_events++;
+
+	if (event->track->next_event_number == -1)
+		event->track->next_event_number = 1;
 
 	return event;
 }
@@ -377,7 +382,7 @@ smf_find_track_with_next_event(smf_t *smf)
 	for (i = 1; i <= g_queue_get_length(smf->tracks_queue); i++) {
 		track = smf_get_track_by_number(smf, i);
 
-		assert(!g_queue_is_empty(track->events_queue));
+		assert(track);
 
 		/* No more events in this track? */
 		if (track->next_event_number == -1)

@@ -15,6 +15,7 @@
 #include <ctype.h>
 #include <arpa/inet.h>
 #include "smf.h"
+#include "smf_private.h"
 
 /*
  * Returns pointer to the next SMF chunk in smf->buffer, based on length of the previous one.

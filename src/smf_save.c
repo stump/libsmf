@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include "smf.h"
+#include "smf_private.h"
 
 /*
  * Extends (reallocates) smf->file_buffer and returns pointer to the newly added space,

@@ -200,13 +200,36 @@ cmd_event(smf_t *smf, char *arg)
 int
 cmd_eventadd(smf_t *smf, char *notused)
 {
-	return -1;
+	if (selected_track == NULL) {
+		g_critical("Please select a track first.");
+		return -1;
+	}
+
+	selected_event = smf_event_new(selected_track);
+	if (selected_event == NULL) {
+		g_critical("smf_event_new() failed, event not created.");
+		return -2;
+	}
+
+	g_message("Event created.");
+
+	return 0;
 }
 
 int
 cmd_eventrm(smf_t *smf, char *notused)
 {
-	return -1;
+	if (selected_event == NULL) {
+		g_critical("No event selected - please use 'event [number]' command first.");
+		return -1;
+	}
+
+	smf_event_free(selected_event);
+	selected_event = NULL;
+
+	g_message("Event removed.");
+
+	return 0;
 }
 
 int
