@@ -485,14 +485,15 @@ smf_rewind(smf_t *smf)
 
 		assert(track != NULL);
 
-		track->next_event_number = 1;
-
-		event = smf_peek_next_event_from_track(track);
-		if (event) {
+		if (track->number_of_events > 0) {
+			event = smf_peek_next_event_from_track(track);
+			assert(event);
 			track->time_of_next_event = event->time_pulses;
+			track->next_event_number = 1;
 		} else {
 			g_warning("Warning: empty track.");
 			track->time_of_next_event = 0;
+			track->next_event_number = -1;
 		}
 	}
 }

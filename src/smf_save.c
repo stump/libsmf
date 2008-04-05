@@ -75,11 +75,6 @@ write_mthd_header(smf_t *smf)
 {
 	struct mthd_chunk_struct mthd_chunk;
 
-	if (smf->number_of_tracks < 1) {
-		g_critical("Cannot write MThd header, because the number of tracks is zero.");
-		return -1;
-	}
-
 	memcpy(mthd_chunk.mthd_header.id, "MThd", 4);
 	mthd_chunk.mthd_header.length = htonl(6);
 	mthd_chunk.format = htons(smf->format);
@@ -305,6 +300,67 @@ pointers_are_clear(smf_t *smf)
 	return 1;
 }
 
+/*
+ * Returns 1 if event is End Of Track event, 0 otherwise.
+ */
+int
+smf_event_is_eot(smf_event_t *event)
+{
+	if (event->midi_buffer_length != 3)
+		return 0;
+
+	if (event->midi_buffer[0] != 0xFF || event->midi_buffer[1] != 0x2F || event->midi_buffer[2] != 0x00)
+		return 0;
+
+	return 1;
+}
+
+/*
+ * Verifies if smf is consistent and returns 0 iff it is.
+ */
+int
+smf_is_invalid(smf_t *smf)
+{
+	int i;
+	smf_track_t *track;
+	smf_event_t *event;
+
+	if (smf->format < 0 || smf->format > 2) {
+		g_critical("SMF error: smf->format is less than zero of greater than two.");
+		return -1;
+	}
+
+	if (smf->number_of_tracks < 1) {
+		g_critical("SMF error: number of tracks is less than one.");
+		return -2;
+	}
+
+	if (smf->format == 0 && smf->number_of_tracks > 1) {
+		g_critical("SMF error: format is 0, but number of tracks is more than one.");
+		return -3;
+	}
+
+	for (i = 1; i <= smf->number_of_tracks; i++) {
+		track = smf_get_track_by_number(smf, i);
+		assert(track);
+
+		if (track->number_of_events < 1) {
+			g_critical("SMF error: track #%x is empty.", track->track_number);
+			return -4;
+		}
+
+		event = smf_get_event_by_number(track, track->number_of_events);
+		assert(event);
+
+		if (!smf_event_is_eot(event)) {
+			g_critical("SMF error: track #%x does not end with End Of Track event.", track->track_number);
+			return -5;
+		}
+	}
+
+	return 0;
+}
+
 int
 smf_save(smf_t *smf, const char *file_name)
 {
@@ -314,6 +370,9 @@ smf_save(smf_t *smf, const char *file_name)
 	smf_rewind(smf);
 
 	assert(pointers_are_clear(smf));
+
+	if (smf_is_invalid(smf))
+		return -1;
 
 	if (write_mthd_header(smf))
 		return -2;
