@@ -98,6 +98,7 @@ smf_track_free(smf_track_t *track)
 		smf_event_free(event);
 
 	assert(g_queue_is_empty(track->events_queue));
+	assert(track->number_of_events == 0);
 	g_queue_free(track->events_queue);
 
 	/* Detach itself from smf. */
@@ -136,6 +137,7 @@ smf_event_new(smf_track_t *track)
 	event->track = track;
 	event->track_number = track->track_number;
 	g_queue_push_tail(track->events_queue, (gpointer)event);
+	event->track->number_of_events++;
 
 	return event;
 }
@@ -148,6 +150,8 @@ smf_event_free(smf_event_t *event)
 {
 	assert(event->track != NULL);
 	assert(event->track->events_queue != NULL);
+
+	event->track->number_of_events--;
 
 	/* Remove event from its track. */
 	g_queue_remove(event->track->events_queue, (gpointer)event);
@@ -290,14 +294,16 @@ smf_get_next_event_from_track(smf_track_t *track)
 	smf_event_t *event, *next_event;
 
 	/* End of track? */
-	if (track->next_event_number < 0)
+	if (track->next_event_number == -1)
 		return NULL;
+
+	assert(track->next_event_number >= 1);
 
 	assert(!g_queue_is_empty(track->events_queue));
 
 	/* XXX: inefficient; use some different data structure. */
-	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number);
-	next_event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number + 1);
+	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number - 1);
+	next_event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number);
 
 	assert(event != next_event);
 	assert(event != NULL);
@@ -316,21 +322,16 @@ smf_get_next_event_from_track(smf_track_t *track)
 smf_event_t *
 smf_peek_next_event_from_track(smf_track_t *track)
 {
-	smf_event_t *event, *next_event;
-
+	smf_event_t *event;
 
 	/* End of track? */
-	if (track->next_event_number < 0)
+	if (track->next_event_number == -1)
 		return NULL;
 
+	assert(track->next_event_number >= 1);
 	assert(!g_queue_is_empty(track->events_queue));
 
-	/* XXX: inefficient; use some different data structure. */
-	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number);
-	next_event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number + 1);
-
-	assert(event != next_event);
-	assert(event != NULL);
+	event = smf_get_event_by_number(track, track->next_event_number);
 
 	return event;
 }
@@ -348,6 +349,22 @@ smf_get_track_by_number(smf_t *smf, int track_number)
 	assert(track);
 
 	return track;
+}
+
+smf_event_t *
+smf_get_event_by_number(smf_track_t *track, int event_number)
+{
+	smf_event_t *event;
+
+	assert(event_number >= 1);
+	assert(event_number <= track->number_of_events);
+
+	/* XXX: inefficient; use some different data structure. */
+	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, event_number - 1);
+
+	assert(event);
+
+	return event;
 }
 
 smf_track_t *
@@ -463,7 +480,7 @@ smf_rewind(smf_t *smf)
 
 		assert(track != NULL);
 
-		track->next_event_number = 0;
+		track->next_event_number = 1;
 
 		event = smf_peek_next_event_from_track(track);
 		if (event) {

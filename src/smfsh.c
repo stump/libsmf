@@ -5,8 +5,8 @@
 #include <ctype.h>
 #include "smf.h"
 
-smf_track_t *current_track;
-smf_event_t *current_event;
+smf_track_t *selected_track = NULL;
+smf_event_t *selected_event = NULL;
 
 void
 usage(void)
@@ -25,12 +25,21 @@ log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *mess
 int
 cmd_save(smf_t *smf, char *file_name)
 {
+	int ret;
+
 	if (file_name == NULL) {
 		g_critical("Please specify file name.");
 		return -1;
 	}
 
-	return smf_save(smf, file_name);
+	ret = smf_save(smf, file_name);
+	if (ret) {
+		g_critical("Couln't save file.");
+		return -1;
+	} else {
+		g_message("File saved.");
+		return 0;
+	}
 }
 
 int
@@ -64,7 +73,11 @@ cmd_track(smf_t *smf, char *arg)
 	int num;
 
 	if (arg == NULL) {
-		g_message("Currently selected is track number %d.", current_track->track_number);
+		if (selected_track == NULL)
+			g_message("No track currently selected.");
+		else
+			g_message("Currently selected is track number %d, containing %d events.",
+				selected_track->track_number, selected_track->number_of_events);
 	} else {
 		num = atoi(arg);
 		if (num < 1 || num > smf->number_of_tracks) {
@@ -72,8 +85,16 @@ cmd_track(smf_t *smf, char *arg)
 			return -1;
 		}
 
-		current_track = smf_get_track_by_number(smf, num);
-		g_message("Track number %d selected.", current_track->track_number);
+		selected_track = smf_get_track_by_number(smf, num);
+		if (selected_track == NULL) {
+			g_critical("smf_get_track_by_number() failed, track not selected.");
+			return -2;
+		}
+
+		selected_event = NULL;
+
+		g_message("Track number %d selected; it contains %d events.",
+				selected_track->track_number, selected_track->number_of_events);
 	}
 
 	return 0;
@@ -82,9 +103,15 @@ cmd_track(smf_t *smf, char *arg)
 int
 cmd_trackadd(smf_t *smf, char *notused)
 {
-	current_track = smf_track_new(smf);
-	/* XXX: Error handling? */
-	g_message("Created new track; track number %d selected.", current_track->track_number);
+	selected_track = smf_track_new(smf);
+	if (selected_track == NULL) {
+		g_critical("smf_track_new() failed, track not created.");
+		return -1;
+	}
+
+	selected_event = NULL;
+
+	g_message("Created new track; track number %d selected.", selected_track->track_number);
 
 	return 0;
 }
@@ -92,9 +119,14 @@ cmd_trackadd(smf_t *smf, char *notused)
 int
 cmd_trackrm(smf_t *smf, char *notused)
 {
-	/* XXX: Obviously. */
-	smf_track_free(current_track);
-	current_track = smf_get_track_by_number(smf, 1);
+	if (selected_track == NULL) {
+		g_critical("No track selected - please use 'track [number]' command first.");
+		return -1;
+	}
+
+	selected_event = NULL;
+	smf_track_free(selected_track);
+	selected_track = NULL;
 
 	return 0;
 }
@@ -117,9 +149,14 @@ cmd_events(smf_t *smf, char *notused)
 {
 	smf_event_t *event;
 
+	if (selected_track == NULL) {
+		g_critical("No track selected - please use 'track [number]' command first.");
+		return -1;
+	}
+
 	smf_rewind(smf);
 
-	while ((event = smf_get_next_event_from_track(current_track)) != NULL) {
+	while ((event = smf_get_next_event_from_track(selected_track)) != NULL) {
 		g_message("----------------------------------");
 		show_event(event);
 	}
@@ -129,6 +166,47 @@ cmd_events(smf_t *smf, char *notused)
 	smf_rewind(smf);
 
 	return 0;
+}
+
+int
+cmd_event(smf_t *smf, char *arg)
+{
+	int num;
+
+	if (arg == NULL) {
+		if (selected_event == NULL)
+			g_message("No event currently selected.");
+		else
+			g_message("Currently selected is event %d, track %d.", -1, selected_track->track_number);
+	} else {
+		num = atoi(arg);
+		if (num < 1 || num > selected_track->number_of_events) {
+			g_critical("Invalid event number specified; valid choices are 1 - %d.", selected_track->number_of_events);
+			return -1;
+		}
+
+		selected_event = smf_get_event_by_number(selected_track, num);
+		if (selected_event == NULL) {
+			g_critical("smf_get_event_by_number() failed, event not selected.");
+			return -2;
+		}
+
+		g_message("Event number %d selected.", -1);
+	}
+
+	return 0;
+}
+
+int
+cmd_eventadd(smf_t *smf, char *notused)
+{
+	return -1;
+}
+
+int
+cmd_eventrm(smf_t *smf, char *notused)
+{
+	return -1;
 }
 
 int
@@ -149,9 +227,12 @@ struct command_struct {
 		{"ppqn", cmd_ppqn, "show ppqn, or set ppqn if used with parameter."},
 		{"tracks", cmd_tracks, "show number of tracks."},
 		{"track", cmd_track, "show number of currently selected track, or select a track."},
-		{"trackadd", cmd_trackadd, "add a track, making it the current one."},
-		{"trackrm", cmd_trackrm, "remove current track, making first track a current one."},
-		{"events", cmd_events, "show events in the current track."},
+		{"trackadd", cmd_trackadd, "add a track and select it."},
+		{"trackrm", cmd_trackrm, "remove currently selected track."},
+		{"events", cmd_events, "show events in the currently selected track."},
+		{"event", cmd_event, "show number of currently selected event, or select an event."},
+		{"eventadd", cmd_eventadd, "add an event and select it."},
+		{"eventrm", cmd_eventrm, "remove currently selected event."},
 		{"exit", cmd_exit, "exit to shell."},
 		{"quit", cmd_exit, NULL},
 		{"bye", cmd_exit, NULL},
