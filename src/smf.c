@@ -32,6 +32,9 @@ smf_new(void)
 	smf->tracks_queue = g_queue_new();
 	assert(smf->tracks_queue);
 
+	/* Default tempo is 120 BPM. */
+	smf->microseconds_per_quarter_note = 0x07A120;
+
 	return smf;
 }
 
@@ -335,12 +338,18 @@ parse_metadata_event(const smf_event_t *event)
 
 	/* "Tempo" metaevent. */
 	if (event->midi_buffer[1] == 0x51) {
+		int tmp;
+
 		assert(event->track != NULL);
 		assert(event->track->smf != NULL);
 
-		event->track->smf->microseconds_per_quarter_note = 
-			(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
+		tmp = (event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
+		if (tmp <= 0) {
+			g_critical("Ignoring invalid tempo change.");
+			return;
+		}
 
+		event->track->smf->microseconds_per_quarter_note = tmp;
 		g_debug("Setting microseconds per quarter note: %d", event->track->smf->microseconds_per_quarter_note);
 
 		return;
@@ -457,9 +466,8 @@ smf_compute_time(smf_event_t *event)
 	assert(event);
 	assert(event->track);
 	assert(event->track->smf);
-
-	if (event->track->smf->ppqn == 0)
-		event->time_seconds = 0.0;
+	assert(event->track->smf->ppqn > 0);
+	assert(event->track->smf->microseconds_per_quarter_note > 0);
 
 	event->time_seconds = event->time_pulses *
 		((double)event->track->smf->microseconds_per_quarter_note / ((double)event->track->smf->ppqn * 1000000.0));
