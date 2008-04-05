@@ -7,6 +7,8 @@
 
 smf_track_t *selected_track = NULL;
 smf_event_t *selected_event = NULL;
+smf_t *smf = NULL;
+char *last_file_name = NULL;
 
 void
 usage(void)
@@ -23,27 +25,72 @@ log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *mess
 }
 
 int
-cmd_save(smf_t *smf, char *file_name)
+cmd_load(char *file_name)
+{
+	if (file_name == NULL) {
+		if (last_file_name == NULL) {
+			g_critical("Please specify file name.");
+			return -1;
+		}
+
+		file_name = last_file_name;
+	}
+
+	if (smf != NULL)
+		smf_free(smf);
+
+	last_file_name = strdup(file_name);
+	smf = smf_load(file_name);
+	if (smf == NULL) {
+		g_critical("Couln't load '%s'.", file_name);
+
+		smf = smf_new();
+		if (smf == NULL) {
+			g_critical("Cannot initialize smf_t.");
+			return -1;
+		}
+
+		return -2;
+	}
+
+	g_message("File '%s' loaded.", file_name);
+
+	return 0;
+}
+
+int
+cmd_save(char *file_name)
 {
 	int ret;
+
+	if (file_name == NULL) {
+		if (last_file_name == NULL) {
+			g_critical("Please specify file name.");
+			return -1;
+		}
+
+		file_name = last_file_name;
+	}
 
 	if (file_name == NULL) {
 		g_critical("Please specify file name.");
 		return -1;
 	}
 
+	last_file_name = strdup(file_name);
 	ret = smf_save(smf, file_name);
 	if (ret) {
-		g_critical("Couln't save file.");
+		g_critical("Couln't save '%s'", file_name);
 		return -1;
-	} else {
-		g_message("File saved.");
-		return 0;
 	}
+
+	g_message("File '%s' saved.", file_name);
+
+	return 0;
 }
 
 int
-cmd_ppqn(smf_t *smf, char *new_ppqn)
+cmd_ppqn(char *new_ppqn)
 {
 	if (new_ppqn == NULL) {
 		g_message("Pulses Per Quarter Note is %d.", smf->ppqn);
@@ -57,7 +104,7 @@ cmd_ppqn(smf_t *smf, char *new_ppqn)
 }
 
 int
-cmd_tracks(smf_t *smf, char *notused)
+cmd_tracks(char *notused)
 {
 	if (smf->number_of_tracks > 0)
 		g_message("There are %d tracks, numbered from 1 to %d.", smf->number_of_tracks, smf->number_of_tracks);
@@ -68,7 +115,7 @@ cmd_tracks(smf_t *smf, char *notused)
 }
 
 int
-cmd_track(smf_t *smf, char *arg)
+cmd_track(char *arg)
 {
 	int num;
 
@@ -101,7 +148,7 @@ cmd_track(smf_t *smf, char *arg)
 }
 
 int
-cmd_trackadd(smf_t *smf, char *notused)
+cmd_trackadd(char *notused)
 {
 	selected_track = smf_track_new(smf);
 	if (selected_track == NULL) {
@@ -117,7 +164,7 @@ cmd_trackadd(smf_t *smf, char *notused)
 }
 
 int
-cmd_trackrm(smf_t *smf, char *notused)
+cmd_trackrm(char *notused)
 {
 	if (selected_track == NULL) {
 		g_critical("No track selected - please use 'track [number]' command first.");
@@ -132,6 +179,60 @@ cmd_trackrm(smf_t *smf, char *notused)
 }
 
 int
+print_event(smf_event_t *event)
+{
+	int off = 0;
+	char buf[256];
+
+	if (smf_event_is_metadata(event))
+		return smf_event_print_metadata(event);
+
+	/* XXX: verify lengths. */
+	switch (event->midi_buffer[0] & 0xF0) {
+		case 0x80:
+			off += snprintf(buf + off, sizeof(buf) - off, "Note Off, channel %d, note %d, velocity %d",
+					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
+			break;
+
+		case 0x90:
+			off += snprintf(buf + off, sizeof(buf) - off, "Note On, channel %d, note %d, velocity %d",
+					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
+			break;
+
+		case 0xA0:
+			off += snprintf(buf + off, sizeof(buf) - off, "Aftertouch, channel %d, note %d, pressure %d",
+					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
+			break;
+
+		case 0xB0:
+			off += snprintf(buf + off, sizeof(buf) - off, "Controller, channel %d, controller %d, value %d",
+					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
+			break;
+
+		case 0xC0:
+			off += snprintf(buf + off, sizeof(buf) - off, "Program Change, channel %d, controller %d",
+					event->midi_buffer[0] & 0x0F, event->midi_buffer[1]);
+			break;
+
+		case 0xD0:
+			off += snprintf(buf + off, sizeof(buf) - off, "Channel Pressure, channel %d, pressure %d",
+					event->midi_buffer[0] & 0x0F, event->midi_buffer[1]);
+			break;
+
+		case 0xE0:
+			off += snprintf(buf + off, sizeof(buf) - off, "Pitch Wheel, channel %d, value %d",
+					event->midi_buffer[0] & 0x0F, ((int)event->midi_buffer[2] << 7) | (int)event->midi_buffer[2]);
+			break;
+
+		default:
+			return 0;
+	}
+
+	g_message("Event: %s", buf);
+
+	return 0;
+}
+int
 show_event(smf_event_t *event)
 {
 	g_message("Time offset from previous event: %d pulses.", event->delta_time_pulses);
@@ -140,12 +241,13 @@ show_event(smf_event_t *event)
 	/* XXX: Don't read past the end of the buffer. */
 	g_message("First three bytes of MIDI message: 0x%x 0x%x 0x%x",
 			event->midi_buffer[0], event->midi_buffer[1], event->midi_buffer[2]);
+	print_event(event);
 
 	return 0;
 }
 
 int
-cmd_events(smf_t *smf, char *notused)
+cmd_events(char *notused)
 {
 	smf_event_t *event;
 
@@ -171,7 +273,7 @@ cmd_events(smf_t *smf, char *notused)
 }
 
 int
-cmd_event(smf_t *smf, char *arg)
+cmd_event(char *arg)
 {
 	int num;
 
@@ -200,7 +302,7 @@ cmd_event(smf_t *smf, char *arg)
 }
 
 int
-cmd_eventadd(smf_t *smf, char *notused)
+cmd_eventadd(char *notused)
 {
 	if (selected_track == NULL) {
 		g_critical("Please select a track first.");
@@ -219,7 +321,7 @@ cmd_eventadd(smf_t *smf, char *notused)
 }
 
 int
-cmd_eventaddeot(smf_t *smf, char *notused)
+cmd_eventaddeot(char *notused)
 {
 	smf_event_t *event;
 
@@ -240,7 +342,7 @@ cmd_eventaddeot(smf_t *smf, char *notused)
 }
 
 int
-cmd_eventrm(smf_t *smf, char *notused)
+cmd_eventrm(char *notused)
 {
 	if (selected_event == NULL) {
 		g_critical("No event selected - please use 'event [number]' command first.");
@@ -256,19 +358,20 @@ cmd_eventrm(smf_t *smf, char *notused)
 }
 
 int
-cmd_exit(smf_t *smf, char *notused)
+cmd_exit(char *notused)
 {
 	g_debug("Good bye.");
 	exit(0);
 }
 
-int cmd_help(smf_t *smf, char *notused);
+int cmd_help(char *notused);
 
 struct command_struct {
 	char *name;
-	int (*function)(smf_t *smf, char *command);
+	int (*function)(char *command);
 	char *help;
 } commands[] = {{"help", cmd_help, "show this help."},
+		{"load", cmd_load, "load named file."},
 		{"save", cmd_save, "save to named file."},
 		{"ppqn", cmd_ppqn, "show ppqn, or set ppqn if used with parameter."},
 		{"tracks", cmd_tracks, "show number of tracks."},
@@ -279,6 +382,7 @@ struct command_struct {
 		{"event", cmd_event, "show number of currently selected event, or select an event."},
 		{"eventadd", cmd_eventadd, "add an event and select it."},
 		{"eventaddeot", cmd_eventaddeot, "add an End Of Track event."},
+		{"eot", cmd_eventaddeot, NULL},
 		{"eventrm", cmd_eventrm, "remove currently selected event."},
 		{"exit", cmd_exit, "exit to shell."},
 		{"quit", cmd_exit, NULL},
@@ -286,7 +390,7 @@ struct command_struct {
 		{NULL, NULL, NULL}};
 
 int
-cmd_help(smf_t *smf, char *notused)
+cmd_help(char *notused)
 {
 	struct command_struct *tmp;
 
@@ -359,7 +463,7 @@ read_command(void)
 }
 
 int
-execute_command(smf_t *smf, char *line)
+execute_command(char *line)
 {
 	char *command, *args;
 	struct command_struct *tmp;
@@ -369,7 +473,7 @@ execute_command(smf_t *smf, char *line)
 
 	for (tmp = commands; tmp->name != NULL; tmp++) {
 		if (strcmp(tmp->name, command) == 0)
-			return (tmp->function)(smf, args);
+			return (tmp->function)(args);
 	}
 
 	g_warning("No such command: '%s'.  Type 'help' to see available commands.", command);
@@ -378,14 +482,14 @@ execute_command(smf_t *smf, char *line)
 }
 
 void
-read_and_execute_command(smf_t *smf)
+read_and_execute_command(void)
 {
 	int ret;
 	char *command;
 
 	command = read_command();
 
-	ret = execute_command(smf, command);
+	ret = execute_command(command);
 	if (ret) {
 		g_warning("Command finished with error.");
 	}
@@ -393,30 +497,25 @@ read_and_execute_command(smf_t *smf)
 
 int main(int argc, char *argv[])
 {
-	smf_t *smf;
-
 	if (argc > 2) {
 		usage();
 	}
 
 	g_log_set_default_handler(log_handler, NULL);
 
+	smf = smf_new();
+	if (smf == NULL) {
+		g_critical("Cannot initialize smf_t.");
+		return -1;
+	}
+
 	if (argc == 2) {
-		smf = smf_load(argv[1]);
-		if (smf == NULL) {
-			g_critical("Cannot load SMF file.");
-			return -1;
-		}
-	} else {
-		smf = smf_new();
-		if (smf == NULL) {
-			g_critical("Cannot initialize smf_t.");
-			return -1;
-		}
+		last_file_name = argv[1];
+		cmd_load(last_file_name);
 	}
 
 	for (;;)
-		read_and_execute_command(smf);
+		read_and_execute_command();
 
 	return 0;
 }

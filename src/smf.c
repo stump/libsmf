@@ -213,19 +213,27 @@ smf_event_free(smf_event_t *event)
 }
 
 int
-event_is_metadata(const smf_event_t *event)
+smf_event_is_metadata(const smf_event_t *event)
 {
+	assert(event->midi_buffer);
+	assert(event->midi_buffer_length > 0);
+	
 	if (event->midi_buffer[0] == 0xFF)
 		return 1;
 
 	return 0;
 }
 
-static void
-print_metadata_event(const smf_event_t *event)
+int
+smf_event_print_metadata(const smf_event_t *event)
 {
 	int off = 0;
 	char buf[256];
+
+	if (!smf_event_is_metadata(event)) {
+		g_critical("Event is not metadata.");
+		return -1;
+	}
 
 	/* XXX: smf_string_from_event() may return NULL. */
 	switch (event->midi_buffer[1]) {
@@ -314,14 +322,16 @@ print_metadata_event(const smf_event_t *event)
 	}
 
 	g_debug("Metadata: %s", buf);
+
+	return 0;
 }
 
 static void
 parse_metadata_event(const smf_event_t *event)
 {
-	assert(event_is_metadata(event));
+	assert(smf_event_is_metadata(event));
 
-	print_metadata_event(event);
+	smf_event_print_metadata(event);
 
 	/* "Tempo" metaevent. */
 	if (event->midi_buffer[1] == 0x51) {
@@ -471,7 +481,7 @@ smf_get_next_event(smf_t *smf)
 	
 	assert(event != NULL);
 
-	if (event_is_metadata(event)) {
+	if (smf_event_is_metadata(event)) {
 		parse_metadata_event(event);
 
 		return smf_get_next_event(smf);

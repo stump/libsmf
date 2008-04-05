@@ -573,127 +573,6 @@ smf_string_from_event(const smf_event_t *event)
 	return make_string((void *)(&event->midi_buffer[2] + length_length), event->midi_buffer_length - 2 - length_length, string_length);
 }
 
-#if 0
-static void
-print_event(smf_event_t *event)
-{
-	fprintf(stderr, "Event: time %d; status 0x%x (", event->time, event->midi_buffer[0]);
-	
-	switch (event->midi_buffer[0] & 0xF0) {
-		case 0x80:
-			fprintf(stderr, "Note Off");
-			break;
-
-		case 0x90:
-			fprintf(stderr, "Note On");
-			break;
-
-		case 0xA0:
-			fprintf(stderr, "Aftertouch");
-			break;
-
-		case 0xB0:
-			fprintf(stderr, "Control Change");
-			break;
-
-		case 0xC0:
-			fprintf(stderr, "Program Change");
-			break;
-
-		case 0xD0:
-			fprintf(stderr, "Channel Pressure");
-			break;
-
-		case 0xE0:
-			fprintf(stderr, "Pitch Wheel");
-			break;
-
-		default:
-			break;
-	}
-
-	if (event->midi_buffer[0] == 0xFF) {
-		switch (event->midi_buffer[1]) {
-			case 0x00:
-				fprintf(stderr, "Sequence Number");
-				break;
-
-			case 0x01:
-				fprintf(stderr, "Text: %s", string_from_event(event));
-
-				break;
-
-			case 0x02:
-				fprintf(stderr, "Copyright: %s", string_from_event(event));
-				break;
-
-			case 0x03:
-				fprintf(stderr, "Sequence/Track Name: %s", string_from_event(event));
-				break;
-
-			case 0x04:
-				fprintf(stderr, "Instrument: %s", string_from_event(event));
-				break;
-
-			case 0x05:
-				fprintf(stderr, "Lyric: %s", string_from_event(event));
-				break;
-
-			case 0x06:
-				fprintf(stderr, "Marker: %s", string_from_event(event));
-				break;
-
-			case 0x07:
-				fprintf(stderr, "Cue Point: %s", string_from_event(event));
-				break;
-
-			case 0x08:
-				fprintf(stderr, "Program Name: %s", string_from_event(event));
-				break;
-
-			case 0x09:
-				fprintf(stderr, "Device (Port) Name: %s", string_from_event(event));
-				break;
-
-			case 0x2F:
-				fprintf(stderr, "End Of Track");
-				break;
-
-			case 0x51:
-				fprintf(stderr, "Tempo: %d microseconds per quarter note", (event->midi_buffer[3] << 16) +
-						(event->midi_buffer[4] << 8) + event->midi_buffer[5]);
-				break;
-
-			case 0x54:
-				fprintf(stderr, "SMPTE Offset");
-				break;
-
-			case 0x58:
-				fprintf(stderr, "Time Signature: %d/%d, %d clocks per click, %d notated 32nd notes per quarter note",
-						event->midi_buffer[3], (int)pow(2, event->midi_buffer[4]), event->midi_buffer[5],
-						event->midi_buffer[6]);
-				break;
-
-			case 0x59:
-				fprintf(stderr, "Key Signature");
-				break;
-
-			case 0x7F:
-				fprintf(stderr, "Proprietary Event");
-				break;
-
-			default:
-				fprintf(stderr, "Unknown Event: 0xFF 0x%x 0x%x 0x%x", event->midi_buffer[1], event->midi_buffer[2],
-				      event->midi_buffer[3]);
-
-				break;
-		}
-	}
-
-	fprintf(stderr, ")\n");
-}
-#endif
-
 /*
  * Verify if the next chunk really is MTrk chunk, and if so, initialize some track variables and return 0.
  * Return different value otherwise.
@@ -779,10 +658,6 @@ parse_mtrk_chunk(smf_track_t *track)
 
 		if (event_is_end_of_track(event))
 			break;
-	
-#if 0
-		print_event(event);
-#endif
 	}
 
 	track->file_buffer = NULL;

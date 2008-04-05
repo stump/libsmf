@@ -250,7 +250,9 @@ write_track(smf_track_t *track)
 static int
 write_file_and_free_buffer(smf_t *smf, const char *file_name)
 {
+	int i;
 	FILE *stream;
+	smf_track_t *track;
 
 	stream = fopen(file_name, "w+");
 	if (stream == NULL) {
@@ -271,8 +273,17 @@ write_file_and_free_buffer(smf_t *smf, const char *file_name)
 		return -3;
 	}
 
+	/* Clear the pointers. */
 	free(smf->file_buffer);
+	smf->file_buffer = NULL;
 	smf->file_buffer_length = 0;
+
+	for (i = 1; i <= smf->number_of_tracks; i++) {
+		track = smf_get_track_by_number(smf, i);
+		assert(track);
+		track->file_buffer = NULL;
+		track->file_buffer_length = 0;
+	}
 
 	return 0;
 }

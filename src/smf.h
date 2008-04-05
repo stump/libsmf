@@ -87,7 +87,8 @@ smf_event_t *smf_peek_next_event(smf_t *smf);
 
 int smf_seek_to(smf_t *smf, double seconds);
 
-int event_is_metadata(const smf_event_t *event); /* XXX: Needed for assertion in jack-smf-player.c. */
+int smf_event_is_metadata(const smf_event_t *event);
+int smf_event_print_metadata(const smf_event_t *event);
 
 char *smf_string_from_event(const smf_event_t *event);
 void smf_rewind(smf_t *smf);
