@@ -39,6 +39,9 @@ cmd_load(char *file_name)
 	if (smf != NULL)
 		smf_free(smf);
 
+	selected_track = NULL;
+	selected_event = NULL;
+
 	last_file_name = strdup(file_name);
 	smf = smf_load(file_name);
 	if (smf == NULL) {
@@ -126,6 +129,11 @@ cmd_track(char *arg)
 			g_message("Currently selected is track number %d, containing %d events.",
 				selected_track->track_number, selected_track->number_of_events);
 	} else {
+		if (smf->number_of_tracks == 0) {
+			g_message("There are no tracks.");
+			return -1;
+		}
+
 		num = atoi(arg);
 		if (num < 1 || num > smf->number_of_tracks) {
 			g_critical("Invalid track number specified; valid choices are 1 - %d.", smf->number_of_tracks);
@@ -302,11 +310,59 @@ cmd_event(char *arg)
 }
 
 int
-cmd_eventadd(char *notused)
+decode_hex(char *str, unsigned char **buffer, int *length)
 {
+	int i, value, midi_buffer_length;
+	char buf[2];
+	unsigned char *midi_buffer;
+	char *end;
+
+	midi_buffer_length = strlen(str);
+	midi_buffer = malloc(midi_buffer_length);
+	if (midi_buffer == NULL) {
+		g_critical("malloc() failed.");
+		goto error;
+	}
+
+	for (i = 0; i < midi_buffer_length; i++) {
+		buf[0] = str[i];
+		buf[1] = '\0';
+		value = strtoll(buf, &end, 16);
+
+		if (end - buf != 1) {
+			g_critical("Garbage characters detected after hex");
+			goto error;
+		}
+
+		midi_buffer[i] = value;
+	}
+
+	*buffer = midi_buffer;
+	*length = midi_buffer_length;
+
+	return 0;
+
+error:
+	if (midi_buffer != NULL)
+		free(midi_buffer);
+
+	return -1;
+}
+
+int
+cmd_eventadd(char *str)
+{
+	int midi_buffer_length;
+	unsigned char *midi_buffer;
+
 	if (selected_track == NULL) {
 		g_critical("Please select a track first.");
 		return -1;
+	}
+
+	if (decode_hex(str, &midi_buffer, &midi_buffer_length)) {
+		g_critical("UR DOIN IT WRONG.");
+		return -2;
 	}
 
 	selected_event = smf_event_new(selected_track);
@@ -314,6 +370,9 @@ cmd_eventadd(char *notused)
 		g_critical("smf_event_new() failed, event not created.");
 		return -2;
 	}
+
+	selected_event->midi_buffer = midi_buffer;
+	selected_event->midi_buffer_length = midi_buffer_length;
 
 	g_message("Event created.");
 
