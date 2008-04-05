@@ -908,6 +908,9 @@ smf_load(const char *file_name)
 
 	free(file_buffer);
 
+	if (smf == NULL)
+		return NULL;
+
 	smf_rewind(smf);
 
 	return smf;

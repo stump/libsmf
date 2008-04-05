@@ -147,6 +147,50 @@ smf_event_new(smf_track_t *track)
 	return event;
 }
 
+smf_event_t *
+smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int third_byte)
+{
+	int len;
+
+	smf_event_t *event;
+
+	event = smf_event_new(track);
+	if (event == NULL)
+		return NULL;
+
+	if (first_byte < 0) {
+		g_critical("First byte of MIDI message cannot be < 0");
+		smf_event_free(event);
+
+		return NULL;
+	}
+
+	if (second_byte < 0)
+		len = 1;
+	else if (third_byte < 0)
+		len = 2;
+	else
+		len = 3;
+
+	/* XXX: check if other bytes have proper values. */
+	event->midi_buffer_length = len;
+	event->midi_buffer = malloc(event->midi_buffer_length);
+	if (event->midi_buffer == NULL) {
+		g_critical("Cannot allocate MIDI buffer structure: %s", strerror(errno));
+		smf_event_free(event);
+
+		return NULL; 
+	}
+
+	event->midi_buffer[0] = first_byte;
+	if (len > 1)
+		event->midi_buffer[1] = second_byte;
+	if (len > 2)
+		event->midi_buffer[2] = third_byte;
+
+	return event;
+}
+
 /*
  * Detaches event from its track and frees it.
  */
@@ -476,8 +520,6 @@ smf_rewind(smf_t *smf)
 
 	assert(smf);
 
-	g_debug("Rewinding.");
-
 	smf->last_seek_position = 0.0;
 
 	for (i = 1; i <= g_queue_get_length(smf->tracks_queue); i++) {
@@ -486,14 +528,14 @@ smf_rewind(smf_t *smf)
 		assert(track != NULL);
 
 		if (track->number_of_events > 0) {
+			track->next_event_number = 1;
 			event = smf_peek_next_event_from_track(track);
 			assert(event);
 			track->time_of_next_event = event->time_pulses;
-			track->next_event_number = 1;
 		} else {
-			g_warning("Warning: empty track.");
-			track->time_of_next_event = 0;
 			track->next_event_number = -1;
+			track->time_of_next_event = 0;
+			g_warning("Warning: empty track.");
 		}
 	}
 }

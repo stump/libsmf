@@ -340,13 +340,18 @@ smf_is_invalid(smf_t *smf)
 		return -3;
 	}
 
+	if (smf->ppqn <= 0) {
+		g_critical("SMF error: PPQN has to be > 0.");
+		return -4;
+	}
+
 	for (i = 1; i <= smf->number_of_tracks; i++) {
 		track = smf_get_track_by_number(smf, i);
 		assert(track);
 
 		if (track->number_of_events < 1) {
 			g_critical("SMF error: track #%x is empty.", track->track_number);
-			return -4;
+			return -5;
 		}
 
 		event = smf_get_event_by_number(track, track->number_of_events);
@@ -354,7 +359,7 @@ smf_is_invalid(smf_t *smf)
 
 		if (!smf_event_is_eot(event)) {
 			g_critical("SMF error: track #%x does not end with End Of Track event.", track->track_number);
-			return -5;
+			return -6;
 		}
 	}
 

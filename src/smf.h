@@ -65,9 +65,12 @@ typedef struct smf_event_struct smf_event_t;
 /* Routines for creating and freeing basic structures defined above. */
 smf_t *smf_new(void);
 void smf_free(smf_t *smf);
+
 smf_track_t *smf_track_new(smf_t *smf);
 void smf_track_free(smf_track_t *track);
+
 smf_event_t *smf_event_new(smf_track_t *track);
+smf_event_t *smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int third_byte);
 void smf_event_free(smf_event_t *event);
 
 /* Routines for loading SMF files. */

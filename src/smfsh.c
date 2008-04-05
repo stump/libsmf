@@ -154,6 +154,8 @@ cmd_events(smf_t *smf, char *notused)
 		return -1;
 	}
 
+	g_message("List of events in track %d follows:", selected_track->track_number);
+
 	smf_rewind(smf);
 
 	while ((event = smf_get_next_event_from_track(selected_track)) != NULL) {
@@ -217,6 +219,27 @@ cmd_eventadd(smf_t *smf, char *notused)
 }
 
 int
+cmd_eventaddeot(smf_t *smf, char *notused)
+{
+	smf_event_t *event;
+
+	if (selected_track == NULL) {
+		g_critical("Please select a track first.");
+		return -1;
+	}
+
+	event = smf_event_new_with_data(selected_track, 0xFF, 0x2F, 0x00);
+	if (event == NULL) {
+		g_critical("smf_event_new() failed, event not created.");
+		return -2;
+	}
+
+	g_message("Event created.");
+
+	return 0;
+}
+
+int
 cmd_eventrm(smf_t *smf, char *notused)
 {
 	if (selected_event == NULL) {
@@ -255,6 +278,7 @@ struct command_struct {
 		{"events", cmd_events, "show events in the currently selected track."},
 		{"event", cmd_event, "show number of currently selected event, or select an event."},
 		{"eventadd", cmd_eventadd, "add an event and select it."},
+		{"eventaddeot", cmd_eventaddeot, "add an End Of Track event."},
 		{"eventrm", cmd_eventrm, "remove currently selected event."},
 		{"exit", cmd_exit, "exit to shell."},
 		{"quit", cmd_exit, NULL},
