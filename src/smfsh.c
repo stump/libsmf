@@ -240,6 +240,7 @@ print_event(smf_event_t *event)
 
 	return 0;
 }
+
 int
 show_event(smf_event_t *event)
 {
@@ -313,11 +314,16 @@ int
 decode_hex(char *str, unsigned char **buffer, int *length)
 {
 	int i, value, midi_buffer_length;
-	char buf[2];
+	char buf[3];
 	unsigned char *midi_buffer;
 	char *end;
 
-	midi_buffer_length = strlen(str);
+	if ((strlen(str) % 2) != 0) {
+		g_critical("Hex value should have even number of characters, you know.");
+		goto error;
+	}
+
+	midi_buffer_length = strlen(str) / 2;
 	midi_buffer = malloc(midi_buffer_length);
 	if (midi_buffer == NULL) {
 		g_critical("malloc() failed.");
@@ -325,12 +331,13 @@ decode_hex(char *str, unsigned char **buffer, int *length)
 	}
 
 	for (i = 0; i < midi_buffer_length; i++) {
-		buf[0] = str[i];
-		buf[1] = '\0';
+		buf[0] = str[i * 2];
+		buf[1] = str[i * 2 + 1];
+		buf[2] = '\0';
 		value = strtoll(buf, &end, 16);
 
-		if (end - buf != 1) {
-			g_critical("Garbage characters detected after hex");
+		if (end - buf != 2) {
+			g_critical("Garbage characters detected after hex.");
 			goto error;
 		}
 
@@ -349,30 +356,66 @@ error:
 	return -1;
 }
 
+void
+eventadd_usage(void)
+{
+	g_critical("Usage: eventadd delta-time-in-pulses midi-in-hex.");
+	g_critical("Example: 'eventadd 1 903C7F' will add Note On event, one pulse from the previous");
+	g_critical("one on that particular track, channel 1, note C4, velocity 127.");
+}
+
 int
 cmd_eventadd(char *str)
 {
-	int midi_buffer_length;
+	int midi_buffer_length, pulses;
 	unsigned char *midi_buffer;
+	char *time, *endtime;
 
 	if (selected_track == NULL) {
 		g_critical("Please select a track first.");
 		return -1;
 	}
 
-	if (decode_hex(str, &midi_buffer, &midi_buffer_length)) {
-		g_critical("UR DOIN IT WRONG.");
+	if (str == NULL) {
+		eventadd_usage();
 		return -2;
+	}
+
+	/* Extract the time. */
+	time = strsep(&str, " ");
+	pulses = strtol(time, &endtime, 10);
+	if (endtime - time != strlen(time)) {
+		g_critical("Time is supposed to be a number, without trailing characters.");
+		return -3;
+	}
+
+	/* Called with one parameter? */
+	if (str == NULL) {
+		eventadd_usage();
+		return -4;
+	}
+
+	if (decode_hex(str, &midi_buffer, &midi_buffer_length)) {
+		eventadd_usage();
+		return -5;
 	}
 
 	selected_event = smf_event_new(selected_track);
 	if (selected_event == NULL) {
 		g_critical("smf_event_new() failed, event not created.");
-		return -2;
+		return -6;
 	}
 
 	selected_event->midi_buffer = midi_buffer;
 	selected_event->midi_buffer_length = midi_buffer_length;
+	selected_event->delta_time_pulses = pulses;
+
+	if (smf_event_is_valid(selected_event) == 0) {
+		g_critical("Event is invalid from the MIDI specification point of view, not created.");
+		smf_event_free(selected_event);
+		selected_event = NULL;
+		return -7;
+	}
 
 	g_message("Event created.");
 

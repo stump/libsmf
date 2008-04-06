@@ -620,14 +620,26 @@ event_is_end_of_track(const smf_event_t *event)
 /*
  * Returns 1 if MIDI data in the event is valid, 0 otherwise.
  */
-static int
-event_is_valid(const smf_event_t *event)
+int
+smf_event_is_valid(const smf_event_t *event)
 {
 	assert(event);
 	assert(event->midi_buffer);
 	assert(event->midi_buffer_length >= 1);
-	assert(event->midi_buffer_length == expected_message_length(event->midi_buffer[0],
-		&(event->midi_buffer[1]), event->midi_buffer_length - 1));
+
+	if (!is_status_byte(event->midi_buffer[0])) {
+		g_critical("First byte of MIDI message is not a valid status byte.");
+
+		return 0;
+	}
+
+	/* XXX: this routine requires some more work to detect more errors. */
+
+	if (event->midi_buffer_length != expected_message_length(event->midi_buffer[0],
+		&(event->midi_buffer[1]), event->midi_buffer_length - 1)) {
+
+		return 0;
+	}
 
 	return 1;
 }
@@ -654,7 +666,7 @@ parse_mtrk_chunk(smf_track_t *track)
 		event->time_pulses = time + event->delta_time_pulses;
 		time = event->time_pulses;
 
-		assert(event_is_valid(event));
+		assert(smf_event_is_valid(event));
 
 		if (event_is_end_of_track(event))
 			break;
