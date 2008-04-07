@@ -14,7 +14,5 @@ struct mthd_chunk_struct {
 	uint16_t			division;
 } __attribute__((__packed__));
 
-smf_track_t *smf_event_free_and_dont_care_about_numbers(smf_event_t *event);
-
 #endif /* SMF_PRIVATE_H */
 

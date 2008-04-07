@@ -91,7 +91,7 @@ smf_track_new(smf_t *smf)
 void
 smf_track_free(smf_track_t *track)
 {
-	int i;
+	int i, track_number;
 	smf_t *smf;
 
 	assert(track);
@@ -99,7 +99,7 @@ smf_track_free(smf_track_t *track)
 
 	/* Remove all the events, from last to first. */
 	while (track->events_array->len > 0)
-		smf_event_free_and_dont_care_about_numbers(g_ptr_array_index(track->events_array, track->events_array->len - 1));
+		smf_event_free(g_ptr_array_index(track->events_array, track->events_array->len - 1));
 
 	assert(track->events_array->len == 0);
 	assert(track->number_of_events == 0);
@@ -107,6 +107,7 @@ smf_track_free(smf_track_t *track)
 
 	/* Detach itself from smf. */
 	smf = track->smf;
+	track_number = track->track_number;
 
 	track->smf->number_of_tracks--;
 
@@ -117,7 +118,7 @@ smf_track_free(smf_track_t *track)
 	free(track);
 
 	/* Renumber the rest of the tracks, so they are consecutively numbered. */
-	for (i = 1; i <= smf->number_of_tracks; i++) {
+	for (i = track_number; i <= smf->number_of_tracks; i++) {
 		track = smf_get_track_by_number(smf, i);
 		track->track_number = i;
 	}
@@ -199,18 +200,20 @@ smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int
 }
 
 /*
- * The only purpose of this function is to speed up freeing
- * the whole smf_track_t instances.
+ * Detaches event from its track and frees it.
  */
-smf_track_t *
-smf_event_free_and_dont_care_about_numbers(smf_event_t *event)
+void
+smf_event_free(smf_event_t *event)
 {
+	int i, event_number;
+
 	smf_track_t *track;
 
 	assert(event->track != NULL);
 	assert(event->track->events_array != NULL);
 
 	track = event->track;
+	event_number = event->event_number;
 
 	event->track->number_of_events--;
 
@@ -223,22 +226,8 @@ smf_event_free_and_dont_care_about_numbers(smf_event_t *event)
 	memset(event, 0, sizeof(smf_event_t));
 	free(event);
 
-	return track;
-}
-
-/*
- * Detaches event from its track and frees it.
- */
-void
-smf_event_free(smf_event_t *event)
-{
-	int i;
-	smf_track_t *track;
-
-	track = smf_event_free_and_dont_care_about_numbers(event);
-
 	/* Renumber the rest of the events, so they are consecutively numbered. */
-	for (i = 1; i <= track->number_of_events; i++) {
+	for (i = event_number; i <= track->number_of_events; i++) {
 		event = smf_get_event_by_number(track, i);
 		event->event_number = i;
 	}
