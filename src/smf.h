@@ -23,7 +23,7 @@ struct smf_struct {
 	int		next_chunk_offset;
 
 	/* Private, used by smf.c. */
-	GQueue		*tracks_queue;
+	GPtrArray	*tracks_array;
 	double		last_seek_position;
 };
 

@@ -29,8 +29,8 @@ smf_new(void)
 
 	memset(smf, 0, sizeof(smf_t));
 
-	smf->tracks_queue = g_queue_new();
-	assert(smf->tracks_queue);
+	smf->tracks_array = g_ptr_array_new();
+	assert(smf->tracks_array);
 
 	/* Default tempo is 120 BPM. */
 	smf->microseconds_per_quarter_note = 500000;
@@ -44,14 +44,14 @@ smf_new(void)
 void
 smf_free(smf_t *smf)
 {
-	smf_track_t *track;
+	int i;
 
-	while ((track = (smf_track_t *)g_queue_pop_head(smf->tracks_queue)) != NULL)
-		smf_track_free(track);
+	for (i = 0; i < smf->tracks_array->len; i++)
+		smf_track_free(g_ptr_array_index(smf->tracks_array, i));
 
-	assert(g_queue_is_empty(smf->tracks_queue));
+	assert(smf->tracks_array->len == 0);
 	assert(smf->number_of_tracks == 0);
-	g_queue_free(smf->tracks_queue);
+	g_ptr_array_free(smf->tracks_array, TRUE);
 
 	memset(smf, 0, sizeof(smf_t));
 	free(smf);
@@ -72,7 +72,7 @@ smf_track_new(smf_t *smf)
 	memset(track, 0, sizeof(smf_track_t));
 
 	track->smf = smf;
-	g_queue_push_tail(smf->tracks_queue, (gpointer)track);
+	g_ptr_array_add(smf->tracks_array, track);
 
 	track->events_queue = g_queue_new();
 	assert(track->events_queue);
@@ -111,8 +111,8 @@ smf_track_free(smf_track_t *track)
 
 	track->smf->number_of_tracks--;
 
-	assert(track->smf->tracks_queue);
-	g_queue_remove(track->smf->tracks_queue, (gpointer)track);
+	assert(track->smf->tracks_array);
+	g_ptr_array_remove(track->smf->tracks_array, track);
 
 	memset(track, 0, sizeof(smf_track_t));
 	free(track);
@@ -400,7 +400,7 @@ smf_get_track_by_number(smf_t *smf, int track_number)
 	assert(track_number >= 1);
 	assert(track_number <= smf->number_of_tracks);
 
-	track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, track_number - 1);
+	track = (smf_track_t *)g_ptr_array_index(smf->tracks_array, track_number - 1);
 
 	assert(track);
 
