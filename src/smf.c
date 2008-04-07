@@ -33,7 +33,7 @@ smf_new(void)
 	assert(smf->tracks_queue);
 
 	/* Default tempo is 120 BPM. */
-	smf->microseconds_per_quarter_note = 0x07A120;
+	smf->microseconds_per_quarter_note = 500000;
 
 	return smf;
 }
@@ -107,8 +107,8 @@ smf_track_free(smf_track_t *track)
 	g_queue_free(track->events_queue);
 
 	/* Detach itself from smf. */
-	assert(track->smf);
 	smf = track->smf;
+
 	track->smf->number_of_tracks--;
 
 	assert(track->smf->tracks_queue);
@@ -143,9 +143,14 @@ smf_event_new(smf_track_t *track)
 	event->track_number = track->track_number;
 	g_queue_push_tail(track->events_queue, (gpointer)event);
 	event->track->number_of_events++;
+	event->event_number = event->track->number_of_events;
 
 	if (event->track->next_event_number == -1)
 		event->track->next_event_number = 1;
+
+	event->delta_time_pulses = -1;
+	event->time_pulses = -1;
+	event->time_seconds = -1;
 
 	return event;
 }
@@ -200,8 +205,13 @@ smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int
 void
 smf_event_free(smf_event_t *event)
 {
+	int i;
+	smf_track_t *track;
+
 	assert(event->track != NULL);
 	assert(event->track->events_queue != NULL);
+
+	track = event->track;
 
 	event->track->number_of_events--;
 
@@ -213,6 +223,12 @@ smf_event_free(smf_event_t *event)
 
 	memset(event, 0, sizeof(smf_event_t));
 	free(event);
+
+	/* Renumber the rest of the events, so they are consecutively numbered. */
+	for (i = 1; i <= g_queue_get_length(track->events_queue); i++) {
+		event = smf_get_event_by_number(track, i);
+		event->event_number = i;
+	}
 }
 
 int
@@ -329,33 +345,6 @@ smf_event_print_metadata(const smf_event_t *event)
 	return 0;
 }
 
-static void
-parse_metadata_event(const smf_event_t *event)
-{
-	assert(smf_event_is_metadata(event));
-
-	smf_event_print_metadata(event);
-
-	/* "Tempo" metaevent. */
-	if (event->midi_buffer[1] == 0x51) {
-		int tmp;
-
-		assert(event->track != NULL);
-		assert(event->track->smf != NULL);
-
-		tmp = (event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
-		if (tmp <= 0) {
-			g_critical("Ignoring invalid tempo change.");
-			return;
-		}
-
-		event->track->smf->microseconds_per_quarter_note = tmp;
-		g_debug("Setting microseconds per quarter note: %d", event->track->smf->microseconds_per_quarter_note);
-
-		return;
-	}
-}
-
 smf_event_t *
 smf_get_next_event_from_track(smf_track_t *track)
 {
@@ -415,6 +404,7 @@ smf_get_track_by_number(smf_t *smf, int track_number)
 	track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, track_number - 1);
 
 	assert(track);
+	assert(track->track_number == track_number);
 
 	return track;
 }
@@ -431,6 +421,7 @@ smf_get_event_by_number(smf_track_t *track, int event_number)
 	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, event_number - 1);
 
 	assert(event);
+	assert(event->event_number == event_number);
 
 	return event;
 }
@@ -460,17 +451,80 @@ smf_find_track_with_next_event(smf_t *smf)
 	return min_time_track;
 }
 
-void
-smf_compute_time(smf_event_t *event)
+static void
+maybe_parse_metadata(smf_event_t *event)
 {
-	assert(event);
-	assert(event->track);
-	assert(event->track->smf);
-	assert(event->track->smf->ppqn > 0);
-	assert(event->track->smf->microseconds_per_quarter_note > 0);
+	if (!smf_event_is_metadata(event))
+		return;
 
-	event->time_seconds = event->time_pulses *
-		((double)event->track->smf->microseconds_per_quarter_note / ((double)event->track->smf->ppqn * 1000000.0));
+	/* "Tempo" metaevent. */
+	if (event->midi_buffer[1] == 0x51) {
+		int tmp;
+
+		assert(event->track != NULL);
+		assert(event->track->smf != NULL);
+
+		tmp = (event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
+		if (tmp <= 0) {
+			g_critical("Ignoring invalid tempo change.");
+			return;
+		}
+
+		event->track->smf->microseconds_per_quarter_note = tmp;
+		g_debug("Setting microseconds per quarter note: %d", event->track->smf->microseconds_per_quarter_note);
+
+		return;
+	}
+}
+
+double
+seconds_between_events(int previous_pulses, smf_event_t *event)
+{
+	int pulses;
+
+	assert(event);
+
+	pulses = event->time_pulses - previous_pulses;
+
+	assert(pulses >= 0);
+
+	return pulses * ((double)event->track->smf->microseconds_per_quarter_note / ((double)event->track->smf->ppqn * 1000000.0));
+}
+
+/*
+ * Computes value of event->time_seconds for all events in smf.
+ * Warning: rewinds the smf.
+ */
+int
+smf_compute_seconds(smf_t *smf)
+{
+	smf_event_t *event, *previous = NULL;
+
+	smf_rewind(smf);
+
+	/*
+	 * XXX: This loop is SLOW.
+	 */
+	for (;;) {
+		event = smf_get_next_event(smf);
+		
+		if (event == NULL)
+			return 0;
+
+		maybe_parse_metadata(event);
+
+		if (event->event_number == 1) {
+			event->time_seconds = seconds_between_events(0, event);
+
+		} else {
+			previous = smf_get_event_by_number(event->track, event->event_number - 1);
+
+			assert(previous);
+			assert(previous->time_seconds >= 0);
+
+			event->time_seconds = previous->time_seconds + seconds_between_events(previous->time_pulses, event);
+		}
+	}
 }
 
 smf_event_t *
@@ -488,18 +542,6 @@ smf_get_next_event(smf_t *smf)
 	event = smf_get_next_event_from_track(track);
 	
 	assert(event != NULL);
-
-	if (smf_event_is_metadata(event)) {
-		parse_metadata_event(event);
-
-		return smf_get_next_event(smf);
-	}
-
-	smf_compute_time(event);
-
-#if 0
-	fprintf(stderr, "smf_get_next_event: next event time = %f;\n", event->time_seconds);
-#endif
 
 	event->track->smf->last_seek_position = -1.0;
 
@@ -522,10 +564,6 @@ smf_peek_next_event(smf_t *smf)
 	
 	assert(event != NULL);
 
-	/* XXX: we cannot do the metadata trick described above. */
-
-	smf_compute_time(event);
-
 	return event;
 }
 
@@ -539,6 +577,7 @@ smf_rewind(smf_t *smf)
 	assert(smf);
 
 	smf->last_seek_position = 0.0;
+	smf->microseconds_per_quarter_note = 500000;
 
 	for (i = 1; i <= g_queue_get_length(smf->tracks_queue); i++) {
 		track = smf_get_track_by_number(smf, i);
@@ -594,11 +633,5 @@ smf_seek_to(smf_t *smf, double seconds)
 	smf->last_seek_position = seconds;
 
 	return 0;
-}
-
-int
-smf_get_number_of_tracks(smf_t *smf)
-{
-	return smf->number_of_tracks;
 }
 

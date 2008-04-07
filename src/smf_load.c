@@ -542,6 +542,9 @@ make_string(const unsigned char *buf, const int buffer_length, int len)
 {
 	char *str;
 
+	assert(buffer_length > 0);
+	assert(len > 0);
+
 	if (len > buffer_length) {
 		g_critical("End of buffer in make_string().");
 
@@ -566,7 +569,7 @@ make_string(const unsigned char *buf, const int buffer_length, int len)
 char *
 smf_string_from_event(const smf_event_t *event)
 {
-	int string_length, length_length;
+	int string_length = -1, length_length = -1;
 
 	extract_vlq((void *)&(event->midi_buffer[2]), event->midi_buffer_length - 2, &string_length, &length_length);
 
@@ -798,6 +801,7 @@ smf_load(const char *file_name)
 	if (smf == NULL)
 		return NULL;
 
+	smf_compute_seconds(smf);
 	smf_rewind(smf);
 
 	return smf;

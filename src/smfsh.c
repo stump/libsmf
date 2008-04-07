@@ -168,13 +168,13 @@ cmd_track(char *arg)
 		num = atoi(arg);
 		if (num < 1 || num > smf->number_of_tracks) {
 			g_critical("Invalid track number specified; valid choices are 1 - %d.", smf->number_of_tracks);
-			return -1;
+			return -2;
 		}
 
 		selected_track = smf_get_track_by_number(smf, num);
 		if (selected_track == NULL) {
 			g_critical("smf_get_track_by_number() failed, track not selected.");
-			return -2;
+			return -3;
 		}
 
 		selected_event = NULL;
@@ -275,7 +275,7 @@ print_event(smf_event_t *event)
 int
 show_event(smf_event_t *event)
 {
-	g_message("Time offset from previous event: %d pulses.", event->delta_time_pulses);
+	g_message("Event number %d, time offset from previous event: %d pulses.", event->event_number, event->delta_time_pulses);
 	g_message("Time since start of the song: %d pulses, %f seconds.", event->time_pulses, event->time_seconds);
 
 	if (event->midi_buffer_length == 1) {
@@ -326,10 +326,12 @@ cmd_event(char *arg)
 	int num;
 
 	if (arg == NULL) {
-		if (selected_event == NULL)
+		if (selected_event == NULL) {
 			g_message("No event currently selected.");
-		else
-			g_message("Currently selected is event %d, track %d.", -1, selected_track->track_number);
+		} else {
+			g_message("Currently selected is event %d, track %d.", selected_event->event_number, selected_track->track_number);
+			show_event(selected_event);
+		}
 	} else {
 		num = atoi(arg);
 		if (num < 1 || num > selected_track->number_of_events) {
@@ -343,7 +345,8 @@ cmd_event(char *arg)
 			return -2;
 		}
 
-		g_message("Event number %d selected.", -1);
+		g_message("Event number %d selected.", selected_event->event_number);
+		show_event(selected_event);
 	}
 
 	return 0;

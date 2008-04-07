@@ -52,6 +52,8 @@ typedef struct smf_track_struct smf_track_t;
 struct smf_event_struct {
 	smf_track_t	*track;
 
+	int		event_number;
+
 	int		delta_time_pulses;
 	int		time_pulses;
 	double		time_seconds;
@@ -80,9 +82,9 @@ smf_t *smf_load_from_memory(const void *buffer, const int buffer_length);
 /* Routine for writing SMF files. */
 int smf_save(smf_t *smf, const char *file_name);
 
-int smf_event_is_valid(const smf_event_t *event);
+int smf_compute_seconds(smf_t *smf);
 
-int smf_get_number_of_tracks(smf_t *smf);
+int smf_event_is_valid(const smf_event_t *event);
 
 smf_event_t *smf_get_next_event(smf_t *smf);
 smf_event_t *smf_peek_next_event(smf_t *smf);
