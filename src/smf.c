@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include "smf.h"
+#include "smf_private.h"
 
 /*
  * Allocates new smf_t structure.
@@ -44,10 +45,9 @@ smf_new(void)
 void
 smf_free(smf_t *smf)
 {
-	int i;
-
-	for (i = 0; i < smf->tracks_array->len; i++)
-		smf_track_free(g_ptr_array_index(smf->tracks_array, i));
+	/* Remove all the tracks, from last to first. */
+	while (smf->tracks_array->len > 0)
+		smf_track_free(g_ptr_array_index(smf->tracks_array, smf->tracks_array->len - 1));
 
 	assert(smf->tracks_array->len == 0);
 	assert(smf->number_of_tracks == 0);
@@ -74,8 +74,8 @@ smf_track_new(smf_t *smf)
 	track->smf = smf;
 	g_ptr_array_add(smf->tracks_array, track);
 
-	track->events_queue = g_queue_new();
-	assert(track->events_queue);
+	track->events_array = g_ptr_array_new();
+	assert(track->events_array);
 
 	smf->number_of_tracks++;
 	track->track_number = smf->number_of_tracks;
@@ -92,19 +92,18 @@ void
 smf_track_free(smf_track_t *track)
 {
 	int i;
-	smf_event_t *event;
 	smf_t *smf;
 
 	assert(track);
-	assert(track->events_queue);
+	assert(track->events_array);
 
-	/* Remove all the events. */
-	while ((event = (smf_event_t *)g_queue_pop_head(track->events_queue)) != NULL)
-		smf_event_free(event);
+	/* Remove all the events, from last to first. */
+	while (track->events_array->len > 0)
+		smf_event_free_and_dont_care_about_numbers(g_ptr_array_index(track->events_array, track->events_array->len - 1));
 
-	assert(g_queue_is_empty(track->events_queue));
+	assert(track->events_array->len == 0);
 	assert(track->number_of_events == 0);
-	g_queue_free(track->events_queue);
+	g_ptr_array_free(track->events_array, TRUE);
 
 	/* Detach itself from smf. */
 	smf = track->smf;
@@ -141,7 +140,7 @@ smf_event_new(smf_track_t *track)
 	/* Add new event to its track. */
 	event->track = track;
 	event->track_number = track->track_number;
-	g_queue_push_tail(track->events_queue, (gpointer)event);
+	g_ptr_array_add(track->events_array, event);
 	event->track->number_of_events++;
 	event->event_number = event->track->number_of_events;
 
@@ -200,6 +199,34 @@ smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int
 }
 
 /*
+ * The only purpose of this function is to speed up freeing
+ * the whole smf_track_t instances.
+ */
+smf_track_t *
+smf_event_free_and_dont_care_about_numbers(smf_event_t *event)
+{
+	smf_track_t *track;
+
+	assert(event->track != NULL);
+	assert(event->track->events_array != NULL);
+
+	track = event->track;
+
+	event->track->number_of_events--;
+
+	/* Remove event from its track. */
+	g_ptr_array_remove(event->track->events_array, event);
+
+	if (event->midi_buffer != NULL)
+		free(event->midi_buffer);
+
+	memset(event, 0, sizeof(smf_event_t));
+	free(event);
+
+	return track;
+}
+
+/*
  * Detaches event from its track and frees it.
  */
 void
@@ -208,21 +235,7 @@ smf_event_free(smf_event_t *event)
 	int i;
 	smf_track_t *track;
 
-	assert(event->track != NULL);
-	assert(event->track->events_queue != NULL);
-
-	track = event->track;
-
-	event->track->number_of_events--;
-
-	/* Remove event from its track. */
-	g_queue_remove(event->track->events_queue, (gpointer)event);
-
-	if (event->midi_buffer != NULL)
-		free(event->midi_buffer);
-
-	memset(event, 0, sizeof(smf_event_t));
-	free(event);
+	track = smf_event_free_and_dont_care_about_numbers(event);
 
 	/* Renumber the rest of the events, so they are consecutively numbered. */
 	for (i = 1; i <= track->number_of_events; i++) {
@@ -385,7 +398,7 @@ smf_peek_next_event_from_track(smf_track_t *track)
 		return NULL;
 
 	assert(track->next_event_number >= 1);
-	assert(!g_queue_is_empty(track->events_queue));
+	assert(track->events_array->len != 0);
 
 	event = smf_get_event_by_number(track, track->next_event_number);
 
@@ -415,8 +428,7 @@ smf_get_event_by_number(smf_track_t *track, int event_number)
 	assert(event_number >= 1);
 	assert(event_number <= track->number_of_events);
 
-	/* XXX: inefficient; use some different data structure. */
-	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, event_number - 1);
+	event = g_ptr_array_index(track->events_array, event_number - 1);
 
 	assert(event);
 

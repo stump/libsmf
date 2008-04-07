@@ -44,7 +44,7 @@ struct smf_track_struct {
 	int		next_event_offset; /* Offset into buffer, used in parse_next_event(). */
 	int		next_event_number;
 	int		time_of_next_event; /* Absolute time of next event on events_queue. */
-	GQueue		*events_queue;
+	GPtrArray	*events_array;
 };
 
 typedef struct smf_track_struct smf_track_t;
