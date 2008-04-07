@@ -403,7 +403,6 @@ smf_get_track_by_number(smf_t *smf, int track_number)
 	track = (smf_track_t *)g_queue_peek_nth(smf->tracks_queue, track_number - 1);
 
 	assert(track);
-	assert(track->track_number == track_number);
 
 	return track;
 }
@@ -420,7 +419,6 @@ smf_get_event_by_number(smf_track_t *track, int event_number)
 	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, event_number - 1);
 
 	assert(event);
-	assert(event->event_number == event_number);
 
 	return event;
 }
