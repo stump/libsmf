@@ -449,6 +449,7 @@ smf_find_track_with_next_event(smf_t *smf)
 	return min_time_track;
 }
 
+/* XXX: Add tempo map. */
 static void
 maybe_parse_metadata(smf_event_t *event)
 {
@@ -475,7 +476,8 @@ maybe_parse_metadata(smf_event_t *event)
 	}
 }
 
-double
+/* XXX: Add tempo map. */
+static double
 seconds_between_events(int previous_pulses, smf_event_t *event)
 {
 	int pulses;
@@ -500,9 +502,6 @@ smf_compute_seconds(smf_t *smf)
 
 	smf_rewind(smf);
 
-	/*
-	 * XXX: This loop is SLOW.
-	 */
 	for (;;) {
 		event = smf_get_next_event(smf);
 		

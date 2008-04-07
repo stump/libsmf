@@ -137,6 +137,8 @@ write_event_time(smf_event_t *event)
 	unsigned long value = event->delta_time_pulses, buffer;
 	int ret;
 
+	assert(event->delta_time_pulses >= 0);
+
 	/* Taken from http://www.borg.com/~jglatt/tech/midifile/vari.htm */
 	buffer = value & 0x7F;
 

@@ -480,6 +480,8 @@ cmd_eventaddeot(char *notused)
 		return -2;
 	}
 
+	event->delta_time_pulses = 0;
+
 	g_message("Event created.");
 
 	return 0;
