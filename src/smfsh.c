@@ -95,16 +95,47 @@ cmd_save(char *file_name)
 int
 cmd_ppqn(char *new_ppqn)
 {
+	int tmp;
+
 	if (new_ppqn == NULL) {
-		g_message("Pulses Per Quarter Note is %d.", smf->ppqn);
+		g_message("Pulses Per Quarter Note (aka Division) is %d.", smf->ppqn);
 	} else {
 		/* XXX: Use strtol. */
-		smf->ppqn = atoi(new_ppqn);
+		tmp = atoi(new_ppqn);
+		if (tmp <= 0) {
+			g_critical("Invalid PPQN, valid values are greater than zero.");
+			return -1;
+		}
+
+		smf->ppqn = tmp;
 		g_message("Pulses Per Quarter Note changed to %d.", smf->ppqn);
 	}
 	
 	return 0;
 }
+
+int
+cmd_format(char *new_format)
+{
+	int tmp;
+
+	if (new_format == NULL) {
+		g_message("Format is %d.", smf->format);
+	} else {
+		/* XXX: Use strtol. */
+		tmp = atoi(new_format);
+		if (tmp < 0 || tmp > 2) {
+			g_critical("Invalid format value, valid values are in range 0 - 2, inclusive.");
+			return -1;
+		}
+
+		smf->format = tmp;
+		g_message("Forma changed to %d.", smf->format);
+	}
+	
+	return 0;
+}
+
 
 int
 cmd_tracks(char *notused)
@@ -245,11 +276,19 @@ int
 show_event(smf_event_t *event)
 {
 	g_message("Time offset from previous event: %d pulses.", event->delta_time_pulses);
-	g_message("Time since start of the song: %f seconds.", event->time_seconds);
-	g_message("MIDI message length: %d bytes.", event->midi_buffer_length);
-	/* XXX: Don't read past the end of the buffer. */
-	g_message("First three bytes of MIDI message: 0x%x 0x%x 0x%x",
-			event->midi_buffer[0], event->midi_buffer[1], event->midi_buffer[2]);
+	g_message("Time since start of the song: %d pulses, %f seconds.", event->time_pulses, event->time_seconds);
+
+	if (event->midi_buffer_length == 1) {
+		g_message("MIDI message: 0x%x", event->midi_buffer[0]);
+	} else if (event->midi_buffer_length == 2) {
+		g_message("MIDI message: 0x%x 0x%x", event->midi_buffer[0], event->midi_buffer[1]);
+	} else if (event->midi_buffer_length == 3) {
+		g_message("MIDI message: 0x%x 0x%x 0x%x", event->midi_buffer[0], event->midi_buffer[1], event->midi_buffer[2]);
+	} else {
+		g_message("Message length is %d bytes; first three bytes are: 0x%x 0x%x 0x%x",
+			event->midi_buffer_length, event->midi_buffer[0], event->midi_buffer[1], event->midi_buffer[2]);
+	}
+
 	print_event(event);
 
 	return 0;
@@ -475,7 +514,8 @@ struct command_struct {
 } commands[] = {{"help", cmd_help, "show this help."},
 		{"load", cmd_load, "load named file."},
 		{"save", cmd_save, "save to named file."},
-		{"ppqn", cmd_ppqn, "show ppqn, or set ppqn if used with parameter."},
+		{"ppqn", cmd_ppqn, "show ppqn (aka division), or set ppqn if used with parameter."},
+		{"format", cmd_format, "show format, or set format if used with parameter."},
 		{"tracks", cmd_tracks, "show number of tracks."},
 		{"track", cmd_track, "show number of currently selected track, or select a track."},
 		{"trackadd", cmd_trackadd, "add a track and select it."},
@@ -483,6 +523,7 @@ struct command_struct {
 		{"events", cmd_events, "show events in the currently selected track."},
 		{"event", cmd_event, "show number of currently selected event, or select an event."},
 		{"eventadd", cmd_eventadd, "add an event and select it."},
+		{"add", cmd_eventadd, NULL},
 		{"eventaddeot", cmd_eventaddeot, "add an End Of Track event."},
 		{"eot", cmd_eventaddeot, NULL},
 		{"eventrm", cmd_eventrm, "remove currently selected event."},
@@ -614,6 +655,9 @@ int main(int argc, char *argv[])
 	if (argc == 2) {
 		last_file_name = argv[1];
 		cmd_load(last_file_name);
+		cmd_track("1");
+	} else {
+		cmd_trackadd(NULL);
 	}
 
 	for (;;)
