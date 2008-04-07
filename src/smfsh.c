@@ -315,8 +315,8 @@ decode_hex(char *str, unsigned char **buffer, int *length)
 {
 	int i, value, midi_buffer_length;
 	char buf[3];
-	unsigned char *midi_buffer;
-	char *end;
+	unsigned char *midi_buffer = NULL;
+	char *end = NULL;
 
 	if ((strlen(str) % 2) != 0) {
 		g_critical("Hex value should have even number of characters, you know.");
