@@ -118,7 +118,7 @@ smf_track_free(smf_track_t *track)
 	free(track);
 
 	/* Renumber the rest of the tracks, so they are consecutively numbered. */
-	for (i = 1; i <= g_queue_get_length(smf->tracks_queue); i++) {
+	for (i = 1; i <= smf->number_of_tracks; i++) {
 		track = smf_get_track_by_number(smf, i);
 		track->track_number = i;
 	}
@@ -225,7 +225,7 @@ smf_event_free(smf_event_t *event)
 	free(event);
 
 	/* Renumber the rest of the events, so they are consecutively numbered. */
-	for (i = 1; i <= g_queue_get_length(track->events_queue); i++) {
+	for (i = 1; i <= track->number_of_events; i++) {
 		event = smf_get_event_by_number(track, i);
 		event->event_number = i;
 	}
@@ -355,18 +355,17 @@ smf_get_next_event_from_track(smf_track_t *track)
 		return NULL;
 
 	assert(track->next_event_number >= 1);
+	assert(track->number_of_events > 0);
 
-	assert(!g_queue_is_empty(track->events_queue));
+	event = smf_get_event_by_number(track, track->next_event_number);
 
-	/* XXX: inefficient; use some different data structure. */
-	event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number - 1);
-	next_event = (smf_event_t *)g_queue_peek_nth(track->events_queue, track->next_event_number);
-
-	assert(event != next_event);
 	assert(event != NULL);
 
 	/* Is this the last event in the track? */
-	if (next_event != NULL) {
+	if (track->next_event_number < track->number_of_events) {
+		next_event = smf_get_event_by_number(track, track->next_event_number + 1);
+		assert(next_event);
+
 		track->time_of_next_event = next_event->time_pulses;
 		track->next_event_number++;
 	} else {
@@ -433,7 +432,7 @@ smf_find_track_with_next_event(smf_t *smf)
 	smf_track_t *track = NULL, *min_time_track = NULL;
 
 	/* Find track with event that should be played next. */
-	for (i = 1; i <= g_queue_get_length(smf->tracks_queue); i++) {
+	for (i = 1; i <= smf->number_of_tracks; i++) {
 		track = smf_get_track_by_number(smf, i);
 
 		assert(track);
@@ -579,7 +578,7 @@ smf_rewind(smf_t *smf)
 	smf->last_seek_position = 0.0;
 	smf->microseconds_per_quarter_note = 500000;
 
-	for (i = 1; i <= g_queue_get_length(smf->tracks_queue); i++) {
+	for (i = 1; i <= smf->number_of_tracks; i++) {
 		track = smf_get_track_by_number(smf, i);
 
 		assert(track != NULL);
