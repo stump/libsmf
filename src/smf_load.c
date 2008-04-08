@@ -657,13 +657,14 @@ parse_mtrk_chunk(smf_track_t *track)
 	smf_event_t *event;
 
 	if (parse_mtrk_header(track))
-		return 1;
+		return -1;
 
 	for (;;) {
 		event = parse_next_event(track);
 
+		/* Couldn't parse an event? */
 		if (event == NULL)
-			return 1;
+			return -1;
 
 		/* Replace "relative" event time with absolute one, i.e. relative to the start of the track. */
 		event->time_pulses = time + event->delta_time_pulses;
