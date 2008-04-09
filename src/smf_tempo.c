@@ -11,7 +11,7 @@
 #include "smf_private.h"
 
 static void
-maybe_parse_metadata(smf_event_t *event)
+maybe_add_to_tempo_map(smf_event_t *event)
 {
 	int new_tempo;
 
@@ -40,19 +40,17 @@ maybe_parse_metadata(smf_event_t *event)
 
 /* XXX: Add tempo map. */
 static double
-seconds_between_events(int previous_pulses, smf_event_t *event)
+seconds_between_events(smf_t *smf, int previous_pulses, int new_pulses)
 {
 	int pulses, tempo;
 
-	assert(event);
+	pulses = new_pulses - previous_pulses;
 
-	pulses = event->time_pulses - previous_pulses;
-
-	tempo = smf_get_tempo_by_position(event->track->smf, previous_pulses)->microseconds_per_quarter_note;
+	tempo = smf_get_tempo_by_position(smf, previous_pulses)->microseconds_per_quarter_note;
 
 	assert(pulses >= 0);
 
-	return pulses * ((double)tempo / ((double)event->track->smf->ppqn * 1000000.0));
+	return pulses * ((double)tempo / ((double)smf->ppqn * 1000000.0));
 }
 
 /*
@@ -65,6 +63,7 @@ smf_compute_seconds(smf_t *smf)
 	smf_event_t *event, *previous = NULL;
 
 	smf_rewind(smf);
+	smf_remove_tempos(smf);
 
 	for (;;) {
 		event = smf_get_next_event(smf);
@@ -72,10 +71,10 @@ smf_compute_seconds(smf_t *smf)
 		if (event == NULL)
 			return 0;
 
-		maybe_parse_metadata(event);
+		maybe_add_to_tempo_map(event);
 
 		if (event->event_number == 1) {
-			event->time_seconds = seconds_between_events(0, event);
+			event->time_seconds = seconds_between_events(smf, 0, event->time_pulses);
 
 		} else {
 			previous = smf_get_event_by_number(event->track, event->event_number - 1);
@@ -83,13 +82,14 @@ smf_compute_seconds(smf_t *smf)
 			assert(previous);
 			assert(previous->time_seconds >= 0);
 
-			event->time_seconds = previous->time_seconds + seconds_between_events(previous->time_pulses, event);
+			event->time_seconds = previous->time_seconds + seconds_between_events(smf,
+				previous->time_pulses, event->time_pulses);
 		}
 	}
 }
 
 /*
- * XXX: Sort entries by ->pulses.  Remove duplicates (two tempos starting at the same time,
+ * XXX: Sort entries by ->time_pulses.  Remove duplicates (two tempos starting at the same time,
  * at pulse 0, for example.
  */
 int
@@ -101,10 +101,13 @@ smf_tempo_add(smf_t *smf, int pulses, int new_tempo)
 		return -1;
 	}
 
-	tempo->pulses = pulses;
+	tempo->time_pulses = pulses;
+#if 0
+	tempo->time_seconds = seconds_between_events(smf, 0, pulses);
+#endif
 	tempo->microseconds_per_quarter_note = new_tempo;
 
-	g_ptr_array_add(smf->tempo_map, tempo);
+	g_ptr_array_add(smf->tempo_array, tempo);
 
 	return 0;
 }
@@ -114,10 +117,10 @@ smf_get_tempo_by_number(smf_t *smf, int number)
 {
 	assert(number >= 0);
 
-	if (number >= smf->tempo_map->len)
+	if (number >= smf->tempo_array->len)
 		return NULL;
 
-	return g_ptr_array_index(smf->tempo_map, number);
+	return g_ptr_array_index(smf->tempo_array, number);
 }
 
 smf_tempo_t *
@@ -128,16 +131,30 @@ smf_get_tempo_by_position(smf_t *smf, int pulses)
 
 	assert(pulses >= 0);
 
-	assert(smf->tempo_map != NULL);
+	assert(smf->tempo_array != NULL);
 	
-	for (i = smf->tempo_map->len - 1; i >= 0; i--) {
+	for (i = smf->tempo_array->len - 1; i >= 0; i--) {
 		tempo = smf_get_tempo_by_number(smf, i);
 
 		assert(tempo);
-		if (tempo->pulses <= pulses)
+		if (tempo->time_pulses <= pulses)
 			return tempo;
 	}
 
 	return NULL;
+}
+
+void
+smf_remove_tempos(smf_t *smf)
+{
+	while (smf->tempo_array->len > 0) {
+		smf_tempo_t *tempo = g_ptr_array_index(smf->tempo_array, smf->tempo_array->len - 1);
+		assert(tempo);
+		free(tempo);
+		g_ptr_array_remove_index(smf->tempo_array, smf->tempo_array->len - 1);
+	}
+
+	assert(smf->tempo_array->len == 0);
+	smf_tempo_add(smf, 0, 500000);
 }
 

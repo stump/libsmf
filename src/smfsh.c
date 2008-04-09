@@ -515,7 +515,7 @@ cmd_tempo(char *notused)
 			break;
 
 		g_message("Tempo #%d: Starts at %d pulses, setting %d microseconds per quarter note.",
-			i, tempo->pulses, tempo->microseconds_per_quarter_note);
+			i, tempo->time_pulses, tempo->microseconds_per_quarter_note);
 	}
 
 	return 0;

@@ -33,8 +33,8 @@ smf_new(void)
 	smf->tracks_array = g_ptr_array_new();
 	assert(smf->tracks_array);
 
-	smf->tempo_map = g_ptr_array_new();
-	assert(smf->tempo_map);
+	smf->tempo_array = g_ptr_array_new();
+	assert(smf->tempo_array);
 
 	/* Initial tempo is 120 BPM. */
 	smf_tempo_add(smf, 0, 500000);
@@ -55,7 +55,7 @@ smf_free(smf_t *smf)
 	assert(smf->tracks_array->len == 0);
 	assert(smf->number_of_tracks == 0);
 	g_ptr_array_free(smf->tracks_array, TRUE);
-	g_ptr_array_free(smf->tempo_map, TRUE);
+	g_ptr_array_free(smf->tempo_array, TRUE);
 
 	memset(smf, 0, sizeof(smf_t));
 	free(smf);

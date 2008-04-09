@@ -26,13 +26,16 @@ struct smf_struct {
 	double		last_seek_position;
 
 	/* Private, used by smf_tempo.c. */
-	GPtrArray	*tempo_map; /* Array of pointers to smf_tempo_struct. */
+	GPtrArray	*tempo_array; /* Array of pointers to smf_tempo_struct. */
 };
 
 typedef struct smf_struct smf_t;
 
+/* This structure describes a single tempo change. */
 struct smf_tempo_struct {
-	int pulses;
+	int time_pulses;
+	double time_seconds;
+
 	int microseconds_per_quarter_note;
 };
 
