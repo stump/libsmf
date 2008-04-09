@@ -46,11 +46,11 @@ smf_new(void)
  * Frees smf and all it's descendant structures.
  */
 void
-smf_free(smf_t *smf)
+smf_delete(smf_t *smf)
 {
 	/* Remove all the tracks, from last to first. */
 	while (smf->tracks_array->len > 0)
-		smf_track_free(g_ptr_array_index(smf->tracks_array, smf->tracks_array->len - 1));
+		smf_track_delete(g_ptr_array_index(smf->tracks_array, smf->tracks_array->len - 1));
 
 	assert(smf->tracks_array->len == 0);
 	assert(smf->number_of_tracks == 0);
@@ -93,7 +93,7 @@ smf_track_new(smf_t *smf)
  * Detaches track from its smf and frees it.
  */
 void
-smf_track_free(smf_track_t *track)
+smf_track_delete(smf_track_t *track)
 {
 	int i, track_number;
 	smf_t *smf;
@@ -103,7 +103,7 @@ smf_track_free(smf_track_t *track)
 
 	/* Remove all the events, from last to first. */
 	while (track->events_array->len > 0)
-		smf_event_free(g_ptr_array_index(track->events_array, track->events_array->len - 1));
+		smf_event_delete(g_ptr_array_index(track->events_array, track->events_array->len - 1));
 
 	assert(track->events_array->len == 0);
 	assert(track->number_of_events == 0);
@@ -172,7 +172,7 @@ smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int
 
 	if (first_byte < 0) {
 		g_critical("First byte of MIDI message cannot be < 0");
-		smf_event_free(event);
+		smf_event_delete(event);
 
 		return NULL;
 	}
@@ -189,7 +189,7 @@ smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int
 	event->midi_buffer = malloc(event->midi_buffer_length);
 	if (event->midi_buffer == NULL) {
 		g_critical("Cannot allocate MIDI buffer structure: %s", strerror(errno));
-		smf_event_free(event);
+		smf_event_delete(event);
 
 		return NULL; 
 	}
@@ -207,7 +207,7 @@ smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int
  * Detaches event from its track and frees it.
  */
 void
-smf_event_free(smf_event_t *event)
+smf_event_delete(smf_event_t *event)
 {
 	int i, event_number;
 

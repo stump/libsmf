@@ -286,7 +286,7 @@ parse_realtime_event(const unsigned char status, smf_track_t *track)
 	event->midi_buffer = malloc(1);
 	if (event->midi_buffer == NULL) {
 		g_critical("Cannot allocate memory in parse_realtime_event(): %s", strerror(errno));
-		smf_event_free(event);
+		smf_event_delete(event);
 
 		return -1;
 	}
@@ -528,7 +528,7 @@ parse_next_event(smf_track_t *track)
 	return event;
 
 error:
-	smf_event_free(event);
+	smf_event_delete(event);
 
 	return NULL;
 }
@@ -760,7 +760,7 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 		/* Skip unparseable chunks. */
 		if (parse_mtrk_chunk(track)) {
 			g_warning("SMF warning: Cannot load track.");
-			smf_track_free(track);
+			smf_track_delete(track);
 		}
 
 		track->file_buffer = NULL;

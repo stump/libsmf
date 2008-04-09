@@ -37,7 +37,7 @@ cmd_load(char *file_name)
 	}
 
 	if (smf != NULL)
-		smf_free(smf);
+		smf_delete(smf);
 
 	selected_track = NULL;
 	selected_event = NULL;
@@ -211,7 +211,7 @@ cmd_trackrm(char *notused)
 	}
 
 	selected_event = NULL;
-	smf_track_free(selected_track);
+	smf_track_delete(selected_track);
 	selected_track = NULL;
 
 	return 0;
@@ -454,7 +454,7 @@ cmd_eventadd(char *str)
 
 	if (smf_event_is_valid(selected_event) == 0) {
 		g_critical("Event is invalid from the MIDI specification point of view, not created.");
-		smf_event_free(selected_event);
+		smf_event_delete(selected_event);
 		selected_event = NULL;
 		return -7;
 	}
@@ -495,7 +495,7 @@ cmd_eventrm(char *notused)
 		return -1;
 	}
 
-	smf_event_free(selected_event);
+	smf_event_delete(selected_event);
 	selected_event = NULL;
 
 	g_message("Event removed.");
