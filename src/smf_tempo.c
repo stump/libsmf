@@ -1,8 +1,15 @@
+/*
+ * This is Standard MIDI File format implementation, tempo map related part.
+ *
+ * For questions and comments, contact Edward Tomasz Napierala <trasz@FreeBSD.org>.
+ * This code is public domain, you can do with it whatever you want.
+ */
+
+#include <stdlib.h>
 #include <assert.h>
 #include "smf.h"
 #include "smf_private.h"
 
-/* XXX: Add tempo map. */
 static void
 maybe_parse_metadata(smf_event_t *event)
 {
@@ -24,8 +31,9 @@ maybe_parse_metadata(smf_event_t *event)
 		return;
 	}
 
-	event->track->smf->microseconds_per_quarter_note = new_tempo;
-	g_debug("Setting microseconds per quarter note: %d", event->track->smf->microseconds_per_quarter_note);
+	smf_tempo_add(event->track->smf, event->time_pulses, new_tempo);
+	g_debug("Setting tempo (microseconds per quarter note) to %d.",
+		smf_get_tempo_by_position(event->track->smf, event->time_pulses)->microseconds_per_quarter_note);
 
 	return;
 }
@@ -34,15 +42,17 @@ maybe_parse_metadata(smf_event_t *event)
 static double
 seconds_between_events(int previous_pulses, smf_event_t *event)
 {
-	int pulses;
+	int pulses, tempo;
 
 	assert(event);
 
 	pulses = event->time_pulses - previous_pulses;
 
+	tempo = smf_get_tempo_by_position(event->track->smf, previous_pulses)->microseconds_per_quarter_note;
+
 	assert(pulses >= 0);
 
-	return pulses * ((double)event->track->smf->microseconds_per_quarter_note / ((double)event->track->smf->ppqn * 1000000.0));
+	return pulses * ((double)tempo / ((double)event->track->smf->ppqn * 1000000.0));
 }
 
 /*
@@ -78,4 +88,56 @@ smf_compute_seconds(smf_t *smf)
 	}
 }
 
+/*
+ * XXX: Sort entries by ->pulses.  Remove duplicates (two tempos starting at the same time,
+ * at pulse 0, for example.
+ */
+int
+smf_tempo_add(smf_t *smf, int pulses, int new_tempo)
+{
+	smf_tempo_t *tempo = malloc(sizeof(smf_tempo_t));
+	if (tempo == NULL) {
+		g_critical("Malloc failed.");
+		return -1;
+	}
+
+	tempo->pulses = pulses;
+	tempo->microseconds_per_quarter_note = new_tempo;
+
+	g_ptr_array_add(smf->tempo_map, tempo);
+
+	return 0;
+}
+
+smf_tempo_t *
+smf_get_tempo_by_number(smf_t *smf, int number)
+{
+	assert(number >= 0);
+
+	if (number >= smf->tempo_map->len)
+		return NULL;
+
+	return g_ptr_array_index(smf->tempo_map, number);
+}
+
+smf_tempo_t *
+smf_get_tempo_by_position(smf_t *smf, int pulses)
+{
+	int i;
+	smf_tempo_t *tempo;
+
+	assert(pulses >= 0);
+
+	assert(smf->tempo_map != NULL);
+	
+	for (i = smf->tempo_map->len - 1; i >= 0; i--) {
+		tempo = smf_get_tempo_by_number(smf, i);
+
+		assert(tempo);
+		if (tempo->pulses <= pulses)
+			return tempo;
+	}
+
+	return NULL;
+}
 

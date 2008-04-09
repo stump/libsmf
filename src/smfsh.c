@@ -504,6 +504,24 @@ cmd_eventrm(char *notused)
 }
 
 int
+cmd_tempo(char *notused)
+{
+	int i;
+	smf_tempo_t *tempo;
+
+	for (i = 0;; i++) {
+		tempo = smf_get_tempo_by_number(smf, i);
+		if (tempo == NULL)
+			break;
+
+		g_message("Tempo #%d: Starts at %d pulses, setting %d microseconds per quarter note.",
+			i, tempo->pulses, tempo->microseconds_per_quarter_note);
+	}
+
+	return 0;
+}
+
+int
 cmd_exit(char *notused)
 {
 	g_debug("Good bye.");
@@ -532,6 +550,7 @@ struct command_struct {
 		{"eventaddeot", cmd_eventaddeot, "add an End Of Track event."},
 		{"eot", cmd_eventaddeot, NULL},
 		{"eventrm", cmd_eventrm, "remove currently selected event."},
+		{"tempo", cmd_tempo, "show tempo map."},
 		{"exit", cmd_exit, "exit to shell."},
 		{"quit", cmd_exit, NULL},
 		{"bye", cmd_exit, NULL},

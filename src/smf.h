@@ -13,7 +13,6 @@ struct smf_struct {
 	int		ppqn;
 	int		frames_per_second;
 	int		resolution;
-	int		microseconds_per_quarter_note;
 	int		number_of_tracks;
 
 	/* These are private fields using only by loading and saving routines. */
@@ -25,9 +24,19 @@ struct smf_struct {
 	/* Private, used by smf.c. */
 	GPtrArray	*tracks_array;
 	double		last_seek_position;
+
+	/* Private, used by smf_tempo.c. */
+	GPtrArray	*tempo_map; /* Array of pointers to smf_tempo_struct. */
 };
 
 typedef struct smf_struct smf_t;
+
+struct smf_tempo_struct {
+	int pulses;
+	int microseconds_per_quarter_note;
+};
+
+typedef struct smf_tempo_struct smf_tempo_t;
 
 struct smf_track_struct {
 	smf_t		*smf;
@@ -99,6 +108,10 @@ void smf_rewind(smf_t *smf);
 smf_event_t *smf_get_next_event_from_track(smf_track_t *track);
 smf_track_t *smf_get_track_by_number(smf_t *smf, int track_number);
 smf_event_t *smf_get_event_by_number(smf_track_t *track, int event_number);
+
+int smf_tempo_add(smf_t *smf, int pulses, int tempo);
+smf_tempo_t *smf_get_tempo_by_position(smf_t *smf, int pulses);
+smf_tempo_t *smf_get_tempo_by_number(smf_t *smf, int number);
 
 #endif /* SMF_H */
 
