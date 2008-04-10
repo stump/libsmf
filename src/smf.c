@@ -523,7 +523,7 @@ smf_rewind(smf_t *smf)
 }
 
 int
-smf_seek_to(smf_t *smf, double seconds)
+smf_seek_to_seconds(smf_t *smf, double seconds)
 {
 	smf_event_t *event;
 	double time;
