@@ -235,63 +235,10 @@ cmd_trackrm(char *notused)
 }
 
 int
-print_event(smf_event_t *event)
-{
-	int off = 0;
-	char buf[256];
-
-	if (smf_event_is_metadata(event))
-		return smf_event_print_metadata(event);
-
-	/* XXX: verify lengths. */
-	switch (event->midi_buffer[0] & 0xF0) {
-		case 0x80:
-			off += snprintf(buf + off, sizeof(buf) - off, "Note Off, channel %d, note %d, velocity %d",
-					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
-			break;
-
-		case 0x90:
-			off += snprintf(buf + off, sizeof(buf) - off, "Note On, channel %d, note %d, velocity %d",
-					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
-			break;
-
-		case 0xA0:
-			off += snprintf(buf + off, sizeof(buf) - off, "Aftertouch, channel %d, note %d, pressure %d",
-					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
-			break;
-
-		case 0xB0:
-			off += snprintf(buf + off, sizeof(buf) - off, "Controller, channel %d, controller %d, value %d",
-					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
-			break;
-
-		case 0xC0:
-			off += snprintf(buf + off, sizeof(buf) - off, "Program Change, channel %d, controller %d",
-					event->midi_buffer[0] & 0x0F, event->midi_buffer[1]);
-			break;
-
-		case 0xD0:
-			off += snprintf(buf + off, sizeof(buf) - off, "Channel Pressure, channel %d, pressure %d",
-					event->midi_buffer[0] & 0x0F, event->midi_buffer[1]);
-			break;
-
-		case 0xE0:
-			off += snprintf(buf + off, sizeof(buf) - off, "Pitch Wheel, channel %d, value %d",
-					event->midi_buffer[0] & 0x0F, ((int)event->midi_buffer[2] << 7) | (int)event->midi_buffer[2]);
-			break;
-
-		default:
-			return 0;
-	}
-
-	g_message("Event: %s", buf);
-
-	return 0;
-}
-
-int
 show_event(smf_event_t *event)
 {
+	char *decoded;
+
 	g_message("Event number %d, time offset from previous event: %d pulses.", event->event_number, event->delta_time_pulses);
 	g_message("Time since start of the song: %d pulses, %f seconds.", event->time_pulses, event->time_seconds);
 
@@ -306,7 +253,18 @@ show_event(smf_event_t *event)
 			event->midi_buffer_length, event->midi_buffer[0], event->midi_buffer[1], event->midi_buffer[2]);
 	}
 
-	print_event(event);
+	decoded = smf_event_decode(event);
+
+	/* Unknown event? */
+	if (decoded == NULL)
+		return 0;
+
+	if (smf_event_is_metadata(event))
+		g_message("Metadata: %s.", decoded);
+	else
+		g_message("Event: %s.", decoded);
+
+	free(decoded);
 
 	return 0;
 }

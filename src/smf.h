@@ -105,7 +105,7 @@ int smf_seek_to_seconds(smf_t *smf, double seconds);
 int smf_seek_to_event(smf_t *smf, const smf_event_t *event);
 
 int smf_event_is_metadata(const smf_event_t *event);
-int smf_event_print_metadata(const smf_event_t *event);
+char *smf_event_decode(const smf_event_t *event);
 
 char *smf_string_from_event(const smf_event_t *event);
 void smf_rewind(smf_t *smf);

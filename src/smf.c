@@ -131,6 +131,9 @@ smf_track_delete(smf_track_t *track)
 /*
  * Allocates new smf_event_t structure and attaches it to the given track.
  */
+/*
+ * XXX: Handle adding entries in the middle of the track.
+ */
 smf_event_t *
 smf_event_new(smf_track_t *track)
 {
@@ -206,6 +209,9 @@ smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int
 /*
  * Detaches event from its track and frees it.
  */
+/*
+ * XXX: Handle removing entries in the middle of the track (recompute delta_time_pulses.).
+ */
 void
 smf_event_delete(smf_event_t *event)
 {
@@ -249,107 +255,169 @@ smf_event_is_metadata(const smf_event_t *event)
 	return 0;
 }
 
-int
-smf_event_print_metadata(const smf_event_t *event)
+#define BUFFER_SIZE 1024
+
+static char *
+smf_event_decode_metadata(const smf_event_t *event)
 {
 	int off = 0;
-	char buf[256];
+	char *buf;
 
-	if (!smf_event_is_metadata(event)) {
-		g_critical("Event is not metadata.");
-		return -1;
+	assert(smf_event_is_metadata(event));
+
+	buf = malloc(BUFFER_SIZE);
+	if (buf == NULL) {
+		g_critical("smf_event_decode_metadata: malloc failed.");
+		return NULL;
 	}
 
 	/* XXX: smf_string_from_event() may return NULL. */
 	switch (event->midi_buffer[1]) {
 		case 0x00:
-			off += snprintf(buf + off, sizeof(buf) - off, "Sequence number");
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Sequence number");
 			break;
 
 		case 0x01:
-			off += snprintf(buf + off, sizeof(buf) - off, "Text: %s", smf_string_from_event(event));
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Text: %s", smf_string_from_event(event));
 			break;
 
 		case 0x02:
-			off += snprintf(buf + off, sizeof(buf) - off, "Copyright: %s", smf_string_from_event(event));
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Copyright: %s", smf_string_from_event(event));
 			break;
 
 		case 0x03:
-			off += snprintf(buf + off, sizeof(buf) - off, "Sequence/Track Name: %s", smf_string_from_event(event));
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Sequence/Track Name: %s", smf_string_from_event(event));
 			break;
 
 		case 0x04:
-			off += snprintf(buf + off, sizeof(buf) - off, "Instrument: %s", smf_string_from_event(event));
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Instrument: %s", smf_string_from_event(event));
 			break;
 
 		case 0x05:
-			off += snprintf(buf + off, sizeof(buf) - off, "Lyric: %s", smf_string_from_event(event));
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Lyric: %s", smf_string_from_event(event));
 			break;
 
 		case 0x06:
-			off += snprintf(buf + off, sizeof(buf) - off, "Marker: %s", smf_string_from_event(event));
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Marker: %s", smf_string_from_event(event));
 			break;
 
 		case 0x07:
-			off += snprintf(buf + off, sizeof(buf) - off, "Cue Point: %s", smf_string_from_event(event));
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Cue Point: %s", smf_string_from_event(event));
 			break;
 
 		case 0x08:
-			off += snprintf(buf + off, sizeof(buf) - off, "Program Name: %s", smf_string_from_event(event));
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Program Name: %s", smf_string_from_event(event));
 			break;
 
 		case 0x09:
-			off += snprintf(buf + off, sizeof(buf) - off, "Device (Port) Name: %s", smf_string_from_event(event));
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Device (Port) Name: %s", smf_string_from_event(event));
 			break;
 
 		/* http://music.columbia.edu/pipermail/music-dsp/2004-August/061196.html */
 		case 0x20:
-			off += snprintf(buf + off, sizeof(buf) - off, "Channel Prefix: %d.", event->midi_buffer[3]);
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Channel Prefix: %d.", event->midi_buffer[3]);
 			break;
 
 		case 0x21:
-			off += snprintf(buf + off, sizeof(buf) - off, "Midi Port: %d.", event->midi_buffer[3]);
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Midi Port: %d.", event->midi_buffer[3]);
 			break;
 
 		case 0x2F:
-			off += snprintf(buf + off, sizeof(buf) - off, "End Of Track");
+			off += snprintf(buf + off, BUFFER_SIZE - off, "End Of Track");
 			break;
 
 		case 0x51:
-			off += snprintf(buf + off, sizeof(buf) - off, "Tempo: %d microseconds per quarter note",
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Tempo: %d microseconds per quarter note",
 				(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5]);
 			break;
 
 		case 0x54:
-			off += snprintf(buf + off, sizeof(buf) - off, "SMPTE Offset");
+			off += snprintf(buf + off, BUFFER_SIZE - off, "SMPTE Offset");
 			break;
 
 		case 0x58:
-			off += snprintf(buf + off, sizeof(buf) - off,
+			off += snprintf(buf + off, BUFFER_SIZE - off,
 				"Time Signature: %d/%d, %d clocks per click, %d notated 32nd notes per quarter note",
 				event->midi_buffer[3], (int)pow(2, event->midi_buffer[4]), event->midi_buffer[5],
 				event->midi_buffer[6]);
 			break;
 
 		case 0x59:
-			off += snprintf(buf + off, sizeof(buf) - off, "Key Signature");
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Key Signature");
 			break;
 
 		case 0x7F:
-			off += snprintf(buf + off, sizeof(buf) - off, "Proprietary (aka Sequencer) Event, length %d",
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Proprietary (aka Sequencer) Event, length %d",
 				event->midi_buffer_length);
 			break;
 
 		default:
-			off += snprintf(buf + off, sizeof(buf) - off, "Unknown Event: 0xFF 0x%x 0x%x 0x%x",
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Unknown Event: 0xFF 0x%x 0x%x 0x%x",
 				event->midi_buffer[1], event->midi_buffer[2], event->midi_buffer[3]);
 
 			break;
 	}
 
-	g_debug("Metadata: %s", buf);
+	return buf;
+}
 
-	return 0;
+char *
+smf_event_decode(const smf_event_t *event)
+{
+	int off = 0;
+	char *buf;
+
+	if (smf_event_is_metadata(event))
+		return smf_event_decode_metadata(event);
+
+	buf = malloc(BUFFER_SIZE);
+	if (buf == NULL) {
+		g_critical("smf_event_decode: malloc failed.");
+		return NULL;
+	}
+
+	/* XXX: verify lengths. */
+	switch (event->midi_buffer[0] & 0xF0) {
+		case 0x80:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Note Off, channel %d, note %d, velocity %d",
+					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
+			break;
+
+		case 0x90:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Note On, channel %d, note %d, velocity %d",
+					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
+			break;
+
+		case 0xA0:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Aftertouch, channel %d, note %d, pressure %d",
+					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
+			break;
+
+		case 0xB0:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Controller, channel %d, controller %d, value %d",
+					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
+			break;
+
+		case 0xC0:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Program Change, channel %d, controller %d",
+					event->midi_buffer[0] & 0x0F, event->midi_buffer[1]);
+			break;
+
+		case 0xD0:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Channel Pressure, channel %d, pressure %d",
+					event->midi_buffer[0] & 0x0F, event->midi_buffer[1]);
+			break;
+
+		case 0xE0:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Pitch Wheel, channel %d, value %d",
+					event->midi_buffer[0] & 0x0F, ((int)event->midi_buffer[2] << 7) | (int)event->midi_buffer[2]);
+			break;
+
+		default:
+			return NULL;
+	}
+
+	return buf;
 }
 
 smf_event_t *
