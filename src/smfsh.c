@@ -5,6 +5,12 @@
 #include <ctype.h>
 #include "smf.h"
 
+#define WITH_READLINE
+
+#ifdef WITH_READLINE
+#include <readline/readline.h>
+#endif
+
 smf_track_t *selected_track = NULL;
 smf_event_t *selected_event = NULL;
 smf_t *smf = NULL;
@@ -595,13 +601,10 @@ strip_unneeded_whitespace(char *str, int len)
 	int skip_white = 1;
 
 	for (src = str, dest = str; src < dest + len; src++) {
-		if (*src == '\n') {
+		if (*src == '\n' || *src == '\0') {
 			*dest = '\0';
 			break;
 		}
-
-		if (*src == '\0')
-			break;
 
 		if (isspace(*src)) {
 			if (skip_white)
@@ -620,14 +623,20 @@ strip_unneeded_whitespace(char *str, int len)
 char *
 read_command(void)
 {
+#ifndef WITH_READLINE
 	static char cmd[1024];
+#endif
 	char *buf;
 	int len;
 
+#ifdef WITH_READLINE
+	buf = readline("smfsh> ");
+#else
 	fprintf(stdout, "smfsh> ");
 	fflush(stdout);
 
 	buf = fgets(cmd, 1024, stdin);
+#endif
 
 	if (buf == NULL) {
 		fprintf(stdout, "exit\n");
