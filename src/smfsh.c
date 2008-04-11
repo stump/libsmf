@@ -9,6 +9,7 @@
 
 #ifdef WITH_READLINE
 #include <readline/readline.h>
+#include <readline/history.h>
 #endif
 
 smf_track_t *selected_track = NULL;
@@ -623,19 +624,22 @@ strip_unneeded_whitespace(char *str, int len)
 char *
 read_command(void)
 {
-#ifndef WITH_READLINE
-	static char cmd[1024];
-#endif
 	char *buf;
 	int len;
 
 #ifdef WITH_READLINE
 	buf = readline("smfsh> ");
 #else
+	buf = malloc(1024);
+	if (buf == NULL) {
+		g_critical("Malloc failed.");
+		return NULL;
+	}
+
 	fprintf(stdout, "smfsh> ");
 	fflush(stdout);
 
-	buf = fgets(cmd, 1024, stdin);
+	buf = fgets(buf, 1024, stdin);
 #endif
 
 	if (buf == NULL) {
@@ -649,6 +653,10 @@ read_command(void)
 
 	if (len == 0)
 		return read_command();
+
+#ifdef WITH_READLINE
+	add_history(buf);
+#endif
 
 	return buf;
 }
@@ -684,7 +692,49 @@ read_and_execute_command(void)
 	if (ret) {
 		g_warning("Command finished with error.");
 	}
+
+	free(command);
 }
+
+#ifdef WITH_READLINE
+
+char *
+smfsh_command_generator(const char *text, int state)
+{
+	static struct command_struct *command = commands;
+	char *tmp;
+
+	if (state == 0)
+		command = commands;
+
+	while (command->name != NULL) {
+		tmp = command->name;
+		command++;
+
+		if (strncmp(tmp, text, strlen(text)) == 0)
+			return strdup(tmp);
+	}
+
+	return NULL;
+}
+
+char **
+smfsh_completion(const char *text, int start, int end)
+{
+	int i;
+
+	/* Return NULL if "text" is not the first word in the input line. */
+	if (start != 0) {
+		for (i = 0; i < start; i++) {
+			if (!isspace(rl_line_buffer[i]))
+				return NULL;
+		}
+	}
+
+	return rl_completion_matches(text, smfsh_command_generator);
+}
+
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -707,6 +757,11 @@ int main(int argc, char *argv[])
 	} else {
 		cmd_trackadd(NULL);
 	}
+
+#ifdef WITH_READLINE
+	rl_readline_name = "smfsh";
+	rl_attempted_completion_function = smfsh_completion;
+#endif
 
 	for (;;)
 		read_and_execute_command();
