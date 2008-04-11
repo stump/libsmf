@@ -96,12 +96,17 @@ int
 cmd_ppqn(char *new_ppqn)
 {
 	int tmp;
+	char *end;
 
 	if (new_ppqn == NULL) {
 		g_message("Pulses Per Quarter Note (aka Division) is %d.", smf->ppqn);
 	} else {
-		/* XXX: Use strtol. */
-		tmp = atoi(new_ppqn);
+		tmp = strtol(new_ppqn, &end, 10);
+		if (end - new_ppqn != strlen(new_ppqn)) {
+			g_critical("Invalid PPQN, garbage characters after the number.");
+			return -1;
+		}
+
 		if (tmp <= 0) {
 			g_critical("Invalid PPQN, valid values are greater than zero.");
 			return -1;
@@ -118,12 +123,17 @@ int
 cmd_format(char *new_format)
 {
 	int tmp;
+	char *end;
 
 	if (new_format == NULL) {
 		g_message("Format is %d.", smf->format);
 	} else {
-		/* XXX: Use strtol. */
-		tmp = atoi(new_format);
+		tmp = strtol(new_format, &end, 10);
+		if (end - new_format != strlen(new_format)) {
+			g_critical("Invalid format value, garbage characters after the number.");
+			return -1;
+		}
+
 		if (tmp < 0 || tmp > 2) {
 			g_critical("Invalid format value, valid values are in range 0 - 2, inclusive.");
 			return -1;
@@ -460,6 +470,11 @@ cmd_eventadd(char *str)
 	}
 
 	g_message("Event created.");
+
+	if (smf_event_is_metadata(selected_event)) {
+		g_debug("Event is metadata; recomputing time.");
+		smf_compute_seconds(smf);
+	}
 
 	return 0;
 }

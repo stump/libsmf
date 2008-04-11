@@ -336,7 +336,8 @@ smf_event_print_metadata(const smf_event_t *event)
 			break;
 
 		case 0x7F:
-			off += snprintf(buf + off, sizeof(buf) - off, "Proprietary Event");
+			off += snprintf(buf + off, sizeof(buf) - off, "Proprietary (aka Sequencer) Event, length %d",
+				event->midi_buffer_length);
 			break;
 
 		default:
@@ -520,6 +521,32 @@ smf_rewind(smf_t *smf)
 			g_warning("Warning: empty track.");
 		}
 	}
+}
+
+int
+smf_seek_to_event(smf_t *smf, const smf_event_t *target)
+{
+	smf_event_t *event;
+
+	smf_rewind(smf);
+
+	g_debug("Seeking to event %d, track %d.", target->event_number, target->track->track_number);
+
+	for (;;) {
+		event = smf_peek_next_event(smf);
+
+		/* There can't be NULL here, unless "target" is not in this smf. */
+		assert(event);
+
+		if (event != target)
+			smf_get_next_event(smf);
+		else
+			break;
+	}	
+
+	smf->last_seek_position = event->time_seconds;
+
+	return 0;
 }
 
 int

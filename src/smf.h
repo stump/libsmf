@@ -102,6 +102,7 @@ smf_event_t *smf_get_next_event(smf_t *smf);
 smf_event_t *smf_peek_next_event(smf_t *smf);
 
 int smf_seek_to_seconds(smf_t *smf, double seconds);
+int smf_seek_to_event(smf_t *smf, const smf_event_t *event);
 
 int smf_event_is_metadata(const smf_event_t *event);
 int smf_event_print_metadata(const smf_event_t *event);
