@@ -595,6 +595,11 @@ cmd_help(char *notused)
 	return 0;
 }
 
+/*
+ * Removes (in place) all whitespace characters before the first
+ * non-whitespace and all trailing whitespace characters.  Replaces
+ * more than one consecutive whitespace characters with one.
+ */
 void
 strip_unneeded_whitespace(char *str, int len)
 {
@@ -619,6 +624,11 @@ strip_unneeded_whitespace(char *str, int len)
 		*dest = *src;
 		dest++;
 	}
+
+	/* Remove trailing whitespace. */
+	len = strlen(dest);
+	if (isspace(dest[len - 1]))
+		dest[len - 1] = '\0';
 }
 
 char *
