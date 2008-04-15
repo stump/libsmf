@@ -256,6 +256,9 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 /*
  * Removes event from its track.
  */
+/*
+ * XXX: Handle removing entries in the middle of the track (recompute delta_time_pulses.).
+ */
 void
 smf_track_remove_event(smf_event_t *event)
 {
@@ -279,9 +282,6 @@ smf_track_remove_event(smf_event_t *event)
 /*
  * Detaches event from its track and frees it.
  */
-/*
- * XXX: Handle removing entries in the middle of the track (recompute delta_time_pulses.).
- */
 void
 smf_event_delete(smf_event_t *event)
 {
@@ -304,6 +304,7 @@ void
 smf_track_append_event(smf_track_t *track, smf_event_t *event)
 {
 	assert(event->track == NULL);
+	assert(event->delta_time_pulses >= 0);
 
 	event->track = track;
 	event->track_number = track->track_number;
@@ -603,7 +604,9 @@ smf_get_next_event(smf_t *smf)
 	smf_track_t *track = smf_find_track_with_next_event(smf);
 
 	if (track == NULL) {
+#if 0
 		g_debug("End of the song.");
+#endif
 
 		return NULL;
 	}
@@ -624,7 +627,9 @@ smf_peek_next_event(smf_t *smf)
 	smf_track_t *track = smf_find_track_with_next_event(smf);
 
 	if (track == NULL) {
+#if 0
 		g_debug("End of the song.");
+#endif
 
 		return NULL;
 	}
