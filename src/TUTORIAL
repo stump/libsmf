@@ -19,7 +19,7 @@ how you do this:
 			return;
 		}
 
-		wait for event->delta_time_pulses MIDI clocks/pulses.
+		wait until event->time_seconds.
 		feed_to_midi_output(event->midi_buffer, event->midi_buffer_length);
 	}
 
@@ -40,20 +40,11 @@ Saving works like this:
 		}
 
 		for (int j = 1; j <= number of events in this track; j++) {
-			smf_event_t *event = smf_event_new();
+			smf_event_t *event = smf_event_new_from_pointer(your MIDI message, message length);
 			if (event == NULL) {
 				Whoops.
 				return;
 			}
-
-			event->midi_buffer_len = midi message length, 3 bytes for Midi On, for example.
-			event->midi_buffer = malloc(event->midi_buffer_len);
-			if (event->midi_buffer == NULL) {
-				Whoops;
-				return;
-			}
-
-			memcpy(event->midi_buffer, your midi data, event->midi_buffer_length);
 
 			event->delta_time_pulses = MIDI clocks from the previous event on this track.
 			

@@ -279,22 +279,14 @@ is_realtime_byte(const unsigned char status)
 static int
 parse_realtime_event(const unsigned char status, smf_track_t *track)
 {
-	smf_event_t *event = smf_event_new();
+	smf_event_t *event;
+
+	assert(is_realtime_byte(status));
+
+	event = smf_event_new_from_bytes(status, -1, -1);
 	if (event == NULL)
 		return -1;
 
-	assert(is_realtime_byte(status));
-	
-	event->midi_buffer = malloc(1);
-	if (event->midi_buffer == NULL) {
-		g_critical("Cannot allocate memory in parse_realtime_event(): %s", strerror(errno));
-		smf_event_delete(event);
-
-		return -2;
-	}
-
-	event->midi_buffer[0] = status;
-	event->midi_buffer_length = 1;
 	event->delta_time_pulses = 0;
 
 	smf_track_append_event(track, event);

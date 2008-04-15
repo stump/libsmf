@@ -87,7 +87,8 @@ void smf_append_track(smf_t *smf, smf_track_t *track);
 void smf_remove_track(smf_track_t *track);
 
 smf_event_t *smf_event_new(void);
-smf_event_t *smf_event_new_with_data(int first_byte, int second_byte, int third_byte);
+smf_event_t *smf_event_new_from_pointer(void *midi_data, int len);
+smf_event_t *smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte);
 void smf_event_delete(smf_event_t *event);
 
 void smf_track_append_event(smf_track_t *track, smf_event_t *event);

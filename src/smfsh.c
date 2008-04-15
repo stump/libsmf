@@ -458,7 +458,7 @@ cmd_eventaddeot(char *notused)
 		return -1;
 	}
 
-	event = smf_event_new_with_data(0xFF, 0x2F, 0x00);
+	event = smf_event_new_from_bytes(0xFF, 0x2F, 0x00);
 	if (event == NULL) {
 		g_critical("smf_event_new() failed, event not created.");
 		return -2;

@@ -170,8 +170,47 @@ smf_event_new(void)
 	return event;
 }
 
+/*
+ * Allocates an smf_event_t structure and fills it with "len" bytes copied
+ * from "midi_data".
+ */
 smf_event_t *
-smf_event_new_with_data(int first_byte, int second_byte, int third_byte)
+smf_event_new_from_pointer(void *midi_data, int len)
+{
+	smf_event_t *event;
+
+	event = smf_event_new();
+	if (event == NULL)
+		return NULL;
+
+	event->midi_buffer_length = len;
+	event->midi_buffer = malloc(event->midi_buffer_length);
+	if (event->midi_buffer == NULL) {
+		g_critical("Cannot allocate MIDI buffer structure: %s", strerror(errno));
+		smf_event_delete(event);
+
+		return NULL; 
+	}
+
+	memcpy(event->midi_buffer, midi_data, len);
+
+	return event;
+}
+
+/*
+ * Allocates an smf_event_t structure and fills it with at most three bytes of data.
+ * For example, if you need to create Note On event, do something like this:
+ *
+ * smf_event_new_from_bytes(0x90, 0x3C, 0x7f);
+ *
+ * To create event for MIDI message that is shorter than three bytes, do something
+ * like this:
+ *
+ * smf_event_new_from_bytes(0xC0, 0x42, -1);
+ * 
+ */
+smf_event_t *
+smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 {
 	int len;
 
