@@ -1,0 +1,74 @@
+An smf_t structure represents a "song".  Every valid smf contains one or more tracks.
+Tracks contain zero or more events.  Libsmf doesn't care about actual MIDI data, as long
+as it is valid from the MIDI specification point of view - it may be realtime message,
+SysEx, whatever.
+
+Say you want to load a SMF (.mid) file and play it back somehow.  This is (roughly)
+how you do this:
+
+	smf_t *smf = smf_load(file_name);
+	if (smf == NULL) {
+		Whoops, something went wrong.
+		return;
+	}
+
+	for (;;) {
+		smf_event_t *event = smf_get_next_event(smf);
+		if (event == NULL) {
+			No more events, end of the song.
+			return;
+		}
+
+		wait for event->delta_time_pulses MIDI clocks/pulses.
+		feed_to_midi_output(event->midi_buffer, event->midi_buffer_length);
+	}
+
+
+Saving works like this:
+
+	smf_t *smf = smf_new();
+	if (smf == NULL) {
+		Whoops.
+		return;
+	}
+
+	for (int i = 1; i <= number of tracks; i++) {
+		smf_track_t *track = smf_track_new();
+		if (track == NULL) {
+			Whoops.
+			return;
+		}
+
+		for (int j = 1; j <= number of events in this track; j++) {
+			smf_event_t *event = smf_event_new();
+			if (event == NULL) {
+				Whoops.
+				return;
+			}
+
+			event->midi_buffer_len = midi message length, 3 bytes for Midi On, for example.
+			event->midi_buffer = malloc(event->midi_buffer_len);
+			if (event->midi_buffer == NULL) {
+				Whoops;
+				return;
+			}
+
+			memcpy(event->midi_buffer, your midi data, event->midi_buffer_length);
+
+			event->delta_time_pulses = MIDI clocks from the previous event on this track.
+			
+			smf_track_add_event(track, event);
+		}
+
+		smf_add_track(smf, track);
+	}
+
+	ret = smf_save(smf, file_name);
+
+	if (ret) {
+		Whoops, saving failed for some reason.
+		return;
+	}
+	
+That's it for basic usage.
+
