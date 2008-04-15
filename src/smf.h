@@ -80,12 +80,18 @@ typedef struct smf_event_struct smf_event_t;
 smf_t *smf_new(void);
 void smf_delete(smf_t *smf);
 
-smf_track_t *smf_track_new(smf_t *smf);
+smf_track_t *smf_track_new(void);
 void smf_track_delete(smf_track_t *track);
 
-smf_event_t *smf_event_new(smf_track_t *track);
-smf_event_t *smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int third_byte);
+void smf_append_track(smf_t *smf, smf_track_t *track);
+void smf_remove_track(smf_track_t *track);
+
+smf_event_t *smf_event_new(void);
+smf_event_t *smf_event_new_with_data(int first_byte, int second_byte, int third_byte);
 void smf_event_delete(smf_event_t *event);
+
+void smf_track_append_event(smf_track_t *track, smf_event_t *event);
+void smf_track_remove_event(smf_event_t *event);
 
 /* Routines for loading SMF files. */
 smf_t *smf_load(const char *file_name);

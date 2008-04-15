@@ -279,7 +279,9 @@ is_realtime_byte(const unsigned char status)
 static int
 parse_realtime_event(const unsigned char status, smf_track_t *track)
 {
-	smf_event_t *event = smf_event_new(track);
+	smf_event_t *event = smf_event_new();
+	if (event == NULL)
+		return -1;
 
 	assert(is_realtime_byte(status));
 	
@@ -288,13 +290,14 @@ parse_realtime_event(const unsigned char status, smf_track_t *track)
 		g_critical("Cannot allocate memory in parse_realtime_event(): %s", strerror(errno));
 		smf_event_delete(event);
 
-		return -1;
+		return -2;
 	}
 
 	event->midi_buffer[0] = status;
 	event->midi_buffer_length = 1;
+	event->delta_time_pulses = 0;
 
-	/* We don't need to do anything more; smf_event_new() already added the new event to the track. */
+	smf_track_append_event(track, event);
 
 	return 0;
 }
@@ -494,7 +497,9 @@ parse_next_event(smf_track_t *track)
 	int time = 0, len, buffer_length;
 	unsigned char *c, *start;
 
-	smf_event_t *event = smf_event_new(track);
+	smf_event_t *event = smf_event_new();
+	if (event == NULL)
+		goto error;
 
 	c = start = (unsigned char *)track->file_buffer + track->next_event_offset;
 
@@ -528,7 +533,8 @@ parse_next_event(smf_track_t *track)
 	return event;
 
 error:
-	smf_event_delete(event);
+	if (event != NULL)
+		smf_event_delete(event);
 
 	return NULL;
 }
@@ -667,10 +673,13 @@ parse_mtrk_chunk(smf_track_t *track)
 			return -1;
 
 		/* Replace "relative" event time with absolute one, i.e. relative to the start of the track. */
+		/* XXX: this should not be there. */
 		event->time_pulses = time + event->delta_time_pulses;
 		time = event->time_pulses;
 
 		assert(smf_event_is_valid(event));
+
+		smf_track_append_event(track, event);
 
 		if (event_is_end_of_track(event))
 			break;
@@ -755,7 +764,11 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 	print_mthd(smf);
 
 	for (i = 1; i <= smf->expected_number_of_tracks; i++) {
-		smf_track_t *track = smf_track_new(smf);
+		smf_track_t *track = smf_track_new();
+		if (track == NULL)
+			return NULL;
+
+		smf_append_track(smf, track);
 
 		/* Skip unparseable chunks. */
 		if (parse_mtrk_chunk(track)) {

@@ -62,10 +62,10 @@ smf_delete(smf_t *smf)
 }
 
 /*
- * Allocates new smf_track_t structure and attaches it to the given smf.
+ * Allocates new smf_track_t structure.
  */
 smf_track_t *
-smf_track_new(smf_t *smf)
+smf_track_new(void)
 {
 	smf_track_t *track = malloc(sizeof(smf_track_t));
 	if (track == NULL) {
@@ -74,17 +74,10 @@ smf_track_new(smf_t *smf)
 	}
 
 	memset(track, 0, sizeof(smf_track_t));
-
-	track->smf = smf;
-	g_ptr_array_add(smf->tracks_array, track);
+	track->next_event_number = -1;
 
 	track->events_array = g_ptr_array_new();
 	assert(track->events_array);
-
-	smf->number_of_tracks++;
-	track->track_number = smf->number_of_tracks;
-
-	track->next_event_number = -1;
 
 	return track;
 }
@@ -95,11 +88,11 @@ smf_track_new(smf_t *smf)
 void
 smf_track_delete(smf_track_t *track)
 {
-	int i, track_number;
-	smf_t *smf;
-
 	assert(track);
 	assert(track->events_array);
+
+	if (track->smf)
+		smf_remove_track(track);
 
 	/* Remove all the events, from last to first. */
 	while (track->events_array->len > 0)
@@ -109,33 +102,57 @@ smf_track_delete(smf_track_t *track)
 	assert(track->number_of_events == 0);
 	g_ptr_array_free(track->events_array, TRUE);
 
-	/* Detach itself from smf. */
-	smf = track->smf;
-	track_number = track->track_number;
+	memset(track, 0, sizeof(smf_track_t));
+	free(track);
+}
+
+
+/*
+ * Appends smf_track_t to smf.
+ */
+void
+smf_append_track(smf_t *smf, smf_track_t *track)
+{
+	assert(track->smf == NULL);
+
+	track->smf = smf;
+	g_ptr_array_add(smf->tracks_array, track);
+
+	smf->number_of_tracks++;
+	track->track_number = smf->number_of_tracks;
+}
+
+/*
+ * Removes track from smf.
+ */
+void
+smf_remove_track(smf_track_t *track)
+{
+	int i;
+	smf_track_t *tmp;
+
+	assert(track->smf != NULL);
 
 	track->smf->number_of_tracks--;
 
 	assert(track->smf->tracks_array);
 	g_ptr_array_remove(track->smf->tracks_array, track);
 
-	memset(track, 0, sizeof(smf_track_t));
-	free(track);
-
 	/* Renumber the rest of the tracks, so they are consecutively numbered. */
-	for (i = track_number; i <= smf->number_of_tracks; i++) {
-		track = smf_get_track_by_number(smf, i);
-		track->track_number = i;
+	for (i = track->track_number; i <= track->smf->number_of_tracks; i++) {
+		tmp = smf_get_track_by_number(track->smf, i);
+		tmp->track_number = i;
 	}
+
+	track->track_number = -1;
+	track->smf = NULL;
 }
 
 /*
- * Allocates new smf_event_t structure and attaches it to the given track.
- */
-/*
- * XXX: Handle adding entries in the middle of the track.
+ * Allocates new smf_event_t structure.
  */
 smf_event_t *
-smf_event_new(smf_track_t *track)
+smf_event_new(void)
 {
 	smf_event_t *event = malloc(sizeof(smf_event_t));
 	if (event == NULL) {
@@ -145,31 +162,22 @@ smf_event_new(smf_track_t *track)
 
 	memset(event, 0, sizeof(smf_event_t));
 
-	/* Add new event to its track. */
-	event->track = track;
-	event->track_number = track->track_number;
-	g_ptr_array_add(track->events_array, event);
-	event->track->number_of_events++;
-	event->event_number = event->track->number_of_events;
-
-	if (event->track->next_event_number == -1)
-		event->track->next_event_number = 1;
-
 	event->delta_time_pulses = -1;
 	event->time_pulses = -1;
 	event->time_seconds = -1;
+	event->track_number = -1;
 
 	return event;
 }
 
 smf_event_t *
-smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int third_byte)
+smf_event_new_with_data(int first_byte, int second_byte, int third_byte)
 {
 	int len;
 
 	smf_event_t *event;
 
-	event = smf_event_new(track);
+	event = smf_event_new();
 	if (event == NULL)
 		return NULL;
 
@@ -207,6 +215,29 @@ smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int
 }
 
 /*
+ * Removes event from its track.
+ */
+void
+smf_track_remove_event(smf_event_t *event)
+{
+	int i;
+	smf_event_t *tmp;
+
+	assert(event->track != NULL);
+
+	event->track->number_of_events--;
+
+	/* Remove event from its track. */
+	g_ptr_array_remove(event->track->events_array, event);
+
+	/* Renumber the rest of the events, so they are consecutively numbered. */
+	for (i = event->event_number; i <= event->track->number_of_events; i++) {
+		tmp = smf_get_event_by_number(event->track, i);
+		tmp->event_number = i;
+	}
+}
+
+/*
  * Detaches event from its track and frees it.
  */
 /*
@@ -215,32 +246,36 @@ smf_event_new_with_data(smf_track_t *track, int first_byte, int second_byte, int
 void
 smf_event_delete(smf_event_t *event)
 {
-	int i, event_number;
-
-	smf_track_t *track;
-
-	assert(event->track != NULL);
 	assert(event->track->events_array != NULL);
 
-	track = event->track;
-	event_number = event->event_number;
-
-	event->track->number_of_events--;
-
-	/* Remove event from its track. */
-	g_ptr_array_remove(event->track->events_array, event);
+	if (event->track != NULL)
+		smf_track_remove_event(event);
 
 	if (event->midi_buffer != NULL)
 		free(event->midi_buffer);
 
 	memset(event, 0, sizeof(smf_event_t));
 	free(event);
+}
 
-	/* Renumber the rest of the events, so they are consecutively numbered. */
-	for (i = event_number; i <= track->number_of_events; i++) {
-		event = smf_get_event_by_number(track, i);
-		event->event_number = i;
-	}
+/*
+ * Appends event at the end of the track.
+ */
+void
+smf_track_append_event(smf_track_t *track, smf_event_t *event)
+{
+	assert(event->track == NULL);
+
+	event->track = track;
+	event->track_number = track->track_number;
+
+	g_ptr_array_add(track->events_array, event);
+	event->track->number_of_events++;
+	event->event_number = event->track->number_of_events;
+
+	if (event->track->next_event_number == -1)
+		event->track->next_event_number = 1;
+
 }
 
 int

@@ -206,11 +206,13 @@ cmd_track(char *arg)
 int
 cmd_trackadd(char *notused)
 {
-	selected_track = smf_track_new(smf);
+	selected_track = smf_track_new();
 	if (selected_track == NULL) {
 		g_critical("smf_track_new() failed, track not created.");
 		return -1;
 	}
+
+	smf_append_track(smf, selected_track);
 
 	selected_event = NULL;
 
@@ -417,7 +419,7 @@ cmd_eventadd(char *str)
 		return -5;
 	}
 
-	selected_event = smf_event_new(selected_track);
+	selected_event = smf_event_new();
 	if (selected_event == NULL) {
 		g_critical("smf_event_new() failed, event not created.");
 		return -6;
@@ -433,6 +435,8 @@ cmd_eventadd(char *str)
 		selected_event = NULL;
 		return -7;
 	}
+
+	smf_track_append_event(selected_track, selected_event);
 
 	g_message("Event created.");
 
@@ -454,13 +458,15 @@ cmd_eventaddeot(char *notused)
 		return -1;
 	}
 
-	event = smf_event_new_with_data(selected_track, 0xFF, 0x2F, 0x00);
+	event = smf_event_new_with_data(0xFF, 0x2F, 0x00);
 	if (event == NULL) {
 		g_critical("smf_event_new() failed, event not created.");
 		return -2;
 	}
 
 	event->delta_time_pulses = 0;
+
+	smf_track_append_event(selected_track, event);
 
 	g_message("Event created.");
 
