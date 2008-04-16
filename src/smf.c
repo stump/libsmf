@@ -705,7 +705,9 @@ smf_seek_to_seconds(smf_t *smf, double seconds)
 	assert(seconds >= 0.0);
 
 	if (seconds == smf->last_seek_position) {
+#if 0
 		g_debug("Avoiding seek to %f seconds.", seconds);
+#endif
 		return 0;
 	}
 
@@ -717,7 +719,7 @@ smf_seek_to_seconds(smf_t *smf, double seconds)
 		event = smf_peek_next_event(smf);
 
 		if (event == NULL) {
-			g_critical("Trying to seek past end of song.");
+			g_critical("Trying to seek past the end of song.");
 			return -1;
 		}
 

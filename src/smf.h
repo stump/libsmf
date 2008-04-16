@@ -1,6 +1,10 @@
 #ifndef SMF_H
 #define SMF_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <glib.h>
@@ -123,6 +127,10 @@ smf_event_t *smf_get_event_by_number(smf_track_t *track, int event_number);
 int smf_tempo_add(smf_t *smf, int pulses, int tempo);
 smf_tempo_t *smf_get_tempo_by_position(smf_t *smf, int pulses);
 smf_tempo_t *smf_get_tempo_by_number(smf_t *smf, int number);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SMF_H */
 
