@@ -159,3 +159,10 @@ smf_remove_tempos(smf_t *smf)
 	smf_tempo_add(smf, 0, 500000);
 }
 
+
+void
+smf_compute_delta_time_pulses(smf_track_t *track, smf_event_t *event)
+{
+	event->delta_time_pulses = 1;
+}
+

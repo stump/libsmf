@@ -96,6 +96,7 @@ smf_event_t *smf_event_new_from_bytes(int first_byte, int second_byte, int third
 void smf_event_delete(smf_event_t *event);
 
 void smf_track_append_event(smf_track_t *track, smf_event_t *event);
+int smf_track_append_eot(smf_track_t *track);
 void smf_track_remove_event(smf_event_t *event);
 
 /* Routines for loading SMF files. */
@@ -106,6 +107,7 @@ smf_t *smf_load_from_memory(const void *buffer, const int buffer_length);
 int smf_save(smf_t *smf, const char *file_name);
 
 int smf_compute_seconds(smf_t *smf);
+void smf_compute_delta_time_pulses(smf_track_t *track, smf_event_t *event);
 
 int smf_event_is_valid(const smf_event_t *event);
 

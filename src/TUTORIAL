@@ -48,8 +48,10 @@ Saving works like this:
 
 			event->delta_time_pulses = MIDI clocks from the previous event on this track.
 			
-			smf_track_add_event(track, event);
+			smf_track_append_event(track, event);
 		}
+
+		smf_track_append_eot(track);
 
 		smf_add_track(smf, track);
 	}

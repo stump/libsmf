@@ -319,6 +319,21 @@ smf_track_append_event(smf_track_t *track, smf_event_t *event)
 }
 
 int
+smf_track_append_eot(smf_track_t *track)
+{
+	smf_event_t *event;
+
+	event = smf_event_new_from_bytes(0xFF, 0x2F, 0x00);
+	if (event == NULL)
+		return -1;
+
+	event->delta_time_pulses = 0;
+	smf_track_append_event(track, event);
+
+	return 0;
+}
+
+int
 smf_event_is_metadata(const smf_event_t *event)
 {
 	assert(event->midi_buffer);
@@ -665,7 +680,9 @@ smf_rewind(smf_t *smf)
 		} else {
 			track->next_event_number = -1;
 			track->time_of_next_event = 0;
+#if 0
 			g_warning("Warning: empty track.");
+#endif
 		}
 	}
 }
