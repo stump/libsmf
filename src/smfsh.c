@@ -116,10 +116,14 @@ cmd_ppqn(char *new_ppqn)
 
 		if (tmp <= 0) {
 			g_critical("Invalid PPQN, valid values are greater than zero.");
-			return -1;
+			return -2;
 		}
 
-		smf->ppqn = tmp;
+		if (smf_set_ppqn(smf, tmp)) {
+			g_message("smf_set_ppqn failed.");
+			return -3;
+		}
+
 		g_message("Pulses Per Quarter Note changed to %d.", smf->ppqn);
 	}
 	
@@ -143,10 +147,14 @@ cmd_format(char *new_format)
 
 		if (tmp < 0 || tmp > 2) {
 			g_critical("Invalid format value, valid values are in range 0 - 2, inclusive.");
-			return -1;
+			return -2;
 		}
 
-		smf->format = tmp;
+		if (smf_set_format(smf, tmp)) {
+			g_critical("smf_set_format failed.");
+			return -3;
+		}
+
 		g_message("Forma changed to %d.", smf->format);
 	}
 	

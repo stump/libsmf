@@ -38,6 +38,8 @@ smf_new(void)
 
 	/* Initial tempo is 120 BPM. */
 	smf_tempo_add(smf, 0, 500000);
+	smf_set_format(smf, 0);
+	smf_set_ppqn(smf, 120);
 
 	return smf;
 }
@@ -120,6 +122,9 @@ smf_append_track(smf_t *smf, smf_track_t *track)
 
 	smf->number_of_tracks++;
 	track->track_number = smf->number_of_tracks;
+
+	if (smf->number_of_tracks > 1)
+		smf_set_format(smf, 1);
 }
 
 /*
@@ -254,32 +259,6 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 }
 
 /*
- * Removes event from its track.
- */
-/*
- * XXX: Handle removing entries in the middle of the track (recompute delta_time_pulses.).
- */
-void
-smf_track_remove_event(smf_event_t *event)
-{
-	int i;
-	smf_event_t *tmp;
-
-	assert(event->track != NULL);
-
-	event->track->number_of_events--;
-
-	/* Remove event from its track. */
-	g_ptr_array_remove(event->track->events_array, event);
-
-	/* Renumber the rest of the events, so they are consecutively numbered. */
-	for (i = event->event_number; i <= event->track->number_of_events; i++) {
-		tmp = smf_get_event_by_number(event->track, i);
-		tmp->event_number = i;
-	}
-}
-
-/*
  * Detaches event from its track and frees it.
  */
 void
@@ -333,6 +312,32 @@ smf_track_append_eot(smf_track_t *track)
 	return 0;
 }
 
+/*
+ * Removes event from its track.
+ */
+/*
+ * XXX: Handle removing entries in the middle of the track (recompute delta_time_pulses.).
+ */
+void
+smf_track_remove_event(smf_event_t *event)
+{
+	int i;
+	smf_event_t *tmp;
+
+	assert(event->track != NULL);
+
+	event->track->number_of_events--;
+
+	/* Remove event from its track. */
+	g_ptr_array_remove(event->track->events_array, event);
+
+	/* Renumber the rest of the events, so they are consecutively numbered. */
+	for (i = event->event_number; i <= event->track->number_of_events; i++) {
+		tmp = smf_get_event_by_number(event->track, i);
+		tmp->event_number = i;
+	}
+}
+
 int
 smf_event_is_metadata(const smf_event_t *event)
 {
@@ -341,6 +346,31 @@ smf_event_is_metadata(const smf_event_t *event)
 	
 	if (event->midi_buffer[0] == 0xFF)
 		return 1;
+
+	return 0;
+}
+
+int
+smf_set_format(smf_t *smf, int format)
+{
+	assert(format == 0 || format == 1);
+
+	if (smf->number_of_tracks > 1 && format == 0) {
+		g_critical("There is more than one track, cannot set format to 0.");
+		return -1;
+	}
+
+	smf->format = format;
+
+	return 0;
+}
+
+int
+smf_set_ppqn(smf_t *smf, int ppqn)
+{
+	assert(ppqn > 0);
+
+	smf->ppqn = ppqn;
 
 	return 0;
 }

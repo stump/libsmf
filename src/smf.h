@@ -99,6 +99,9 @@ void smf_track_append_event(smf_track_t *track, smf_event_t *event);
 int smf_track_append_eot(smf_track_t *track);
 void smf_track_remove_event(smf_event_t *event);
 
+int smf_set_format(smf_t *smf, int format);
+int smf_set_ppqn(smf_t *smf, int format);
+
 /* Routines for loading SMF files. */
 smf_t *smf_load(const char *file_name);
 smf_t *smf_load_from_memory(const void *buffer, const int buffer_length);
