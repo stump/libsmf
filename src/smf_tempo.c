@@ -44,6 +44,7 @@ seconds_from_pulses(smf_t *smf, int pulses)
 	double seconds = 0.0;
 	smf_tempo_t *tempo;
 
+	/* Go through tempos, from the last before pulses to the first, adding time. */
 	for (;;) {
 		tempo = smf_get_tempo_by_position(smf, pulses);
 		assert(tempo);
@@ -54,12 +55,25 @@ seconds_from_pulses(smf_t *smf, int pulses)
 		if (tempo->time_pulses == 0)
 			return seconds;
 
-		/* XXX: -1? */
-		pulses = tempo->time_pulses - 1;
+		pulses = tempo->time_pulses;
 	}
 
 	/* Not reached. */
 	return -1;
+}
+
+static int
+pulses_from_seconds(smf_t *smf, double seconds)
+{
+	int pulses = 0;
+	smf_tempo_t *tempo;
+
+	tempo = smf_get_last_tempo(smf);
+
+	/* XXX: Obviously unfinished. */
+	pulses += seconds * ((double)smf->ppqn * 1000000.0 / tempo->microseconds_per_quarter_note);
+
+	return pulses;
 }
 
 /*
@@ -132,6 +146,9 @@ smf_get_tempo_by_number(smf_t *smf, int number)
 	return g_ptr_array_index(smf->tempo_array, number);
 }
 
+/*
+ * Remove last tempo (i.e. tempo with greatest time_pulses) that happens before "pulses".
+ */
 smf_tempo_t *
 smf_get_tempo_by_position(smf_t *smf, int pulses)
 {
@@ -140,13 +157,16 @@ smf_get_tempo_by_position(smf_t *smf, int pulses)
 
 	assert(pulses >= 0);
 
+	if (pulses == 0)
+		return smf_get_tempo_by_number(smf, 0);
+
 	assert(smf->tempo_array != NULL);
 	
 	for (i = smf->tempo_array->len - 1; i >= 0; i--) {
 		tempo = smf_get_tempo_by_number(smf, i);
 
 		assert(tempo);
-		if (tempo->time_pulses <= pulses)
+		if (tempo->time_pulses < pulses)
 			return tempo;
 	}
 
@@ -177,4 +197,65 @@ smf_remove_tempos(smf_t *smf)
 	assert(smf->tempo_array->len == 0);
 	smf_tempo_add(smf, 0, 500000);
 }
+
+/*
+ * Appends event to the track at the time "pulses" clocks from the start of song.
+ */
+void
+smf_track_append_event_pulses(smf_track_t *track, smf_event_t *event, int pulses)
+{
+	int previous_time_pulses;
+
+	assert(pulses >= 0);
+	assert(event->delta_time_pulses == -1);
+	assert(event->time_pulses == -1);
+	assert(event->time_seconds == -1.0);
+
+	/* Get time of last event on this track. */
+	if (track->number_of_events > 0) {
+		smf_event_t *previous_event = smf_track_get_last_event(track);
+		assert(previous_event);
+		previous_time_pulses = previous_event->time_pulses;
+	} else {
+		previous_time_pulses = 0;
+	}
+
+	assert(previous_time_pulses >= 0);
+
+	event->time_pulses = pulses;
+	event->delta_time_pulses = event->time_pulses - previous_time_pulses;
+	event->time_seconds = seconds_from_pulses(track->smf, pulses);
+	smf_track_append_event(track, event);
+}
+
+/*
+ * Appends event to the track at the time "seconds" seconds from the start of song.
+ */
+void
+smf_track_append_event_seconds(smf_track_t *track, smf_event_t *event, double seconds)
+{
+	int previous_time_pulses;
+
+	assert(seconds >= 0.0);
+	assert(event->delta_time_pulses == -1);
+	assert(event->time_pulses == -1);
+	assert(event->time_seconds == -1.0);
+	assert(track->smf != NULL);
+
+	if (track->number_of_events > 0) {
+		smf_event_t *previous_event = smf_track_get_last_event(track);
+		assert(previous_event);
+		previous_time_pulses = previous_event->time_pulses;
+	} else {
+		previous_time_pulses = 0;
+	}
+
+	assert(previous_time_pulses >= 0);
+
+	event->time_seconds = seconds;
+	event->time_pulses = pulses_from_seconds(track->smf, seconds);
+	event->delta_time_pulses = event->time_pulses - previous_time_pulses;
+	smf_track_append_event(track, event);
+}
+
 
