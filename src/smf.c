@@ -464,9 +464,16 @@ smf_event_decode_metadata(const smf_event_t *event)
 			break;
 
 		case 0x59:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Key Signature, %d %s %s", abs(event->midi_buffer[3]),
-				(int)(signed char)(event->midi_buffer[3]) >= 0 ? "sharp" : "flat",
-				event->midi_buffer[4] == 0 ? "major" : "minor");
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Key Signature, %d", abs(event->midi_buffer[3]));
+			if (event->midi_buffer[3] == 0)
+				off += snprintf(buf + off, BUFFER_SIZE - off, " flat");
+			else if ((int)(signed char)(event->midi_buffer[3]) >= 0)
+				off += snprintf(buf + off, BUFFER_SIZE - off, " sharp");
+			else
+				off += snprintf(buf + off, BUFFER_SIZE - off, " flat");
+
+			off += snprintf(buf + off, BUFFER_SIZE - off, ", %s", event->midi_buffer[4] == 0 ? "major" : "minor");
+
 			break;
 
 		case 0x7F:
