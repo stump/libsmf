@@ -233,7 +233,7 @@ write_track(smf_track_t *track)
 	if (ret)
 		return ret;
 
-	while ((event = smf_get_next_event_from_track(track)) != NULL) {
+	while ((event = smf_track_get_next_event(track)) != NULL) {
 		ret = write_event(event);
 		if (ret)
 			return ret;
@@ -367,7 +367,7 @@ smf_is_invalid(smf_t *smf)
 			return -5;
 		}
 
-		event = smf_get_event_by_number(track, track->number_of_events);
+		event = smf_track_get_last_event(track);
 		assert(event);
 
 		if (!smf_event_is_eot(event)) {

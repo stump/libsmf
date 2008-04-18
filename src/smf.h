@@ -38,8 +38,6 @@ typedef struct smf_struct smf_t;
 /* This structure describes a single tempo change. */
 struct smf_tempo_struct {
 	int time_pulses;
-	double time_seconds;
-
 	int microseconds_per_quarter_note;
 };
 
@@ -80,20 +78,28 @@ struct smf_event_struct {
 
 typedef struct smf_event_struct smf_event_t;
 
-/* Routines for creating and freeing basic structures defined above. */
 smf_t *smf_new(void);
 void smf_delete(smf_t *smf);
 
-smf_track_t *smf_track_new(void);
-void smf_track_delete(smf_track_t *track);
+int smf_set_format(smf_t *smf, int format);
+int smf_set_ppqn(smf_t *smf, int format);
+
+smf_track_t *smf_get_track_by_number(smf_t *smf, int track_number);
+smf_event_t *smf_get_next_event(smf_t *smf);
+smf_event_t *smf_peek_next_event(smf_t *smf);
+void smf_rewind(smf_t *smf);
+int smf_seek_to_seconds(smf_t *smf, double seconds);
+int smf_seek_to_event(smf_t *smf, const smf_event_t *event);
 
 void smf_append_track(smf_t *smf, smf_track_t *track);
 void smf_remove_track(smf_track_t *track);
 
-smf_event_t *smf_event_new(void);
-smf_event_t *smf_event_new_from_pointer(void *midi_data, int len);
-smf_event_t *smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte);
-void smf_event_delete(smf_event_t *event);
+smf_track_t *smf_track_new(void);
+void smf_track_delete(smf_track_t *track);
+
+smf_event_t *smf_track_get_next_event(smf_track_t *track);
+smf_event_t *smf_track_get_event_by_number(smf_track_t *track, int event_number);
+smf_event_t *smf_track_get_last_event(smf_track_t *track);
 
 void smf_track_append_event(smf_track_t *track, smf_event_t *event);
 void smf_track_append_event_pulses(smf_track_t *track, smf_event_t *event, int pulses);
@@ -101,8 +107,16 @@ void smf_track_append_event_seconds(smf_track_t *track, smf_event_t *event, doub
 int smf_track_append_eot(smf_track_t *track);
 void smf_track_remove_event(smf_event_t *event);
 
-int smf_set_format(smf_t *smf, int format);
-int smf_set_ppqn(smf_t *smf, int format);
+smf_event_t *smf_get_next_event_from_track(smf_track_t *track);
+smf_event_t *smf_event_new(void);
+smf_event_t *smf_event_new_from_pointer(void *midi_data, int len);
+smf_event_t *smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte);
+void smf_event_delete(smf_event_t *event);
+
+int smf_event_is_valid(const smf_event_t *event);
+int smf_event_is_metadata(const smf_event_t *event);
+char *smf_event_decode(const smf_event_t *event);
+char *smf_string_from_event(const smf_event_t *event);
 
 /* Routines for loading SMF files. */
 smf_t *smf_load(const char *file_name);
@@ -112,24 +126,6 @@ smf_t *smf_load_from_memory(const void *buffer, const int buffer_length);
 int smf_save(smf_t *smf, const char *file_name);
 
 int smf_compute_seconds(smf_t *smf);
-
-int smf_event_is_valid(const smf_event_t *event);
-
-smf_event_t *smf_get_next_event(smf_t *smf);
-smf_event_t *smf_peek_next_event(smf_t *smf);
-
-int smf_seek_to_seconds(smf_t *smf, double seconds);
-int smf_seek_to_event(smf_t *smf, const smf_event_t *event);
-
-int smf_event_is_metadata(const smf_event_t *event);
-char *smf_event_decode(const smf_event_t *event);
-
-char *smf_string_from_event(const smf_event_t *event);
-void smf_rewind(smf_t *smf);
-smf_event_t *smf_get_next_event_from_track(smf_track_t *track);
-smf_track_t *smf_get_track_by_number(smf_t *smf, int track_number);
-smf_event_t *smf_get_event_by_number(smf_track_t *track, int event_number);
-smf_event_t *smf_get_last_event(smf_track_t *track);
 
 int smf_tempo_add(smf_t *smf, int pulses, int tempo);
 smf_tempo_t *smf_get_tempo_by_position(smf_t *smf, int pulses);

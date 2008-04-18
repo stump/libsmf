@@ -312,7 +312,7 @@ smf_track_append_event_pulses(smf_track_t *track, smf_event_t *event, int pulses
 
 	/* Get time of last event on this track. */
 	if (track->number_of_events > 0) {
-		smf_event_t *previous_event = smf_get_last_event(track);
+		smf_event_t *previous_event = smf_track_get_last_event(track);
 		assert(previous_event);
 		previous_time_pulses = previous_event->time_pulses;
 	} else {
@@ -344,7 +344,7 @@ smf_track_append_event_seconds(smf_track_t *track, smf_event_t *event, double se
 	tempo = smf_get_last_tempo(track->smf);
 
 	if (track->number_of_events > 0) {
-		smf_event_t *previous_event = smf_get_last_event(track);
+		smf_event_t *previous_event = smf_track_get_last_event(track);
 		assert(previous_event);
 		previous_time_pulses = previous_event->time_pulses;
 	} else {
@@ -395,7 +395,7 @@ smf_track_remove_event(smf_event_t *event)
 
 	/* Renumber the rest of the events, so they are consecutively numbered. */
 	for (i = event->event_number; i <= event->track->number_of_events; i++) {
-		tmp = smf_get_event_by_number(event->track, i);
+		tmp = smf_track_get_event_by_number(event->track, i);
 		tmp->event_number = i;
 	}
 }
@@ -603,7 +603,7 @@ smf_event_decode(const smf_event_t *event)
 }
 
 smf_event_t *
-smf_get_next_event_from_track(smf_track_t *track)
+smf_track_get_next_event(smf_track_t *track)
 {
 	smf_event_t *event, *next_event;
 
@@ -614,13 +614,13 @@ smf_get_next_event_from_track(smf_track_t *track)
 	assert(track->next_event_number >= 1);
 	assert(track->number_of_events > 0);
 
-	event = smf_get_event_by_number(track, track->next_event_number);
+	event = smf_track_get_event_by_number(track, track->next_event_number);
 
 	assert(event != NULL);
 
 	/* Is this the last event in the track? */
 	if (track->next_event_number < track->number_of_events) {
-		next_event = smf_get_event_by_number(track, track->next_event_number + 1);
+		next_event = smf_track_get_event_by_number(track, track->next_event_number + 1);
 		assert(next_event);
 
 		track->time_of_next_event = next_event->time_pulses;
@@ -632,7 +632,7 @@ smf_get_next_event_from_track(smf_track_t *track)
 	return event;
 }
 
-smf_event_t *
+static smf_event_t *
 smf_peek_next_event_from_track(smf_track_t *track)
 {
 	smf_event_t *event;
@@ -644,7 +644,7 @@ smf_peek_next_event_from_track(smf_track_t *track)
 	assert(track->next_event_number >= 1);
 	assert(track->events_array->len != 0);
 
-	event = smf_get_event_by_number(track, track->next_event_number);
+	event = smf_track_get_event_by_number(track, track->next_event_number);
 
 	return event;
 }
@@ -665,7 +665,7 @@ smf_get_track_by_number(smf_t *smf, int track_number)
 }
 
 smf_event_t *
-smf_get_event_by_number(smf_track_t *track, int event_number)
+smf_track_get_event_by_number(smf_track_t *track, int event_number)
 {
 	smf_event_t *event;
 
@@ -680,11 +680,11 @@ smf_get_event_by_number(smf_track_t *track, int event_number)
 }
 
 smf_event_t *
-smf_get_last_event(smf_track_t *track)
+smf_track_get_last_event(smf_track_t *track)
 {
 	smf_event_t *event;
        
-	event = smf_get_event_by_number(track, track->number_of_events);
+	event = smf_track_get_event_by_number(track, track->number_of_events);
 
 	return event;
 }
@@ -728,7 +728,7 @@ smf_get_next_event(smf_t *smf)
 		return NULL;
 	}
 
-	event = smf_get_next_event_from_track(track);
+	event = smf_track_get_next_event(track);
 	
 	assert(event != NULL);
 

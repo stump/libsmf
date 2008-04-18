@@ -293,7 +293,7 @@ cmd_events(char *notused)
 
 	smf_rewind(smf);
 
-	while ((event = smf_get_next_event_from_track(selected_track)) != NULL) {
+	while ((event = smf_track_get_next_event(selected_track)) != NULL) {
 		g_message("----------------------------------");
 		show_event(event);
 	}
@@ -324,7 +324,7 @@ cmd_event(char *arg)
 			return -1;
 		}
 
-		selected_event = smf_get_event_by_number(selected_track, num);
+		selected_event = smf_track_get_event_by_number(selected_track, num);
 		if (selected_event == NULL) {
 			g_critical("smf_get_event_by_number() failed, event not selected.");
 			return -2;
