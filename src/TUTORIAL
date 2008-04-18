@@ -59,7 +59,6 @@ Saving works like this:
 	}
 
 	ret = smf_save(smf, file_name);
-
 	if (ret) {
 		Whoops, saving failed for some reason.
 		return;

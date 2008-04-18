@@ -90,22 +90,30 @@ smf_compute_seconds(smf_t *smf)
 }
 
 /*
- * XXX: Sort entries by ->time_pulses.  Remove duplicates (two tempos starting at the same time,
- * at pulse 0, for example.
+ * XXX: Sort entries by ->time_pulses.
  */
 int
 smf_tempo_add(smf_t *smf, int pulses, int new_tempo)
 {
-	smf_tempo_t *tempo = malloc(sizeof(smf_tempo_t));
+	smf_tempo_t *tempo;
+
+	if (smf->tempo_array->len > 0) {
+		tempo = smf_get_last_tempo(smf);
+
+		/* If previous tempo starts at the same time as new one, reuse it, updating in place. */
+		if (tempo->time_pulses == pulses) {
+			tempo->microseconds_per_quarter_note = new_tempo;
+			return 0;
+		}
+	}
+
+	tempo = malloc(sizeof(smf_tempo_t));
 	if (tempo == NULL) {
 		g_critical("Malloc failed.");
 		return -1;
 	}
 
 	tempo->time_pulses = pulses;
-#if 0
-	tempo->time_seconds = seconds_between_events(smf, 0, pulses);
-#endif
 	tempo->microseconds_per_quarter_note = new_tempo;
 
 	g_ptr_array_add(smf->tempo_array, tempo);
