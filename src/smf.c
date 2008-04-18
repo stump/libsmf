@@ -169,7 +169,7 @@ smf_event_new(void)
 
 	event->delta_time_pulses = -1;
 	event->time_pulses = -1;
-	event->time_seconds = -1;
+	event->time_seconds = -1.0;
 	event->track_number = -1;
 
 	return event;
@@ -277,7 +277,8 @@ smf_event_delete(smf_event_t *event)
 }
 
 /*
- * Appends event at the end of the track.
+ * Appends event at the end of the track.  Event needs to have
+ * ->delta_time_pulses already set.
  */
 void
 smf_track_append_event(smf_track_t *track, smf_event_t *event)
@@ -294,7 +295,68 @@ smf_track_append_event(smf_track_t *track, smf_event_t *event)
 
 	if (event->track->next_event_number == -1)
 		event->track->next_event_number = 1;
+}
 
+/*
+ * Appends event to the track at the time "pulses" clocks from the start of song.
+ */
+void
+smf_track_append_event_pulses(smf_track_t *track, smf_event_t *event, int pulses)
+{
+	int previous_time_pulses;
+
+	assert(pulses >= 0);
+	assert(event->delta_time_pulses == -1);
+	assert(event->time_pulses == -1);
+	assert(event->time_seconds == -1.0);
+
+	/* Get time of last event on this track. */
+	if (track->number_of_events > 0) {
+		smf_event_t *previous_event = smf_get_last_event(track);
+		assert(previous_event);
+		previous_time_pulses = previous_event->time_pulses;
+	} else {
+		previous_time_pulses = 0;
+	}
+
+	assert(previous_time_pulses >= 0);
+
+	event->time_pulses = pulses;
+	event->delta_time_pulses = event->time_pulses - previous_time_pulses;
+	smf_track_append_event(track, event);
+}
+
+/*
+ * Appends event to the track at the time "seconds" seconds from the start of song.
+ */
+void
+smf_track_append_event_seconds(smf_track_t *track, smf_event_t *event, double seconds)
+{
+	int previous_time_pulses;
+	smf_tempo_t *tempo;
+
+	assert(seconds >= 0.0);
+	assert(event->delta_time_pulses == -1);
+	assert(event->time_pulses == -1);
+	assert(event->time_seconds == -1.0);
+	assert(track->smf != NULL);
+
+	tempo = smf_get_last_tempo(track->smf);
+
+	if (track->number_of_events > 0) {
+		smf_event_t *previous_event = smf_get_last_event(track);
+		assert(previous_event);
+		previous_time_pulses = previous_event->time_pulses;
+	} else {
+		previous_time_pulses = 0;
+	}
+
+	assert(previous_time_pulses >= 0);
+
+	event->time_seconds = seconds;
+	event->time_pulses = event->time_seconds * ((double)track->smf->ppqn * 1000000.0 / tempo->microseconds_per_quarter_note);
+	event->delta_time_pulses = event->time_pulses - previous_time_pulses;
+	smf_track_append_event(track, event);
 }
 
 int
@@ -613,6 +675,16 @@ smf_get_event_by_number(smf_track_t *track, int event_number)
 	event = g_ptr_array_index(track->events_array, event_number - 1);
 
 	assert(event);
+
+	return event;
+}
+
+smf_event_t *
+smf_get_last_event(smf_track_t *track)
+{
+	smf_event_t *event;
+       
+	event = smf_get_event_by_number(track, track->number_of_events);
 
 	return event;
 }

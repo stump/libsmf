@@ -145,6 +145,17 @@ smf_get_tempo_by_position(smf_t *smf, int pulses)
 	return NULL;
 }
 
+smf_tempo_t *
+smf_get_last_tempo(smf_t *smf)
+{
+	smf_tempo_t *tempo;
+
+	tempo = smf_get_tempo_by_number(smf, smf->tempo_array->len - 1);
+	assert(tempo);
+
+	return tempo;
+}
+
 void
 smf_remove_tempos(smf_t *smf)
 {
@@ -157,38 +168,5 @@ smf_remove_tempos(smf_t *smf)
 
 	assert(smf->tempo_array->len == 0);
 	smf_tempo_add(smf, 0, 500000);
-}
-
-
-void
-smf_compute_delta_time_pulses(smf_track_t *track, smf_event_t *event)
-{
-	smf_tempo_t *tempo;
-	int previous_time_pulses;
-
-	assert(track->smf);
-	assert(track->smf->ppqn > 0);
-
-	/* Get last tempo. */
-	tempo = smf_get_tempo_by_number(track->smf, track->smf->tempo_array->len - 1);
-	assert(tempo);
-
-	/* Get time of last event on this track. */
-	if (track->number_of_events > 0) {
-		smf_event_t *previous_event = smf_get_event_by_number(track, track->number_of_events);
-		assert(previous_event);
-		previous_time_pulses = previous_event->time_pulses;
-	} else {
-		previous_time_pulses = 0;
-	}
-
-	assert(previous_time_pulses >= 0);
-
-	event->time_pulses = event->time_seconds * ((double)track->smf->ppqn * 1000000.0 / tempo->microseconds_per_quarter_note);
-
-	event->delta_time_pulses = event->time_pulses - previous_time_pulses;
-	assert(event->delta_time_pulses >= 0);
-
-	fprintf(stderr, "seconds is %f, delta time pulses is %d\n", event->time_seconds, event->delta_time_pulses);
 }
 

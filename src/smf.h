@@ -96,6 +96,8 @@ smf_event_t *smf_event_new_from_bytes(int first_byte, int second_byte, int third
 void smf_event_delete(smf_event_t *event);
 
 void smf_track_append_event(smf_track_t *track, smf_event_t *event);
+void smf_track_append_event_pulses(smf_track_t *track, smf_event_t *event, int pulses);
+void smf_track_append_event_seconds(smf_track_t *track, smf_event_t *event, double seconds);
 int smf_track_append_eot(smf_track_t *track);
 void smf_track_remove_event(smf_event_t *event);
 
@@ -110,7 +112,6 @@ smf_t *smf_load_from_memory(const void *buffer, const int buffer_length);
 int smf_save(smf_t *smf, const char *file_name);
 
 int smf_compute_seconds(smf_t *smf);
-void smf_compute_delta_time_pulses(smf_track_t *track, smf_event_t *event);
 
 int smf_event_is_valid(const smf_event_t *event);
 
@@ -128,10 +129,12 @@ void smf_rewind(smf_t *smf);
 smf_event_t *smf_get_next_event_from_track(smf_track_t *track);
 smf_track_t *smf_get_track_by_number(smf_t *smf, int track_number);
 smf_event_t *smf_get_event_by_number(smf_track_t *track, int event_number);
+smf_event_t *smf_get_last_event(smf_track_t *track);
 
 int smf_tempo_add(smf_t *smf, int pulses, int tempo);
 smf_tempo_t *smf_get_tempo_by_position(smf_t *smf, int pulses);
 smf_tempo_t *smf_get_tempo_by_number(smf_t *smf, int number);
+smf_tempo_t *smf_get_last_tempo(smf_t *smf);
 
 #ifdef __cplusplus
 }
