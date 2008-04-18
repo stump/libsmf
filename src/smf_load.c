@@ -287,9 +287,7 @@ parse_realtime_event(const unsigned char status, smf_track_t *track)
 	if (event == NULL)
 		return -1;
 
-	event->delta_time_pulses = 0;
-
-	smf_track_append_event(track, event);
+	smf_track_append_event_delta_pulses(track, event, 0);
 
 	return 0;
 }
@@ -508,7 +506,6 @@ parse_next_event(smf_track_t *track)
 
 	c += len;
 	buffer_length -= len;
-	event->delta_time_pulses = time;
 
 	if (buffer_length <= 0)
 		goto error;
@@ -521,6 +518,8 @@ parse_next_event(smf_track_t *track)
 	buffer_length -= len;
 	track->last_status = event->midi_buffer[0];
 	track->next_event_offset += c - start;
+
+	smf_track_append_event_delta_pulses(track, event, time);
 
 	return event;
 
@@ -651,7 +650,6 @@ smf_event_is_valid(const smf_event_t *event)
 static int
 parse_mtrk_chunk(smf_track_t *track)
 {
-	int time = 0;
 	smf_event_t *event;
 
 	if (parse_mtrk_header(track))
@@ -664,14 +662,7 @@ parse_mtrk_chunk(smf_track_t *track)
 		if (event == NULL)
 			return -1;
 
-		/* Replace "relative" event time with absolute one, i.e. relative to the start of the track. */
-		/* XXX: this should not be there. */
-		event->time_pulses = time + event->delta_time_pulses;
-		time = event->time_pulses;
-
 		assert(smf_event_is_valid(event));
-
-		smf_track_append_event(track, event);
 
 		if (event_is_end_of_track(event))
 			break;

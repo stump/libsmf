@@ -14,6 +14,7 @@ struct mthd_chunk_struct {
 	uint16_t			division;
 } __attribute__((__packed__));
 
+void smf_track_append_event(smf_track_t *track, smf_event_t *event);
 void smf_remove_tempos(smf_t *smf);
 
 #endif /* SMF_PRIVATE_H */

@@ -101,7 +101,7 @@ smf_event_t *smf_track_get_next_event(smf_track_t *track);
 smf_event_t *smf_track_get_event_by_number(smf_track_t *track, int event_number);
 smf_event_t *smf_track_get_last_event(smf_track_t *track);
 
-void smf_track_append_event(smf_track_t *track, smf_event_t *event);
+void smf_track_append_event_delta_pulses(smf_track_t *track, smf_event_t *event, int pulses);
 void smf_track_append_event_pulses(smf_track_t *track, smf_event_t *event, int pulses);
 void smf_track_append_event_seconds(smf_track_t *track, smf_event_t *event, double seconds);
 int smf_track_append_eot(smf_track_t *track);

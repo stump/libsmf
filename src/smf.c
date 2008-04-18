@@ -278,13 +278,15 @@ smf_event_delete(smf_event_t *event)
 
 /*
  * Appends event at the end of the track.  Event needs to have
- * ->delta_time_pulses already set.
+ * all three times already set.
  */
 void
 smf_track_append_event(smf_track_t *track, smf_event_t *event)
 {
 	assert(event->track == NULL);
 	assert(event->delta_time_pulses >= 0);
+	assert(event->time_pulses >= 0);
+	assert(event->time_seconds >= 0.0);
 
 	event->track = track;
 	event->track_number = track->track_number;
@@ -306,8 +308,7 @@ smf_track_append_eot(smf_track_t *track)
 	if (event == NULL)
 		return -1;
 
-	event->delta_time_pulses = 0;
-	smf_track_append_event(track, event);
+	smf_track_append_event_delta_pulses(track, event, 0);
 
 	return 0;
 }
@@ -463,7 +464,9 @@ smf_event_decode_metadata(const smf_event_t *event)
 			break;
 
 		case 0x59:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Key Signature");
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Key Signature, %d %s %s", abs(event->midi_buffer[3]),
+				(int)(signed char)(event->midi_buffer[3]) >= 0 ? "sharp" : "flat",
+				event->midi_buffer[4] == 0 ? "major" : "minor");
 			break;
 
 		case 0x7F:

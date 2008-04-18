@@ -32,8 +32,10 @@ maybe_add_to_tempo_map(smf_event_t *event)
 	}
 
 	smf_tempo_add(event->track->smf, event->time_pulses, new_tempo);
+#if 0
 	g_debug("Setting tempo (microseconds per quarter note) to %d.",
 		smf_get_tempo_by_position(event->track->smf, event->time_pulses)->microseconds_per_quarter_note);
+#endif
 
 	return;
 }
@@ -199,6 +201,46 @@ smf_remove_tempos(smf_t *smf)
 }
 
 /*
+ * Returns ->time_pulses of last event on the given track, or 0, if track is empty.
+ */
+static int
+last_event_pulses(smf_track_t *track)
+{
+	/* Get time of last event on this track. */
+	if (track->number_of_events > 0) {
+		smf_event_t *previous_event = smf_track_get_last_event(track);
+		assert(previous_event);
+		assert(previous_event->time_pulses >= 0);
+
+		return previous_event->time_pulses;
+	}
+
+	return 0;
+}
+
+
+/*
+ * Appends event to the track at the time "pulses" clocks from the previous event in this track.
+ */
+void
+smf_track_append_event_delta_pulses(smf_track_t *track, smf_event_t *event, int pulses)
+{
+	int previous_time_pulses;
+
+	assert(pulses >= 0);
+	assert(event->delta_time_pulses == -1);
+	assert(event->time_pulses == -1);
+	assert(event->time_seconds == -1.0);
+
+	previous_time_pulses = last_event_pulses(track);
+
+	event->delta_time_pulses = pulses;
+	event->time_pulses = previous_time_pulses + pulses;
+	event->time_seconds = seconds_from_pulses(track->smf, pulses);
+	smf_track_append_event(track, event);
+}
+
+/*
  * Appends event to the track at the time "pulses" clocks from the start of song.
  */
 void
@@ -211,16 +253,7 @@ smf_track_append_event_pulses(smf_track_t *track, smf_event_t *event, int pulses
 	assert(event->time_pulses == -1);
 	assert(event->time_seconds == -1.0);
 
-	/* Get time of last event on this track. */
-	if (track->number_of_events > 0) {
-		smf_event_t *previous_event = smf_track_get_last_event(track);
-		assert(previous_event);
-		previous_time_pulses = previous_event->time_pulses;
-	} else {
-		previous_time_pulses = 0;
-	}
-
-	assert(previous_time_pulses >= 0);
+	previous_time_pulses = last_event_pulses(track);
 
 	event->time_pulses = pulses;
 	event->delta_time_pulses = event->time_pulses - previous_time_pulses;
@@ -242,15 +275,7 @@ smf_track_append_event_seconds(smf_track_t *track, smf_event_t *event, double se
 	assert(event->time_seconds == -1.0);
 	assert(track->smf != NULL);
 
-	if (track->number_of_events > 0) {
-		smf_event_t *previous_event = smf_track_get_last_event(track);
-		assert(previous_event);
-		previous_time_pulses = previous_event->time_pulses;
-	} else {
-		previous_time_pulses = 0;
-	}
-
-	assert(previous_time_pulses >= 0);
+	previous_time_pulses = last_event_pulses(track);
 
 	event->time_seconds = seconds;
 	event->time_pulses = pulses_from_seconds(track->smf, seconds);

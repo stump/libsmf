@@ -435,7 +435,6 @@ cmd_eventadd(char *str)
 
 	selected_event->midi_buffer = midi_buffer;
 	selected_event->midi_buffer_length = midi_buffer_length;
-	selected_event->delta_time_pulses = pulses;
 
 	if (smf_event_is_valid(selected_event) == 0) {
 		g_critical("Event is invalid from the MIDI specification point of view, not created.");
@@ -444,7 +443,7 @@ cmd_eventadd(char *str)
 		return -7;
 	}
 
-	smf_track_append_event(selected_track, selected_event);
+	smf_track_append_event_delta_pulses(selected_track, selected_event, pulses);
 
 	g_message("Event created.");
 
