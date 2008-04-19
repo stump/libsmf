@@ -15,7 +15,8 @@ struct mthd_chunk_struct {
 } __attribute__((__packed__));
 
 void smf_track_add_event(smf_track_t *track, smf_event_t *event);
-void smf_remove_tempos(smf_t *smf);
+
+void smf_init_tempo(smf_t *smf);
 
 #endif /* SMF_PRIVATE_H */
 

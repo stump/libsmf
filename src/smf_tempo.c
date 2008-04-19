@@ -10,6 +10,41 @@
 #include "smf.h"
 #include "smf_private.h"
 
+/*
+ * XXX: Sort entries by ->time_pulses.
+ */
+static int
+smf_tempo_add(smf_t *smf, int pulses, int new_tempo)
+{
+	smf_tempo_t *tempo;
+
+	if (smf->tempo_array->len > 0) {
+		tempo = smf_get_last_tempo(smf);
+
+		/* If previous tempo starts at the same time as new one, reuse it, updating in place. */
+		if (tempo->time_pulses == pulses) {
+			tempo->microseconds_per_quarter_note = new_tempo;
+			return 0;
+		}
+	}
+
+	tempo = malloc(sizeof(smf_tempo_t));
+	if (tempo == NULL) {
+		g_critical("Malloc failed.");
+		return -1;
+	}
+
+	tempo->time_pulses = pulses;
+	tempo->microseconds_per_quarter_note = new_tempo;
+	tempo->beats_per_bar = 4; /* XXX */
+	tempo->beats_per_bar = 0.25; /* XXX */
+
+	g_ptr_array_add(smf->tempo_array, tempo);
+
+	return 0;
+}
+
+
 static void
 maybe_add_to_tempo_map(smf_event_t *event)
 {
@@ -88,7 +123,7 @@ smf_create_tempo_map_and_compute_seconds(smf_t *smf)
 	smf_event_t *event;
 
 	smf_rewind(smf);
-	smf_remove_tempos(smf);
+	smf_init_tempo(smf);
 
 	for (;;) {
 		event = smf_get_next_event(smf);
@@ -103,40 +138,6 @@ smf_create_tempo_map_and_compute_seconds(smf_t *smf)
 
 	/* Not reached. */
 	return -1;
-}
-
-/*
- * XXX: Sort entries by ->time_pulses.
- */
-int
-smf_tempo_add(smf_t *smf, int pulses, int new_tempo)
-{
-	smf_tempo_t *tempo;
-
-	if (smf->tempo_array->len > 0) {
-		tempo = smf_get_last_tempo(smf);
-
-		/* If previous tempo starts at the same time as new one, reuse it, updating in place. */
-		if (tempo->time_pulses == pulses) {
-			tempo->microseconds_per_quarter_note = new_tempo;
-			return 0;
-		}
-	}
-
-	tempo = malloc(sizeof(smf_tempo_t));
-	if (tempo == NULL) {
-		g_critical("Malloc failed.");
-		return -1;
-	}
-
-	tempo->time_pulses = pulses;
-	tempo->microseconds_per_quarter_note = new_tempo;
-	tempo->beats_per_bar = 4; /* XXX */
-	tempo->beats_per_bar = 0.25; /* XXX */
-
-	g_ptr_array_add(smf->tempo_array, tempo);
-
-	return 0;
 }
 
 smf_tempo_t *
@@ -188,8 +189,11 @@ smf_get_last_tempo(smf_t *smf)
 	return tempo;
 }
 
+/*
+ * Remove any existing tempos and add default one.
+ */
 void
-smf_remove_tempos(smf_t *smf)
+smf_init_tempo(smf_t *smf)
 {
 	while (smf->tempo_array->len > 0) {
 		smf_tempo_t *tempo = g_ptr_array_index(smf->tempo_array, smf->tempo_array->len - 1);
@@ -199,6 +203,7 @@ smf_remove_tempos(smf_t *smf)
 	}
 
 	assert(smf->tempo_array->len == 0);
+	/* Initial tempo is 120 BPM. */
 	smf_tempo_add(smf, 0, 500000);
 }
 

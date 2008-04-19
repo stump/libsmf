@@ -36,8 +36,7 @@ smf_new(void)
 	smf->tempo_array = g_ptr_array_new();
 	assert(smf->tempo_array);
 
-	/* Initial tempo is 120 BPM. */
-	smf_tempo_add(smf, 0, 500000);
+	smf_init_tempo(smf);
 	smf_set_format(smf, 0);
 	smf_set_ppqn(smf, 120);
 

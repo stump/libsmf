@@ -80,6 +80,7 @@ struct smf_event_struct {
 
 typedef struct smf_event_struct smf_event_t;
 
+/* Routines for manipulating smf_t. */
 smf_t *smf_new(void);
 void smf_delete(smf_t *smf);
 
@@ -96,6 +97,7 @@ int smf_seek_to_event(smf_t *smf, const smf_event_t *event);
 void smf_add_track(smf_t *smf, smf_track_t *track);
 void smf_remove_track(smf_track_t *track);
 
+/* Routines for manipulating smf_track_t. */
 smf_track_t *smf_track_new(void);
 void smf_track_delete(smf_track_t *track);
 
@@ -109,7 +111,7 @@ void smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double 
 int smf_track_add_eot(smf_track_t *track);
 void smf_track_remove_event(smf_event_t *event);
 
-smf_event_t *smf_get_next_event_from_track(smf_track_t *track);
+/* Routines for manipulating smf_event_t. */
 smf_event_t *smf_event_new(void);
 smf_event_t *smf_event_new_from_pointer(void *midi_data, int len);
 smf_event_t *smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte);
@@ -127,12 +129,11 @@ smf_t *smf_load_from_memory(const void *buffer, const int buffer_length);
 /* Routine for writing SMF files. */
 int smf_save(smf_t *smf, const char *file_name);
 
-int smf_create_tempo_map_and_compute_seconds(smf_t *smf);
-
-int smf_tempo_add(smf_t *smf, int pulses, int tempo);
+/* Routines for manipulating smf_tempo_t. */
 smf_tempo_t *smf_get_tempo_by_position(smf_t *smf, int pulses);
 smf_tempo_t *smf_get_tempo_by_number(smf_t *smf, int number);
 smf_tempo_t *smf_get_last_tempo(smf_t *smf);
+int smf_create_tempo_map_and_compute_seconds(smf_t *smf);
 
 #ifdef __cplusplus
 }
