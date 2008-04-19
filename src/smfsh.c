@@ -386,15 +386,15 @@ error:
 void
 eventadd_usage(void)
 {
-	g_critical("Usage: eventadd delta-time-in-pulses midi-in-hex.");
-	g_critical("Example: 'eventadd 1 903C7F' will add Note On event, one pulse from the previous");
-	g_critical("one on that particular track, channel 1, note C4, velocity 127.");
+	g_message("Usage: eventadd time-in-seconds midi-in-hex.  For example, 'eventadd 1 903C7F'");
+        g_message("will add Note On event, one second from the start of song, channel 1, note C4, velocity 127.");
 }
 
 int
 cmd_eventadd(char *str)
 {
-	int midi_buffer_length, pulses;
+	int midi_buffer_length;
+	double seconds;
 	unsigned char *midi_buffer;
 	char *time, *endtime;
 
@@ -410,7 +410,7 @@ cmd_eventadd(char *str)
 
 	/* Extract the time. */
 	time = strsep(&str, " ");
-	pulses = strtol(time, &endtime, 10);
+	seconds = strtod(time, &endtime);
 	if (endtime - time != strlen(time)) {
 		g_critical("Time is supposed to be a number, without trailing characters.");
 		return -3;
@@ -443,7 +443,7 @@ cmd_eventadd(char *str)
 		return -7;
 	}
 
-	smf_track_add_event_delta_pulses(selected_track, selected_event, pulses);
+	smf_track_add_event_seconds(selected_track, selected_event, seconds);
 
 	g_message("Event created.");
 

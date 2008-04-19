@@ -284,66 +284,49 @@ last_event_pulses(smf_track_t *track)
 }
 
 /*
- * Appends event to the track at the time "pulses" clocks from the previous event in this track.
+ * Adds event to the track at the time "pulses" clocks from the previous event in this track.
+ * Note that ->delta_pulses is computed by smf.c:smf_track_add_event, not here.
  */
 void
-smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int pulses)
+smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int delta)
 {
-	int previous_time_pulses;
-
-	assert(pulses >= 0);
-	assert(event->delta_time_pulses == -1);
-	assert(event->time_pulses == -1);
-	assert(event->time_seconds == -1.0);
-
-	previous_time_pulses = last_event_pulses(track);
-
-	event->delta_time_pulses = pulses;
-	event->time_pulses = previous_time_pulses + pulses;
-	event->time_seconds = seconds_from_pulses(track->smf, pulses);
-	smf_track_add_event(track, event);
-}
-
-/*
- * Appends event to the track at the time "pulses" clocks from the start of song.
- */
-void
-smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses)
-{
-	int previous_time_pulses;
-
-	assert(pulses >= 0);
-	assert(event->delta_time_pulses == -1);
-	assert(event->time_pulses == -1);
-	assert(event->time_seconds == -1.0);
-
-	previous_time_pulses = last_event_pulses(track);
-
-	event->time_pulses = pulses;
-	event->delta_time_pulses = event->time_pulses - previous_time_pulses;
-	event->time_seconds = seconds_from_pulses(track->smf, pulses);
-	smf_track_add_event(track, event);
-}
-
-/*
- * Appends event to the track at the time "seconds" seconds from the start of song.
- */
-void
-smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double seconds)
-{
-	int previous_time_pulses;
-
-	assert(seconds >= 0.0);
-	assert(event->delta_time_pulses == -1);
+	assert(delta >= 0);
 	assert(event->time_pulses == -1);
 	assert(event->time_seconds == -1.0);
 	assert(track->smf != NULL);
 
-	previous_time_pulses = last_event_pulses(track);
+	smf_track_add_event_pulses(track, event, last_event_pulses(track) + delta);
+}
+
+/*
+ * Adds event to the track at the time "pulses" clocks from the start of song.
+ */
+void
+smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses)
+{
+	assert(pulses >= 0);
+	assert(event->time_pulses == -1);
+	assert(event->time_seconds == -1.0);
+	assert(track->smf != NULL);
+
+	event->time_pulses = pulses;
+	event->time_seconds = seconds_from_pulses(track->smf, pulses);
+	smf_track_add_event(track, event);
+}
+
+/*
+ * Adds event to the track at the time "seconds" seconds from the start of song.
+ */
+void
+smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double seconds)
+{
+	assert(seconds >= 0.0);
+	assert(event->time_pulses == -1);
+	assert(event->time_seconds == -1.0);
+	assert(track->smf != NULL);
 
 	event->time_seconds = seconds;
 	event->time_pulses = pulses_from_seconds(track->smf, seconds);
-	event->delta_time_pulses = event->time_pulses - previous_time_pulses;
 	smf_track_add_event(track, event);
 }
 

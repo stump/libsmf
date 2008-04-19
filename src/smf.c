@@ -273,28 +273,84 @@ smf_event_delete(smf_event_t *event)
 	free(event);
 }
 
+gint
+events_array_compare_function(gconstpointer aa, gconstpointer bb)
+{
+	smf_event_t *a, *b;
+	
+	/* "The comparison function for g_ptr_array_sort() doesn't take the pointers
+	    from the array as arguments, it takes pointers to the pointers in the array." */
+	a = (smf_event_t *)*(gpointer *)aa;
+	b = (smf_event_t *)*(gpointer *)bb;
+
+	if (a->time_pulses < b->time_pulses)
+		return -1;
+
+	if (a->time_pulses > b->time_pulses)
+		return 1;
+
+	return 0;
+}
+
 /*
- * Appends event at the end of the track.  Event needs to have
- * all three times already set.
+ * Adds the event to the track and computes ->delta_pulses.
+ * Event needs to have ->time_pulses and ->time_seconds already set.
  */
 void
 smf_track_add_event(smf_track_t *track, smf_event_t *event)
 {
+	int i;
+	int last_pulses = 0;
+
 	assert(track->smf != NULL);
 	assert(event->track == NULL);
-	assert(event->delta_time_pulses >= 0);
+	assert(event->delta_time_pulses == -1);
 	assert(event->time_pulses >= 0);
 	assert(event->time_seconds >= 0.0);
 
 	event->track = track;
 	event->track_number = track->track_number;
 
-	g_ptr_array_add(track->events_array, event);
-	event->track->number_of_events++;
-	event->event_number = event->track->number_of_events;
+	if (track->number_of_events == 0) {
+		assert(track->next_event_number == -1);
+		track->next_event_number = 1;
+	}
 
-	if (event->track->next_event_number == -1)
-		event->track->next_event_number = 1;
+	if (track->number_of_events > 0)
+		last_pulses = smf_track_get_last_event(track)->time_pulses;
+
+	track->number_of_events++;
+
+	/* Are we just appending element at the end of the track? */
+	if (last_pulses <= event->time_pulses) {
+		event->delta_time_pulses = event->time_pulses - last_pulses;
+		assert(event->delta_time_pulses >= 0);
+		g_ptr_array_add(track->events_array, event);
+		event->event_number = track->number_of_events;
+
+	/* We need to insert in the middle of the track.  XXX: This is slow. */
+	} else {
+		/* Append, then sort according to ->time_pulses. */
+		g_ptr_array_add(track->events_array, event);
+		g_ptr_array_sort(track->events_array, events_array_compare_function);
+
+		/* Renumber entries and fix their ->delta_pulses. */
+		for (i = 1; i <= track->number_of_events; i++) {
+			smf_event_t *tmp = smf_track_get_event_by_number(track, i);
+			tmp->event_number = i;
+
+			if (tmp->delta_time_pulses != -1)
+				continue;
+
+			if (i == 1) {
+				tmp->delta_time_pulses = tmp->time_pulses;
+			} else {
+				tmp->delta_time_pulses = tmp->time_pulses -
+					smf_track_get_event_by_number(track, i - 1)->time_pulses;
+				assert(tmp->delta_time_pulses >= 0);
+			}
+		}
+	}
 
 	/* XXX: This may be a little slow. */
 	if (smf_event_is_tempo_change_or_time_signature(event))
@@ -336,17 +392,16 @@ smf_track_remove_event(smf_event_t *event)
 	}
 
 	track->number_of_events--;
-
-	/* Remove event from its track. */
 	g_ptr_array_remove(track->events_array, event);
-	event->track = NULL;
-	event->event_number = -1;
 
 	/* Renumber the rest of the events, so they are consecutively numbered. */
 	for (i = event->event_number; i <= track->number_of_events; i++) {
 		tmp = smf_track_get_event_by_number(track, i);
 		tmp->event_number = i;
 	}
+
+	event->track = NULL;
+	event->event_number = -1;
 
 	/* XXX: This may be a little slow. */
 	if (smf_event_is_tempo_change_or_time_signature(event))
