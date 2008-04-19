@@ -7,70 +7,119 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <math.h>
 #include "smf.h"
 #include "smf_private.h"
 
 /*
- * XXX: Sort entries by ->time_pulses.
+ * If there is tempo starting at "pulses" already, return it.  Otherwise,
+ * allocate new one, fill it with values from previous one (or default ones,
+ * if there is no previous one) and attach it to "smf".
  */
-static int
-smf_tempo_add(smf_t *smf, int pulses, int new_tempo)
+smf_tempo_t *
+new_tempo(smf_t *smf, int pulses)
 {
-	smf_tempo_t *tempo;
+	smf_tempo_t *tempo, *previous_tempo = NULL;
 
 	if (smf->tempo_array->len > 0) {
-		tempo = smf_get_last_tempo(smf);
+		previous_tempo = smf_get_last_tempo(smf);
 
 		/* If previous tempo starts at the same time as new one, reuse it, updating in place. */
-		if (tempo->time_pulses == pulses) {
-			tempo->microseconds_per_quarter_note = new_tempo;
-			return 0;
-		}
+		if (previous_tempo->time_pulses == pulses)
+			return previous_tempo;
 	}
 
 	tempo = malloc(sizeof(smf_tempo_t));
 	if (tempo == NULL) {
-		g_critical("Malloc failed.");
-		return -1;
+		g_critical("Cannot allocate smf_tempo_t.");
+		return NULL;
 	}
 
 	tempo->time_pulses = pulses;
-	tempo->microseconds_per_quarter_note = new_tempo;
-	tempo->beats_per_bar = 4; /* XXX */
-	tempo->beats_per_bar = 0.25; /* XXX */
+
+	if (previous_tempo != NULL) {
+		tempo->microseconds_per_quarter_note = previous_tempo->microseconds_per_quarter_note;
+		tempo->numerator = previous_tempo->numerator;
+		tempo->denominator = previous_tempo->denominator;
+		tempo->clocks_per_click = previous_tempo->clocks_per_click;
+		tempo->notes_per_note = previous_tempo->notes_per_note;
+	} else {
+		tempo->microseconds_per_quarter_note = 500000; /* Initial tempo is 120 BPM. */
+		tempo->numerator = 4;
+		tempo->denominator = 4;
+		tempo->clocks_per_click = -1;
+		tempo->notes_per_note = -1;
+	}
 
 	g_ptr_array_add(smf->tempo_array, tempo);
+
+	return tempo;
+}
+
+static int
+add_tempo(smf_t *smf, int pulses, int tempo)
+{
+	smf_tempo_t *smf_tempo = new_tempo(smf, pulses);
+	if (smf_tempo == NULL)
+		return -1;
+
+	smf_tempo->microseconds_per_quarter_note = tempo;
 
 	return 0;
 }
 
+static int
+add_time_signature(smf_t *smf, int pulses, int numerator, int denominator, int clocks_per_click, int notes_per_note)
+{
+	smf_tempo_t *smf_tempo = new_tempo(smf, pulses);
+	if (smf_tempo == NULL)
+		return -1;
+
+	smf_tempo->numerator = numerator;
+	smf_tempo->denominator = denominator;
+	smf_tempo->clocks_per_click = clocks_per_click;
+	smf_tempo->notes_per_note = notes_per_note;
+
+	return 0;
+}
 
 static void
 maybe_add_to_tempo_map(smf_event_t *event)
 {
-	int new_tempo;
-
 	if (!smf_event_is_metadata(event))
-		return;
-
-	/* Not a Tempo Change? */
-	if (event->midi_buffer[1] != 0x51)
 		return;
 
 	assert(event->track != NULL);
 	assert(event->track->smf != NULL);
+	assert(event->midi_buffer_length >= 1);
 
-	new_tempo = (event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
-	if (new_tempo <= 0) {
-		g_critical("Ignoring invalid tempo change.");
-		return;
+	/* Tempo Change? */
+	if (event->midi_buffer[1] == 0x51) {
+		int new_tempo = (event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
+		if (new_tempo <= 0) {
+			g_critical("Ignoring invalid tempo change.");
+			return;
+		}
+
+		add_tempo(event->track->smf, event->time_pulses, new_tempo);
 	}
 
-	smf_tempo_add(event->track->smf, event->time_pulses, new_tempo);
-#if 0
-	g_debug("Setting tempo (microseconds per quarter note) to %d.",
-		smf_get_tempo_by_position(event->track->smf, event->time_pulses)->microseconds_per_quarter_note);
-#endif
+	/* Time Signature? */
+	if (event->midi_buffer[1] == 0x58) {
+		int numerator, denominator, clocks_per_click, notes_per_note;
+
+		if (event->midi_buffer_length < 7) {
+			g_critical("Time Signature event seems truncated.");
+			return;
+		}
+
+		numerator = event->midi_buffer[3];
+		denominator = (int)pow(2, event->midi_buffer[4]);
+		clocks_per_click = event->midi_buffer[5];
+		notes_per_note = event->midi_buffer[6];
+
+		add_time_signature(event->track->smf, event->time_pulses, numerator, denominator, clocks_per_click, notes_per_note);
+	}
 
 	return;
 }
@@ -152,7 +201,7 @@ smf_get_tempo_by_number(smf_t *smf, int number)
 }
 
 /*
- * Remove last tempo (i.e. tempo with greatest time_pulses) that happens before "pulses".
+ * Return last tempo (i.e. tempo with greatest time_pulses) that happens before "pulses".
  */
 smf_tempo_t *
 smf_get_tempo_by_position(smf_t *smf, int pulses)
@@ -178,6 +227,9 @@ smf_get_tempo_by_position(smf_t *smf, int pulses)
 	return NULL;
 }
 
+/*
+ * Return last tempo.
+ */
 smf_tempo_t *
 smf_get_last_tempo(smf_t *smf)
 {
@@ -192,9 +244,11 @@ smf_get_last_tempo(smf_t *smf)
 /*
  * Remove any existing tempos and add default one.
  */
-void
+int
 smf_init_tempo(smf_t *smf)
 {
+	smf_tempo_t *tempo;
+
 	while (smf->tempo_array->len > 0) {
 		smf_tempo_t *tempo = g_ptr_array_index(smf->tempo_array, smf->tempo_array->len - 1);
 		assert(tempo);
@@ -203,8 +257,12 @@ smf_init_tempo(smf_t *smf)
 	}
 
 	assert(smf->tempo_array->len == 0);
-	/* Initial tempo is 120 BPM. */
-	smf_tempo_add(smf, 0, 500000);
+
+	tempo = new_tempo(smf, 0);
+	if (tempo == NULL)
+		return -1;
+
+	return 0;
 }
 
 /*
@@ -224,7 +282,6 @@ last_event_pulses(smf_track_t *track)
 
 	return 0;
 }
-
 
 /*
  * Appends event to the track at the time "pulses" clocks from the previous event in this track.
@@ -289,5 +346,4 @@ smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double secon
 	event->delta_time_pulses = event->time_pulses - previous_time_pulses;
 	smf_track_add_event(track, event);
 }
-
 

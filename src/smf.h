@@ -39,8 +39,10 @@ typedef struct smf_struct smf_t;
 struct smf_tempo_struct {
 	int time_pulses;
 	int microseconds_per_quarter_note;
-	double beats_per_bar;
-	double beat_type;
+	int numerator;
+	int denominator;
+	int clocks_per_click;
+	int notes_per_note;
 };
 
 typedef struct smf_tempo_struct smf_tempo_t;
