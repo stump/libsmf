@@ -135,7 +135,6 @@ int smf_save(smf_t *smf, const char *file_name);
 smf_tempo_t *smf_get_tempo_by_position(smf_t *smf, int pulses);
 smf_tempo_t *smf_get_tempo_by_number(smf_t *smf, int number);
 smf_tempo_t *smf_get_last_tempo(smf_t *smf);
-int smf_create_tempo_map_and_compute_seconds(smf_t *smf);
 
 #ifdef __cplusplus
 }

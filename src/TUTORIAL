@@ -64,5 +64,6 @@ Saving works like this:
 		return;
 	}
 	
-That's it for basic usage.
+Note that you always have to first add the track to smf, and then add events to the track.
+Otherwise you will trip asserts.  That's it for basic usage.
 

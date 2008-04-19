@@ -263,8 +263,6 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 void
 smf_event_delete(smf_event_t *event)
 {
-	assert(event->track->events_array != NULL);
-
 	if (event->track != NULL)
 		smf_track_remove_event(event);
 
@@ -282,6 +280,7 @@ smf_event_delete(smf_event_t *event)
 void
 smf_track_add_event(smf_track_t *track, smf_event_t *event)
 {
+	assert(track->smf != NULL);
 	assert(event->track == NULL);
 	assert(event->delta_time_pulses >= 0);
 	assert(event->time_pulses >= 0);
@@ -296,6 +295,10 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 
 	if (event->track->next_event_number == -1)
 		event->track->next_event_number = 1;
+
+	/* XXX: This may be a little slow. */
+	if (smf_event_is_tempo_change_or_time_signature(event))
+		smf_create_tempo_map_and_compute_seconds(track->smf);
 }
 
 int
@@ -323,19 +326,28 @@ smf_track_remove_event(smf_event_t *event)
 {
 	int i;
 	smf_event_t *tmp;
+	smf_track_t *track;
 
 	assert(event->track != NULL);
 
-	event->track->number_of_events--;
+	track = event->track;
+
+	track->number_of_events--;
 
 	/* Remove event from its track. */
-	g_ptr_array_remove(event->track->events_array, event);
+	g_ptr_array_remove(track->events_array, event);
+	event->track = NULL;
+	event->event_number = -1;
 
 	/* Renumber the rest of the events, so they are consecutively numbered. */
-	for (i = event->event_number; i <= event->track->number_of_events; i++) {
-		tmp = smf_track_get_event_by_number(event->track, i);
+	for (i = event->event_number; i <= track->number_of_events; i++) {
+		tmp = smf_track_get_event_by_number(track, i);
 		tmp->event_number = i;
 	}
+
+	/* XXX: This may be a little slow. */
+	if (smf_event_is_tempo_change_or_time_signature(event))
+		smf_create_tempo_map_and_compute_seconds(track->smf);
 }
 
 int
@@ -345,6 +357,20 @@ smf_event_is_metadata(const smf_event_t *event)
 	assert(event->midi_buffer_length > 0);
 	
 	if (event->midi_buffer[0] == 0xFF)
+		return 1;
+
+	return 0;
+}
+
+int
+smf_event_is_tempo_change_or_time_signature(smf_event_t *event)
+{
+	if (!smf_event_is_metadata(event))
+		return 0;
+
+	assert(event->midi_buffer_length >= 2);
+
+	if (event->midi_buffer[1] == 0x51 || event->midi_buffer[1] == 0x58)
 		return 1;
 
 	return 0;

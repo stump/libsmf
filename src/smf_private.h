@@ -17,6 +17,8 @@ struct mthd_chunk_struct {
 void smf_track_add_event(smf_track_t *track, smf_event_t *event);
 
 int smf_init_tempo(smf_t *smf);
+int smf_create_tempo_map_and_compute_seconds(smf_t *smf);
+int smf_event_is_tempo_change_or_time_signature(smf_event_t *event);
 
 #endif /* SMF_PRIVATE_H */
 

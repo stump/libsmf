@@ -447,12 +447,6 @@ cmd_eventadd(char *str)
 
 	g_message("Event created.");
 
-	/* XXX: This shouldn't be here. */
-	if (smf_event_is_metadata(selected_event)) {
-		g_debug("Event is metadata; recomputing time.");
-		smf_create_tempo_map_and_compute_seconds(smf);
-	}
-
 	return 0;
 }
 
