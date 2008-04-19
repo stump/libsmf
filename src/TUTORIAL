@@ -52,10 +52,10 @@ Saving works like this:
 				return;
 			}
 
-			smf_track_append_event_seconds(track, event, seconds since start of song);
+			smf_track_add_event_seconds(track, event, seconds since start of song);
 		}
 
-		smf_track_append_eot(track);
+		smf_track_add_eot(track);
 	}
 
 	ret = smf_save(smf, file_name);

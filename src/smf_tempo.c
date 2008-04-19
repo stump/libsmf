@@ -131,6 +131,8 @@ smf_tempo_add(smf_t *smf, int pulses, int new_tempo)
 
 	tempo->time_pulses = pulses;
 	tempo->microseconds_per_quarter_note = new_tempo;
+	tempo->beats_per_bar = 4; /* XXX */
+	tempo->beats_per_bar = 0.25; /* XXX */
 
 	g_ptr_array_add(smf->tempo_array, tempo);
 
@@ -223,7 +225,7 @@ last_event_pulses(smf_track_t *track)
  * Appends event to the track at the time "pulses" clocks from the previous event in this track.
  */
 void
-smf_track_append_event_delta_pulses(smf_track_t *track, smf_event_t *event, int pulses)
+smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int pulses)
 {
 	int previous_time_pulses;
 
@@ -237,14 +239,14 @@ smf_track_append_event_delta_pulses(smf_track_t *track, smf_event_t *event, int 
 	event->delta_time_pulses = pulses;
 	event->time_pulses = previous_time_pulses + pulses;
 	event->time_seconds = seconds_from_pulses(track->smf, pulses);
-	smf_track_append_event(track, event);
+	smf_track_add_event(track, event);
 }
 
 /*
  * Appends event to the track at the time "pulses" clocks from the start of song.
  */
 void
-smf_track_append_event_pulses(smf_track_t *track, smf_event_t *event, int pulses)
+smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses)
 {
 	int previous_time_pulses;
 
@@ -258,14 +260,14 @@ smf_track_append_event_pulses(smf_track_t *track, smf_event_t *event, int pulses
 	event->time_pulses = pulses;
 	event->delta_time_pulses = event->time_pulses - previous_time_pulses;
 	event->time_seconds = seconds_from_pulses(track->smf, pulses);
-	smf_track_append_event(track, event);
+	smf_track_add_event(track, event);
 }
 
 /*
  * Appends event to the track at the time "seconds" seconds from the start of song.
  */
 void
-smf_track_append_event_seconds(smf_track_t *track, smf_event_t *event, double seconds)
+smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double seconds)
 {
 	int previous_time_pulses;
 
@@ -280,7 +282,7 @@ smf_track_append_event_seconds(smf_track_t *track, smf_event_t *event, double se
 	event->time_seconds = seconds;
 	event->time_pulses = pulses_from_seconds(track->smf, seconds);
 	event->delta_time_pulses = event->time_pulses - previous_time_pulses;
-	smf_track_append_event(track, event);
+	smf_track_add_event(track, event);
 }
 
 

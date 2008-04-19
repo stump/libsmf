@@ -220,7 +220,7 @@ cmd_trackadd(char *notused)
 		return -1;
 	}
 
-	smf_append_track(smf, selected_track);
+	smf_add_track(smf, selected_track);
 
 	selected_event = NULL;
 
@@ -443,7 +443,7 @@ cmd_eventadd(char *str)
 		return -7;
 	}
 
-	smf_track_append_event_delta_pulses(selected_track, selected_event, pulses);
+	smf_track_add_event_delta_pulses(selected_track, selected_event, pulses);
 
 	g_message("Event created.");
 
@@ -463,8 +463,8 @@ cmd_eventaddeot(char *notused)
 		return -1;
 	}
 
-	if (smf_track_append_eot(selected_track)) {
-		g_critical("smf_track_append_eot() failed.");
+	if (smf_track_add_eot(selected_track)) {
+		g_critical("smf_track_add_eot() failed.");
 		return -2;
 	}
 

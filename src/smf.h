@@ -39,6 +39,8 @@ typedef struct smf_struct smf_t;
 struct smf_tempo_struct {
 	int time_pulses;
 	int microseconds_per_quarter_note;
+	double beats_per_bar;
+	double beat_type;
 };
 
 typedef struct smf_tempo_struct smf_tempo_t;
@@ -91,7 +93,7 @@ void smf_rewind(smf_t *smf);
 int smf_seek_to_seconds(smf_t *smf, double seconds);
 int smf_seek_to_event(smf_t *smf, const smf_event_t *event);
 
-void smf_append_track(smf_t *smf, smf_track_t *track);
+void smf_add_track(smf_t *smf, smf_track_t *track);
 void smf_remove_track(smf_track_t *track);
 
 smf_track_t *smf_track_new(void);
@@ -101,10 +103,10 @@ smf_event_t *smf_track_get_next_event(smf_track_t *track);
 smf_event_t *smf_track_get_event_by_number(smf_track_t *track, int event_number);
 smf_event_t *smf_track_get_last_event(smf_track_t *track);
 
-void smf_track_append_event_delta_pulses(smf_track_t *track, smf_event_t *event, int pulses);
-void smf_track_append_event_pulses(smf_track_t *track, smf_event_t *event, int pulses);
-void smf_track_append_event_seconds(smf_track_t *track, smf_event_t *event, double seconds);
-int smf_track_append_eot(smf_track_t *track);
+void smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int pulses);
+void smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses);
+void smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double seconds);
+int smf_track_add_eot(smf_track_t *track);
 void smf_track_remove_event(smf_event_t *event);
 
 smf_event_t *smf_get_next_event_from_track(smf_track_t *track);

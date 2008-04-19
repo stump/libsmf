@@ -287,7 +287,7 @@ parse_realtime_event(const unsigned char status, smf_track_t *track)
 	if (event == NULL)
 		return -1;
 
-	smf_track_append_event_delta_pulses(track, event, 0);
+	smf_track_add_event_delta_pulses(track, event, 0);
 
 	return 0;
 }
@@ -519,7 +519,7 @@ parse_next_event(smf_track_t *track)
 	track->last_status = event->midi_buffer[0];
 	track->next_event_offset += c - start;
 
-	smf_track_append_event_delta_pulses(track, event, time);
+	smf_track_add_event_delta_pulses(track, event, time);
 
 	return event;
 
@@ -751,7 +751,7 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 		if (track == NULL)
 			return NULL;
 
-		smf_append_track(smf, track);
+		smf_add_track(smf, track);
 
 		/* Skip unparseable chunks. */
 		if (parse_mtrk_chunk(track)) {

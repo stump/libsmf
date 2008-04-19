@@ -113,7 +113,7 @@ smf_track_delete(smf_track_t *track)
  * Appends smf_track_t to smf.
  */
 void
-smf_append_track(smf_t *smf, smf_track_t *track)
+smf_add_track(smf_t *smf, smf_track_t *track)
 {
 	assert(track->smf == NULL);
 
@@ -281,7 +281,7 @@ smf_event_delete(smf_event_t *event)
  * all three times already set.
  */
 void
-smf_track_append_event(smf_track_t *track, smf_event_t *event)
+smf_track_add_event(smf_track_t *track, smf_event_t *event)
 {
 	assert(event->track == NULL);
 	assert(event->delta_time_pulses >= 0);
@@ -300,7 +300,7 @@ smf_track_append_event(smf_track_t *track, smf_event_t *event)
 }
 
 int
-smf_track_append_eot(smf_track_t *track)
+smf_track_add_eot(smf_track_t *track)
 {
 	smf_event_t *event;
 
@@ -308,7 +308,7 @@ smf_track_append_eot(smf_track_t *track)
 	if (event == NULL)
 		return -1;
 
-	smf_track_append_event_delta_pulses(track, event, 0);
+	smf_track_add_event_delta_pulses(track, event, 0);
 
 	return 0;
 }
