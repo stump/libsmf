@@ -318,9 +318,6 @@ smf_track_add_eot(smf_track_t *track)
 /*
  * Removes event from its track.
  */
-/*
- * XXX: Handle removing entries in the middle of the track (recompute delta_time_pulses.).
- */
 void
 smf_track_remove_event(smf_event_t *event)
 {
@@ -329,8 +326,14 @@ smf_track_remove_event(smf_event_t *event)
 	smf_track_t *track;
 
 	assert(event->track != NULL);
-
 	track = event->track;
+
+	/* Adjust ->delta_time_pulses of the next event. */
+	if (event->event_number < track->number_of_events) {
+		tmp = smf_track_get_event_by_number(track, event->event_number + 1);
+		assert(tmp);
+		tmp->delta_time_pulses += event->delta_time_pulses;
+	}
 
 	track->number_of_events--;
 

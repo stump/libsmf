@@ -65,5 +65,6 @@ Saving works like this:
 	}
 	
 Note that you always have to first add the track to smf, and then add events to the track.
-Otherwise you will trip asserts.  That's it for basic usage.
+Otherwise you will trip asserts.  Also, try to add events at the end of the track and remove
+them from the end of the track, that's much more efficient.  That's it for basic usage.
 
