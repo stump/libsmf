@@ -886,3 +886,9 @@ smf_seek_to_seconds(smf_t *smf, double seconds)
 	return 0;
 }
 
+const char *
+smf_get_version(void)
+{
+	return SMF_VERSION;
+}
+

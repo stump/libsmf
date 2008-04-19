@@ -9,6 +9,8 @@ extern "C" {
 #include <arpa/inet.h>
 #include <glib.h>
 
+#define SMF_VERSION "0.6"
+
 struct smf_struct {
 	int		format;
 	int		expected_number_of_tracks;
@@ -135,6 +137,8 @@ int smf_save(smf_t *smf, const char *file_name);
 smf_tempo_t *smf_get_tempo_by_position(smf_t *smf, int pulses);
 smf_tempo_t *smf_get_tempo_by_number(smf_t *smf, int number);
 smf_tempo_t *smf_get_last_tempo(smf_t *smf);
+
+const char *smf_get_version(void);
 
 #ifdef __cplusplus
 }
