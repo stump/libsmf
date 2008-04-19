@@ -83,7 +83,7 @@ pulses_from_seconds(smf_t *smf, double seconds)
  * Warning: rewinds the smf.
  */
 int
-smf_compute_seconds(smf_t *smf)
+smf_create_tempo_map_and_compute_seconds(smf_t *smf)
 {
 	smf_event_t *event;
 

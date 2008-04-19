@@ -127,7 +127,7 @@ smf_t *smf_load_from_memory(const void *buffer, const int buffer_length);
 /* Routine for writing SMF files. */
 int smf_save(smf_t *smf, const char *file_name);
 
-int smf_compute_seconds(smf_t *smf);
+int smf_create_tempo_map_and_compute_seconds(smf_t *smf);
 
 int smf_tempo_add(smf_t *smf, int pulses, int tempo);
 smf_tempo_t *smf_get_tempo_by_position(smf_t *smf, int pulses);

@@ -798,7 +798,7 @@ smf_load(const char *file_name)
 	if (smf == NULL)
 		return NULL;
 
-	smf_compute_seconds(smf);
+	smf_create_tempo_map_and_compute_seconds(smf);
 	smf_rewind(smf);
 
 	return smf;

@@ -449,7 +449,7 @@ cmd_eventadd(char *str)
 
 	if (smf_event_is_metadata(selected_event)) {
 		g_debug("Event is metadata; recomputing time.");
-		smf_compute_seconds(smf);
+		smf_create_tempo_map_and_compute_seconds(smf);
 	}
 
 	return 0;
