@@ -421,6 +421,18 @@ smf_event_is_metadata(const smf_event_t *event)
 }
 
 int
+smf_event_is_sysex(const smf_event_t *event)
+{
+	assert(event->midi_buffer);
+	assert(event->midi_buffer_length > 0);
+	
+	if (event->midi_buffer[0] == 0xF0)
+		return 1;
+
+	return 0;
+}
+
+int
 smf_event_is_tempo_change_or_time_signature(smf_event_t *event)
 {
 	if (!smf_event_is_metadata(event))
@@ -574,6 +586,104 @@ smf_event_decode_metadata(const smf_event_t *event)
 	return buf;
 }
 
+static char *
+smf_event_decode_sysex(const smf_event_t *event)
+{
+	int off = 0;
+	char *buf, manufacturer, subid, subid2;
+
+	assert(smf_event_is_sysex(event));
+
+	buf = malloc(BUFFER_SIZE);
+	if (buf == NULL) {
+		g_critical("smf_event_decode_sysex: malloc failed.");
+		return NULL;
+	}
+
+	manufacturer = event->midi_buffer[1];
+
+	if (manufacturer == 0x7F) {
+		off += snprintf(buf + off, BUFFER_SIZE - off, "SysEx, realtime, channel %d", event->midi_buffer[2]);
+	} else if (manufacturer == 0x7E) {
+		off += snprintf(buf + off, BUFFER_SIZE - off, "SysEx, non-realtime, channel %d", event->midi_buffer[2]);
+	} else {
+		off += snprintf(buf + off, BUFFER_SIZE - off, "SysEx, manufacturer 0x%x", manufacturer);
+
+		return buf;
+	}
+
+	subid = event->midi_buffer[3];
+	subid2 = event->midi_buffer[4];
+
+	if (subid == 0x01)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Sample Dump Header");
+
+	else if (subid == 0x02)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Sample Dump Data Packet");
+
+	else if (subid == 0x03)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Sample Dump Request");
+
+	else if (subid == 0x04 && subid2 == 0x01)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Master Volume");
+
+	else if (subid == 0x05 && subid2 == 0x01)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Sample Dump Loop Point Retransmit");
+
+	else if (subid == 0x05 && subid2 == 0x02)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Sample Dump Loop Point Request");
+
+	else if (subid == 0x06 && subid2 == 0x01)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Identity Request");
+
+	else if (subid == 0x06 && subid2 == 0x02)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Identity Reply");
+
+	else if (subid == 0x08 && subid2 == 0x00)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Bulk Tuning Dump Request");
+
+	else if (subid == 0x08 && subid2 == 0x01)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Bulk Tuning Dump");
+
+	else if (subid == 0x08 && subid2 == 0x02)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Single Note Tuning Change");
+
+	else if (subid == 0x08 && subid2 == 0x03)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Bulk Tuning Dump Request (Bank)");
+
+	else if (subid == 0x08 && subid2 == 0x04)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Key Based Tuning Dump");
+
+	else if (subid == 0x08 && subid2 == 0x05)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Scale/Octave Tuning Dump, 1 byte format");
+
+	else if (subid == 0x08 && subid2 == 0x06)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Scale/Octave Tuning Dump, 2 byte format");
+
+	else if (subid == 0x08 && subid2 == 0x07)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Single Note Tuning Change (Bank)");
+
+	else if (subid == 0x09)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", General Midi %s", subid2 == 0 ? "disable" : "enable");
+
+	else if (subid == 0x7C)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Sample Dump Wait");
+
+	else if (subid == 0x7D)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Sample Dump Cancel");
+
+	else if (subid == 0x7E)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Sample Dump NAK");
+
+	else if (subid == 0x7F)
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Sample Dump ACK");
+
+	else
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", Unknown");
+
+	return buf;
+}
+
 char *
 smf_event_decode(const smf_event_t *event)
 {
@@ -582,6 +692,9 @@ smf_event_decode(const smf_event_t *event)
 
 	if (smf_event_is_metadata(event))
 		return smf_event_decode_metadata(event);
+
+	if (smf_event_is_sysex(event))
+		return smf_event_decode_sysex(event);
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
