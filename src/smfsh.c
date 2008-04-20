@@ -31,6 +31,8 @@ log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *mess
 	fprintf(stderr, "%s: %s\n", log_domain, message);
 }
 
+int cmd_track(char *arg);
+
 int
 cmd_load(char *file_name)
 {
@@ -64,6 +66,8 @@ cmd_load(char *file_name)
 	}
 
 	g_message("File '%s' loaded.", file_name);
+
+	cmd_track("1");
 
 	return 0;
 }
@@ -724,7 +728,6 @@ int main(int argc, char *argv[])
 	if (argc == 2) {
 		last_file_name = argv[1];
 		cmd_load(last_file_name);
-		cmd_track("1");
 	} else {
 		cmd_trackadd(NULL);
 	}
