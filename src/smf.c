@@ -92,12 +92,12 @@ smf_track_delete(smf_track_t *track)
 	assert(track);
 	assert(track->events_array);
 
-	if (track->smf)
-		smf_remove_track(track);
-
 	/* Remove all the events, from last to first. */
 	while (track->events_array->len > 0)
 		smf_event_delete(g_ptr_array_index(track->events_array, track->events_array->len - 1));
+
+	if (track->smf)
+		smf_remove_track(track);
 
 	assert(track->events_array->len == 0);
 	assert(track->number_of_events == 0);
