@@ -477,7 +477,7 @@ static char *
 smf_event_decode_metadata(const smf_event_t *event)
 {
 	int off = 0;
-	char *buf;
+	char *buf, *extracted;
 
 	assert(smf_event_is_metadata(event));
 
@@ -487,54 +487,101 @@ smf_event_decode_metadata(const smf_event_t *event)
 		return NULL;
 	}
 
-	/* XXX: smf_string_from_event() may return NULL. */
 	switch (event->midi_buffer[1]) {
 		case 0x00:
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Sequence number");
 			break;
 
 		case 0x01:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Text: %s", smf_string_from_event(event));
+			extracted = smf_string_from_event(event);
+			if (extracted == NULL)
+				goto error;
+
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Text: %s", extracted);
 			break;
 
 		case 0x02:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Copyright: %s", smf_string_from_event(event));
+			extracted = smf_string_from_event(event);
+			if (extracted == NULL)
+				goto error;
+
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Copyright: %s", extracted);
 			break;
 
 		case 0x03:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Sequence/Track Name: %s", smf_string_from_event(event));
+			extracted = smf_string_from_event(event);
+			if (extracted == NULL)
+				goto error;
+
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Sequence/Track Name: %s", extracted);
 			break;
 
 		case 0x04:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Instrument: %s", smf_string_from_event(event));
+			extracted = smf_string_from_event(event);
+			if (extracted == NULL)
+				goto error;
+
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Instrument: %s", extracted);
 			break;
 
 		case 0x05:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Lyric: %s", smf_string_from_event(event));
+			extracted = smf_string_from_event(event);
+			if (extracted == NULL)
+				goto error;
+
+
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Lyric: %s", extracted);
 			break;
 
 		case 0x06:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Marker: %s", smf_string_from_event(event));
+			extracted = smf_string_from_event(event);
+			if (extracted == NULL)
+				goto error;
+
+
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Marker: %s", extracted);
 			break;
 
 		case 0x07:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Cue Point: %s", smf_string_from_event(event));
+			extracted = smf_string_from_event(event);
+			if (extracted == NULL)
+				goto error;
+
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Cue Point: %s", extracted);
 			break;
 
 		case 0x08:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Program Name: %s", smf_string_from_event(event));
+			extracted = smf_string_from_event(event);
+			if (extracted == NULL)
+				goto error;
+
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Program Name: %s", extracted);
 			break;
 
 		case 0x09:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Device (Port) Name: %s", smf_string_from_event(event));
+			extracted = smf_string_from_event(event);
+			if (extracted == NULL)
+				goto error;
+
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Device (Port) Name: %s", extracted);
 			break;
 
 		/* http://music.columbia.edu/pipermail/music-dsp/2004-August/061196.html */
 		case 0x20:
+			if (event->midi_buffer_length < 4) {
+				g_critical("smf_event_decode_metadata: truncated MIDI message.");
+				goto error;
+			}
+
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Channel Prefix: %d.", event->midi_buffer[3]);
 			break;
 
 		case 0x21:
+			if (event->midi_buffer_length < 4) {
+				g_critical("smf_event_decode_metadata: truncated MIDI message.");
+				goto error;
+			}
+
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Midi Port: %d.", event->midi_buffer[3]);
 			break;
 
@@ -543,6 +590,11 @@ smf_event_decode_metadata(const smf_event_t *event)
 			break;
 
 		case 0x51:
+			if (event->midi_buffer_length < 6) {
+				g_critical("smf_event_decode_metadata: truncated MIDI message.");
+				goto error;
+			}
+
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Tempo: %d microseconds per quarter note",
 				(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5]);
 			break;
@@ -552,6 +604,11 @@ smf_event_decode_metadata(const smf_event_t *event)
 			break;
 
 		case 0x58:
+			if (event->midi_buffer_length < 7) {
+				g_critical("smf_event_decode_metadata: truncated MIDI message.");
+				goto error;
+			}
+
 			off += snprintf(buf + off, BUFFER_SIZE - off,
 				"Time Signature: %d/%d, %d clocks per click, %d notated 32nd notes per quarter note",
 				event->midi_buffer[3], (int)pow(2, event->midi_buffer[4]), event->midi_buffer[5],
@@ -559,6 +616,11 @@ smf_event_decode_metadata(const smf_event_t *event)
 			break;
 
 		case 0x59:
+			if (event->midi_buffer_length < 5) {
+				g_critical("smf_event_decode_metadata: truncated MIDI message.");
+				goto error;
+			}
+
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Key Signature, %d", abs(event->midi_buffer[3]));
 			if (event->midi_buffer[3] == 0)
 				off += snprintf(buf + off, BUFFER_SIZE - off, " flat");
@@ -577,6 +639,11 @@ smf_event_decode_metadata(const smf_event_t *event)
 			break;
 
 		default:
+			if (event->midi_buffer_length < 4) {
+				g_critical("smf_event_decode_metadata: truncated MIDI message.");
+				goto error;
+			}
+
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Unknown Event: 0xFF 0x%x 0x%x 0x%x",
 				event->midi_buffer[1], event->midi_buffer[2], event->midi_buffer[3]);
 
@@ -584,6 +651,11 @@ smf_event_decode_metadata(const smf_event_t *event)
 	}
 
 	return buf;
+
+error:
+	free(buf);
+
+	return NULL;
 }
 
 static char *
@@ -593,6 +665,11 @@ smf_event_decode_sysex(const smf_event_t *event)
 	char *buf, manufacturer, subid, subid2;
 
 	assert(smf_event_is_sysex(event));
+
+	if (event->midi_buffer_length < 5) {
+		g_critical("smf_event_decode_sysex: truncated MIDI message.");
+		return NULL;
+	}
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
@@ -702,7 +779,7 @@ smf_event_decode(const smf_event_t *event)
 		return NULL;
 	}
 
-	/* XXX: verify lengths. */
+	/* XXX: Verify lengths. */
 	switch (event->midi_buffer[0] & 0xF0) {
 		case 0x80:
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Note Off, channel %d, note %d, velocity %d",

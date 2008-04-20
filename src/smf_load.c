@@ -568,7 +568,17 @@ smf_string_from_event(const smf_event_t *event)
 {
 	int string_length = -1, length_length = -1;
 
+	if (event->midi_buffer_length < 3) {
+		g_critical("smf_string_from_event: truncated MIDI message.");
+		return NULL;
+	}
+
 	extract_vlq((void *)&(event->midi_buffer[2]), event->midi_buffer_length - 2, &string_length, &length_length);
+
+	if (string_length <= 0) {
+		g_critical("smf_string_from_event: truncated MIDI message.");
+		return NULL;
+	}
 
 	return make_string((void *)(&event->midi_buffer[2] + length_length), event->midi_buffer_length - 2 - length_length, string_length);
 }
