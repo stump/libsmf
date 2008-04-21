@@ -433,7 +433,7 @@ smf_event_is_sysex(const smf_event_t *event)
 }
 
 int
-smf_event_is_tempo_change_or_time_signature(smf_event_t *event)
+smf_event_is_tempo_change_or_time_signature(const smf_event_t *event)
 {
 	if (!smf_event_is_metadata(event))
 		return 0;
@@ -773,13 +773,17 @@ smf_event_decode(const smf_event_t *event)
 	if (smf_event_is_sysex(event))
 		return smf_event_decode_sysex(event);
 
+	if (!smf_event_length_is_valid(event)) {
+		g_critical("smf_event_decode: incorrect MIDI message length.");
+		return NULL;
+	}
+
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
 		g_critical("smf_event_decode: malloc failed.");
 		return NULL;
 	}
 
-	/* XXX: Verify lengths. */
 	switch (event->midi_buffer[0] & 0xF0) {
 		case 0x80:
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Note Off, channel %d, note %d, velocity %d",

@@ -628,8 +628,32 @@ event_is_end_of_track(const smf_event_t *event)
 }
 
 /*
+ * Returns 1, if event is as long as it should be, from the MIDI specification point of view.
+ * Does not work for SysExes.
+ */
+int
+smf_event_length_is_valid(const smf_event_t *event)
+{
+	assert(event);
+	assert(event->midi_buffer);
+	assert(!smf_event_is_sysex(event));
+
+	if (event->midi_buffer_length < 1)
+		return 0;
+
+	if (event->midi_buffer_length != expected_message_length(event->midi_buffer[0],
+		&(event->midi_buffer[1]), event->midi_buffer_length - 1)) {
+
+		return 0;
+	}
+
+	return 1;
+}
+
+/*
  * Returns 1 if MIDI data in the event is valid, 0 otherwise.
  */
+/* XXX: this routine requires some more work to detect more errors. */
 int
 smf_event_is_valid(const smf_event_t *event)
 {
@@ -643,13 +667,8 @@ smf_event_is_valid(const smf_event_t *event)
 		return 0;
 	}
 
-	/* XXX: this routine requires some more work to detect more errors. */
-
-	if (event->midi_buffer_length != expected_message_length(event->midi_buffer[0],
-		&(event->midi_buffer[1]), event->midi_buffer_length - 1)) {
-
+	if (!smf_event_length_is_valid(event))
 		return 0;
-	}
 
 	return 1;
 }
