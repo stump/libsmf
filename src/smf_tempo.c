@@ -178,7 +178,9 @@ pulses_from_seconds(const smf_t *smf, double seconds)
 
 	tempo = smf_get_tempo_by_seconds(smf, seconds);
 	assert(tempo);
-	assert(tempo->time_seconds <= seconds);
+	/* The second part of the assert below is because time_seconds for position 0
+	   is actually not quite equal to 0 - due to roundoff errors, I guess. */
+	assert(tempo->time_seconds <= seconds || tempo->time_seconds < 0.000001);
 
 	pulses = tempo->time_pulses + (seconds - tempo->time_seconds) *
 		((double)smf->ppqn * 1000000.0 / tempo->microseconds_per_quarter_note);
