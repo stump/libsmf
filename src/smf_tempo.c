@@ -11,6 +11,8 @@
 #include "smf.h"
 #include "smf_private.h"
 
+static double seconds_from_pulses(const smf_t *smf, int pulses);
+
 /*
  * If there is tempo starting at "pulses" already, return it.  Otherwise,
  * allocate new one, fill it with values from previous one (or default ones,
@@ -36,6 +38,7 @@ new_tempo(smf_t *smf, int pulses)
 	}
 
 	tempo->time_pulses = pulses;
+	/* tempo->time_seconds = seconds_from_pulses(smf, pulses); */
 
 	if (previous_tempo != NULL) {
 		tempo->microseconds_per_quarter_note = previous_tempo->microseconds_per_quarter_note;
@@ -125,14 +128,14 @@ maybe_add_to_tempo_map(smf_event_t *event)
 }
 
 static double
-seconds_from_pulses(smf_t *smf, int pulses)
+seconds_from_pulses(const smf_t *smf, int pulses)
 {
 	double seconds = 0.0;
 	smf_tempo_t *tempo;
 
 	/* Go through tempos, from the last before pulses to the first, adding time. */
 	for (;;) {
-		tempo = smf_get_tempo_by_position(smf, pulses);
+		tempo = smf_get_tempo_by_pulses(smf, pulses);
 		assert(tempo);
 		assert(tempo->time_pulses <= pulses);
 
@@ -149,7 +152,7 @@ seconds_from_pulses(smf_t *smf, int pulses)
 }
 
 static int
-pulses_from_seconds(smf_t *smf, double seconds)
+pulses_from_seconds(const smf_t *smf, double seconds)
 {
 	int pulses = 0;
 	smf_tempo_t *tempo;
@@ -190,7 +193,7 @@ smf_create_tempo_map_and_compute_seconds(smf_t *smf)
 }
 
 smf_tempo_t *
-smf_get_tempo_by_number(smf_t *smf, int number)
+smf_get_tempo_by_number(const smf_t *smf, int number)
 {
 	assert(number >= 0);
 
@@ -204,7 +207,7 @@ smf_get_tempo_by_number(smf_t *smf, int number)
  * Return last tempo (i.e. tempo with greatest time_pulses) that happens before "pulses".
  */
 smf_tempo_t *
-smf_get_tempo_by_position(smf_t *smf, int pulses)
+smf_get_tempo_by_pulses(const smf_t *smf, int pulses)
 {
 	int i;
 	smf_tempo_t *tempo;
@@ -228,10 +231,38 @@ smf_get_tempo_by_position(smf_t *smf, int pulses)
 }
 
 /*
+ * Return last tempo (i.e. tempo with greatest time_seconds) that happens before "seconds".
+ */
+smf_tempo_t *
+smf_get_tempo_by_seconds(const smf_t *smf, double seconds)
+{
+	int i;
+	smf_tempo_t *tempo;
+
+	assert(seconds >= 0);
+
+	if (seconds == 0)
+		return smf_get_tempo_by_number(smf, 0);
+
+	assert(smf->tempo_array != NULL);
+	
+	for (i = smf->tempo_array->len - 1; i >= 0; i--) {
+		tempo = smf_get_tempo_by_number(smf, i);
+
+		assert(tempo);
+		if (tempo->time_seconds < seconds)
+			return tempo;
+	}
+
+	return NULL;
+}
+
+
+/*
  * Return last tempo.
  */
 smf_tempo_t *
-smf_get_last_tempo(smf_t *smf)
+smf_get_last_tempo(const smf_t *smf)
 {
 	smf_tempo_t *tempo;
 
@@ -269,7 +300,7 @@ smf_init_tempo(smf_t *smf)
  * Returns ->time_pulses of last event on the given track, or 0, if track is empty.
  */
 static int
-last_event_pulses(smf_track_t *track)
+last_event_pulses(const smf_track_t *track)
 {
 	/* Get time of last event on this track. */
 	if (track->number_of_events > 0) {

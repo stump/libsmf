@@ -905,7 +905,7 @@ smf_get_track_by_number(smf_t *smf, int track_number)
 }
 
 smf_event_t *
-smf_track_get_event_by_number(smf_track_t *track, int event_number)
+smf_track_get_event_by_number(const smf_track_t *track, int event_number)
 {
 	smf_event_t *event;
 
@@ -920,7 +920,7 @@ smf_track_get_event_by_number(smf_track_t *track, int event_number)
 }
 
 smf_event_t *
-smf_track_get_last_event(smf_track_t *track)
+smf_track_get_last_event(const smf_track_t *track)
 {
 	smf_event_t *event;
        

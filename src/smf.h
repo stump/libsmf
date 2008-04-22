@@ -46,6 +46,7 @@ typedef struct smf_struct smf_t;
 /* This structure describes a single tempo change. */
 struct smf_tempo_struct {
 	int time_pulses;
+	double time_seconds;
 	int microseconds_per_quarter_note;
 	int numerator;
 	int denominator;
@@ -112,8 +113,8 @@ smf_track_t *smf_track_new(void);
 void smf_track_delete(smf_track_t *track);
 
 smf_event_t *smf_track_get_next_event(smf_track_t *track);
-smf_event_t *smf_track_get_event_by_number(smf_track_t *track, int event_number);
-smf_event_t *smf_track_get_last_event(smf_track_t *track);
+smf_event_t *smf_track_get_event_by_number(const smf_track_t *track, int event_number);
+smf_event_t *smf_track_get_last_event(const smf_track_t *track);
 
 void smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int pulses);
 void smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses);
@@ -140,9 +141,10 @@ smf_t *smf_load_from_memory(const void *buffer, const int buffer_length);
 int smf_save(smf_t *smf, const char *file_name);
 
 /* Routines for manipulating smf_tempo_t. */
-smf_tempo_t *smf_get_tempo_by_position(smf_t *smf, int pulses);
-smf_tempo_t *smf_get_tempo_by_number(smf_t *smf, int number);
-smf_tempo_t *smf_get_last_tempo(smf_t *smf);
+smf_tempo_t *smf_get_tempo_by_pulses(const smf_t *smf, int pulses);
+smf_tempo_t *smf_get_tempo_by_seconds(const smf_t *smf, double seconds);
+smf_tempo_t *smf_get_tempo_by_number(const smf_t *smf, int number);
+smf_tempo_t *smf_get_last_tempo(const smf_t *smf);
 
 const char *smf_get_version(void);
 

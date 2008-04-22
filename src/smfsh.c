@@ -495,8 +495,8 @@ cmd_tempo(char *notused)
 		if (tempo == NULL)
 			break;
 
-		g_message("Tempo #%d: Starts at %d pulses, setting %d microseconds per quarter note.",
-			i, tempo->time_pulses, tempo->microseconds_per_quarter_note);
+		g_message("Tempo #%d: Starts at %d pulses, %f seconds, setting %d microseconds per quarter note.",
+			i, tempo->time_pulses, tempo->time_seconds, tempo->microseconds_per_quarter_note);
 		g_message("Time signature: %d/%d, %d clocks per click, %d 32nd notes per quarter note.",
 			tempo->numerator, tempo->denominator, tempo->clocks_per_click, tempo->notes_per_note);
 	}
