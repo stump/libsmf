@@ -255,7 +255,7 @@ extract_vlq(const unsigned char *buf, const int buffer_length, int *value, int *
 /*
  * Returns 1 if the given byte is a valid status byte, 0 otherwise.
  */
-static int
+int
 is_status_byte(const unsigned char status)
 {
 	return (status & 0x80);

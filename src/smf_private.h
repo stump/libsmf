@@ -21,6 +21,7 @@ int smf_create_tempo_map_and_compute_seconds(smf_t *smf);
 int smf_event_is_tempo_change_or_time_signature(const smf_event_t *event);
 int smf_event_length_is_valid(const smf_event_t *event);
 int smf_event_is_sysex(const smf_event_t *event);
+int is_status_byte(const unsigned char status);
 
 #endif /* SMF_PRIVATE_H */
 

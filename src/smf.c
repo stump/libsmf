@@ -231,6 +231,17 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 		return NULL;
 	}
 
+	if (first_byte > 255) {
+		g_critical("smf_event_new_from_bytes: first byte is %d, which is larger than 255.", first_byte);
+		return NULL;
+	}
+
+	if (!is_status_byte(first_byte)) {
+		g_critical("smf_event_new_from_bytes: first byte is not a valid status byte.");
+		return NULL;
+	}
+
+
 	if (second_byte < 0)
 		len = 1;
 	else if (third_byte < 0)
@@ -238,7 +249,30 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 	else
 		len = 3;
 
-	/* XXX: check if other bytes have proper values. */
+	if (len > 1) {
+		if (second_byte > 255) {
+			g_critical("smf_event_new_from_bytes: second byte is %d, which is larger than 255.", second_byte);
+			return NULL;
+		}
+
+		if (is_status_byte(second_byte)) {
+			g_critical("smf_event_new_from_bytes: second byte cannot be a status byte.");
+			return NULL;
+		}
+	}
+
+	if (len > 2) {
+		if (third_byte > 255) {
+			g_critical("smf_event_new_from_bytes: third byte is %d, which is larger than 255.", third_byte);
+			return NULL;
+		}
+
+		if (is_status_byte(third_byte)) {
+			g_critical("smf_event_new_from_bytes: third byte cannot be a status byte.");
+			return NULL;
+		}
+	}
+
 	event->midi_buffer_length = len;
 	event->midi_buffer = malloc(event->midi_buffer_length);
 	if (event->midi_buffer == NULL) {
