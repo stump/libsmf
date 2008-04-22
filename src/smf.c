@@ -36,9 +36,9 @@ smf_new(void)
 	smf->tempo_array = g_ptr_array_new();
 	assert(smf->tempo_array);
 
-	smf_init_tempo(smf);
-	smf_set_format(smf, 0);
 	smf_set_ppqn(smf, 120);
+	smf_set_format(smf, 0);
+	smf_init_tempo(smf);
 
 	return smf;
 }

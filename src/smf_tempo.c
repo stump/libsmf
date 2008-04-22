@@ -38,7 +38,6 @@ new_tempo(smf_t *smf, int pulses)
 	}
 
 	tempo->time_pulses = pulses;
-	/* tempo->time_seconds = seconds_from_pulses(smf, pulses); */
 
 	if (previous_tempo != NULL) {
 		tempo->microseconds_per_quarter_note = previous_tempo->microseconds_per_quarter_note;
@@ -55,6 +54,8 @@ new_tempo(smf_t *smf, int pulses)
 	}
 
 	g_ptr_array_add(smf->tempo_array, tempo);
+
+	tempo->time_seconds = seconds_from_pulses(smf, pulses);
 
 	return tempo;
 }
@@ -128,7 +129,7 @@ maybe_add_to_tempo_map(smf_event_t *event)
 }
 
 static double
-seconds_from_pulses(const smf_t *smf, int pulses)
+seconds_from_pulses_old(const smf_t *smf, int pulses)
 {
 	double seconds = 0.0;
 	smf_tempo_t *tempo;
@@ -151,16 +152,36 @@ seconds_from_pulses(const smf_t *smf, int pulses)
 	return -1;
 }
 
+static double
+seconds_from_pulses(const smf_t *smf, int pulses)
+{
+	double seconds;
+	smf_tempo_t *tempo;
+
+	tempo = smf_get_tempo_by_pulses(smf, pulses);
+	assert(tempo);
+	assert(tempo->time_pulses <= pulses);
+
+	seconds = tempo->time_seconds + (double)(pulses - tempo->time_pulses) *
+		(tempo->microseconds_per_quarter_note / ((double)smf->ppqn * 1000000.0));
+
+	assert(fabs(seconds - seconds_from_pulses_old(smf, pulses)) < 0.00001);
+
+	return seconds;
+}
+
 static int
 pulses_from_seconds(const smf_t *smf, double seconds)
 {
 	int pulses = 0;
 	smf_tempo_t *tempo;
 
-	tempo = smf_get_last_tempo(smf);
+	tempo = smf_get_tempo_by_seconds(smf, seconds);
+	assert(tempo);
+	assert(tempo->time_seconds <= seconds);
 
-	/* XXX: Obviously unfinished. */
-	pulses += seconds * ((double)smf->ppqn * 1000000.0 / tempo->microseconds_per_quarter_note);
+	pulses = tempo->time_pulses + (seconds - tempo->time_seconds) *
+		((double)smf->ppqn * 1000000.0 / tempo->microseconds_per_quarter_note);
 
 	return pulses;
 }
