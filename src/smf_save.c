@@ -363,7 +363,7 @@ smf_is_invalid(smf_t *smf)
 		assert(track);
 
 		if (track->number_of_events < 1) {
-			g_critical("SMF error: track #%x is empty.", track->track_number);
+			g_critical("SMF error: track #%d is empty.", track->track_number);
 			return -5;
 		}
 
@@ -371,7 +371,7 @@ smf_is_invalid(smf_t *smf)
 		assert(event);
 
 		if (!smf_event_is_eot(event)) {
-			g_critical("SMF error: track #%x does not end with End Of Track event.", track->track_number);
+			g_critical("SMF error: track #%d does not end with End Of Track event.", track->track_number);
 			return -6;
 		}
 	}
