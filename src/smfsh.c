@@ -5,8 +5,6 @@
 #include <ctype.h>
 #include "smf.h"
 
-#define WITH_READLINE
-
 #ifdef WITH_READLINE
 #include <readline/readline.h>
 #include <readline/history.h>
