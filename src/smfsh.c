@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "smf.h"
+#include "config.h"
 
 #ifdef WITH_READLINE
 #include <readline/readline.h>
