@@ -474,12 +474,67 @@ smf_set_ppqn(smf_t *smf, int ppqn)
 #define BUFFER_SIZE 1024
 
 static char *
-smf_event_decode_metadata(const smf_event_t *event)
+smf_event_decode_textual(const smf_event_t *event, const char *name)
 {
 	int off = 0;
 	char *buf, *extracted;
 
+	buf = malloc(BUFFER_SIZE);
+	if (buf == NULL) {
+		g_critical("smf_event_decode_textual: malloc failed.");
+		return NULL;
+	}
+
+	extracted = smf_string_from_event(event);
+	if (extracted == NULL) {
+		free(buf);
+		return NULL;
+	}
+
+	snprintf(buf + off, BUFFER_SIZE - off, "%s: %s", name, extracted);
+
+	return buf;
+}
+
+static char *
+smf_event_decode_metadata(const smf_event_t *event)
+{
+	int off = 0;
+	char *buf;
+
 	assert(smf_event_is_metadata(event));
+
+	switch (event->midi_buffer[1]) {
+		case 0x01:
+			return smf_event_decode_textual(event, "Text");
+
+		case 0x02:
+			return smf_event_decode_textual(event, "Copyright");
+
+		case 0x03:
+			return smf_event_decode_textual(event, "Sequence/Track Name");
+
+		case 0x04:
+			return smf_event_decode_textual(event, "Instrument");
+
+		case 0x05:
+			return smf_event_decode_textual(event, "Lyric");
+
+		case 0x06:
+			return smf_event_decode_textual(event, "Marker");
+
+		case 0x07:
+			return smf_event_decode_textual(event, "Cue Point");
+
+		case 0x08:
+			return smf_event_decode_textual(event, "Program Name");
+
+		case 0x09:
+			return smf_event_decode_textual(event, "Device (Port) Name");
+
+		default:
+			break;
+	}
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
@@ -490,80 +545,6 @@ smf_event_decode_metadata(const smf_event_t *event)
 	switch (event->midi_buffer[1]) {
 		case 0x00:
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Sequence number");
-			break;
-
-		case 0x01:
-			extracted = smf_string_from_event(event);
-			if (extracted == NULL)
-				goto error;
-
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Text: %s", extracted);
-			break;
-
-		case 0x02:
-			extracted = smf_string_from_event(event);
-			if (extracted == NULL)
-				goto error;
-
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Copyright: %s", extracted);
-			break;
-
-		case 0x03:
-			extracted = smf_string_from_event(event);
-			if (extracted == NULL)
-				goto error;
-
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Sequence/Track Name: %s", extracted);
-			break;
-
-		case 0x04:
-			extracted = smf_string_from_event(event);
-			if (extracted == NULL)
-				goto error;
-
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Instrument: %s", extracted);
-			break;
-
-		case 0x05:
-			extracted = smf_string_from_event(event);
-			if (extracted == NULL)
-				goto error;
-
-
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Lyric: %s", extracted);
-			break;
-
-		case 0x06:
-			extracted = smf_string_from_event(event);
-			if (extracted == NULL)
-				goto error;
-
-
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Marker: %s", extracted);
-			break;
-
-		case 0x07:
-			extracted = smf_string_from_event(event);
-			if (extracted == NULL)
-				goto error;
-
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Cue Point: %s", extracted);
-			break;
-
-		case 0x08:
-			extracted = smf_string_from_event(event);
-			if (extracted == NULL)
-				goto error;
-
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Program Name: %s", extracted);
-			break;
-
-		case 0x09:
-			extracted = smf_string_from_event(event);
-			if (extracted == NULL)
-				goto error;
-
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Device (Port) Name: %s", extracted);
 			break;
 
 		/* http://music.columbia.edu/pipermail/music-dsp/2004-August/061196.html */
