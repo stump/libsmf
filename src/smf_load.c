@@ -629,14 +629,13 @@ event_is_end_of_track(const smf_event_t *event)
 
 /*
  * Returns 1, if event is as long as it should be, from the MIDI specification point of view.
- * Does not work for SysExes.
+ * Does not work for SysExes - it doesn't recognize internal structure of SysEx.
  */
 int
 smf_event_length_is_valid(const smf_event_t *event)
 {
 	assert(event);
 	assert(event->midi_buffer);
-	assert(!smf_event_is_sysex(event));
 
 	if (event->midi_buffer_length < 1)
 		return 0;
