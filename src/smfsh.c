@@ -254,7 +254,7 @@ int
 show_event(smf_event_t *event)
 {
 	int off = 0, i;
-	char *buf, *decoded, *type;
+	char *decoded, *type;
 
 	if (smf_event_is_metadata(event))
 		type = "Metadata";
@@ -264,16 +264,16 @@ show_event(smf_event_t *event)
 	decoded = smf_event_decode(event);
 
 	if (decoded == NULL) {
-		buf = malloc(BUFFER_SIZE);
-		if (buf == NULL) {
+		decoded = malloc(BUFFER_SIZE);
+		if (decoded == NULL) {
 			g_critical("show_event: malloc failed.");
 			return -1;
 		}
 
-		off += snprintf(buf + off, BUFFER_SIZE - off, "Unknown event:");
+		off += snprintf(decoded + off, BUFFER_SIZE - off, "Unknown event:");
 
 		for (i = 0; i < event->midi_buffer_length && i < 5; i++)
-			off += snprintf(buf + off, BUFFER_SIZE - off, " 0x%x", event->midi_buffer[i]);
+			off += snprintf(decoded + off, BUFFER_SIZE - off, " 0x%x", event->midi_buffer[i]);
 	}
 
 	g_message("%d: %s: %s, %f seconds, %d pulses, %d delta pulses", event->event_number, type, decoded,
