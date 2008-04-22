@@ -1,3 +1,9 @@
+/*
+ * This is the include file for libsmf, Standard Midi File format library.
+ * For questions and comments, contact Edward Tomasz Napierala <trasz@FreeBSD.org>.
+ * Libsmf is public domain, you can do with it whatever you want.
+ */
+
 #ifndef SMF_H
 #define SMF_H
 

@@ -1,0 +1,6 @@
+Things to do:
+
+ - Test tempo calculations.
+
+ - Add a way to force some particular tempo during playback and ignore the following tempo changes.
+
