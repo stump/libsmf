@@ -248,35 +248,36 @@ cmd_trackrm(char *notused)
 	return 0;
 }
 
+#define BUFFER_SIZE 1024
+
 int
 show_event(smf_event_t *event)
 {
-	char *decoded;
-
-	g_message("Event number %d, time offset from previous event: %d pulses.", event->event_number, event->delta_time_pulses);
-	g_message("Time since start of the song: %d pulses, %f seconds.", event->time_pulses, event->time_seconds);
-
-	if (event->midi_buffer_length == 1) {
-		g_message("MIDI message: 0x%x", event->midi_buffer[0]);
-	} else if (event->midi_buffer_length == 2) {
-		g_message("MIDI message: 0x%x 0x%x", event->midi_buffer[0], event->midi_buffer[1]);
-	} else if (event->midi_buffer_length == 3) {
-		g_message("MIDI message: 0x%x 0x%x 0x%x", event->midi_buffer[0], event->midi_buffer[1], event->midi_buffer[2]);
-	} else {
-		g_message("Message length is %d bytes; first three bytes are: 0x%x 0x%x 0x%x",
-			event->midi_buffer_length, event->midi_buffer[0], event->midi_buffer[1], event->midi_buffer[2]);
-	}
-
-	decoded = smf_event_decode(event);
-
-	/* Unknown event? */
-	if (decoded == NULL)
-		return 0;
+	int off = 0, i;
+	char *buf, *decoded, *type;
 
 	if (smf_event_is_metadata(event))
-		g_message("Metadata: %s.", decoded);
+		type = "Metadata";
 	else
-		g_message("Event: %s.", decoded);
+		type = "Event";
+	
+	decoded = smf_event_decode(event);
+
+	if (decoded == NULL) {
+		buf = malloc(BUFFER_SIZE);
+		if (buf == NULL) {
+			g_critical("show_event: malloc failed.");
+			return -1;
+		}
+
+		off += snprintf(buf + off, BUFFER_SIZE - off, "Unknown event:");
+
+		for (i = 0; i < event->midi_buffer_length && i < 5; i++)
+			off += snprintf(buf + off, BUFFER_SIZE - off, " 0x%x", event->midi_buffer[i]);
+	}
+
+	g_message("%d: %s: %s, %f seconds, %d pulses, %d delta pulses", event->event_number, type, decoded,
+		event->time_seconds, event->time_pulses, event->delta_time_pulses);
 
 	free(decoded);
 
@@ -298,11 +299,8 @@ cmd_events(char *notused)
 	smf_rewind(smf);
 
 	while ((event = smf_track_get_next_event(selected_track)) != NULL) {
-		g_message("----------------------------------");
 		show_event(event);
 	}
-
-	g_message("----------------------------------");
 
 	smf_rewind(smf);
 
