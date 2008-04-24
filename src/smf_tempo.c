@@ -263,9 +263,9 @@ smf_get_tempo_by_seconds(const smf_t *smf, double seconds)
 	int i;
 	smf_tempo_t *tempo;
 
-	assert(seconds >= 0);
+	assert(seconds >= 0.0);
 
-	if (seconds == 0)
+	if (seconds == 0.0)
 		return smf_get_tempo_by_number(smf, 0);
 
 	assert(smf->tempo_array != NULL);
