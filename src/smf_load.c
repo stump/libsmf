@@ -337,7 +337,9 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 {
 	/* Make sure this really is a valid status byte. */
 	assert(is_status_byte(status));
-	assert(buffer_length > 0);
+
+	/* Buffer length may be zero, for e.g. realtime messages. */
+	assert(buffer_length >= 0);
 
 	/* Is this a metamessage? */
 	if (status == 0xFF) {
