@@ -21,29 +21,29 @@ struct smf_struct {
 	int		format;
 	int		expected_number_of_tracks;
 
-	/* These fields are extracted from "division" field of MThd header.  Valid is _either_ ppqn or frames_per_second/resolution. */
+	/** These fields are extracted from "division" field of MThd header.  Valid is _either_ ppqn or frames_per_second/resolution. */
 	int		ppqn;
 	int		frames_per_second;
 	int		resolution;
 	int		number_of_tracks;
 
-	/* These are private fields using only by loading and saving routines. */
+	/** These are private fields using only by loading and saving routines. */
 	FILE		*stream;
 	void		*file_buffer;
 	int		file_buffer_length;
 	int		next_chunk_offset;
 
-	/* Private, used by smf.c. */
+	/** Private, used by smf.c. */
 	GPtrArray	*tracks_array;
 	double		last_seek_position;
 
-	/* Private, used by smf_tempo.c. */
+	/** Private, used by smf_tempo.c. */
 	GPtrArray	*tempo_array; /* Array of pointers to smf_tempo_struct. */
 };
 
 typedef struct smf_struct smf_t;
 
-/* This structure describes a single tempo change. */
+/** This structure describes a single tempo change. */
 struct smf_tempo_struct {
 	int time_pulses;
 	double time_seconds;
@@ -62,12 +62,12 @@ struct smf_track_struct {
 	int		track_number;
 	int		number_of_events;
 
-	/* These are private fields using only by loading and saving routines. */
+	/** These are private fields using only by loading and saving routines. */
 	void		*file_buffer;
 	int		file_buffer_length;
 	int		last_status; /* Used for "running status". */
 
-	/* Private, used by smf.c. */
+	/** Private, used by smf.c. */
 	int		next_event_offset; /* Offset into buffer, used in parse_next_event(). */
 	int		next_event_number;
 	int		time_of_next_event; /* Absolute time of next event on events_queue. */
