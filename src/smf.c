@@ -826,6 +826,18 @@ smf_event_decode_sysex(const smf_event_t *event)
 	return buf;
 }
 
+static void
+note_from_int(char *buf, int note_number)
+{
+	int note, octave;
+	char *names[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+
+	octave = note_number / 12 - 1;
+	note = note_number % 12;
+
+	sprintf(buf, "%s%d", names[note], octave);
+}
+
 /**
  * \return Textual representation of the event given, or NULL, if event is unknown.
  */
@@ -833,7 +845,7 @@ char *
 smf_event_decode(const smf_event_t *event)
 {
 	int off = 0;
-	char *buf;
+	char *buf, note[5];
 
 	if (smf_event_is_metadata(event))
 		return smf_event_decode_metadata(event);
@@ -854,18 +866,21 @@ smf_event_decode(const smf_event_t *event)
 
 	switch (event->midi_buffer[0] & 0xF0) {
 		case 0x80:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Note Off, channel %d, note %d, velocity %d",
-					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
+			note_from_int(note, event->midi_buffer[1]);
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Note Off, channel %d, note %s, velocity %d",
+					event->midi_buffer[0] & 0x0F, note, event->midi_buffer[2]);
 			break;
 
 		case 0x90:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Note On, channel %d, note %d, velocity %d",
-					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
+			note_from_int(note, event->midi_buffer[1]);
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Note On, channel %d, note %s, velocity %d",
+					event->midi_buffer[0] & 0x0F, note, event->midi_buffer[2]);
 			break;
 
 		case 0xA0:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Aftertouch, channel %d, note %d, pressure %d",
-					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
+			note_from_int(note, event->midi_buffer[1]);
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Aftertouch, channel %d, note %s, pressure %d",
+					event->midi_buffer[0] & 0x0F, note, event->midi_buffer[2]);
 			break;
 
 		case 0xB0:
