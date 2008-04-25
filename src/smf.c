@@ -468,7 +468,9 @@ smf_track_remove_event(smf_event_t *event)
 }
 
 /**
- * \return Nonzero if event is metaevent.
+ * \return Nonzero if event is metaevent.  You should never send metaevents;
+ * they are not really MIDI messages.  They carry information like track title,
+ * time signature etc.
  */
 int
 smf_event_is_metadata(const smf_event_t *event)

@@ -4,6 +4,91 @@
  * Libsmf is public domain, you can do with it whatever you want.
  */
 
+/**
+ *
+ * \mainpage General usage instructions
+ *
+ * An smf_t structure represents a "song".  Every valid smf contains one or more tracks.
+ * Tracks contain zero or more events.  Libsmf doesn't care about actual MIDI data, as long
+ * as it is valid from the MIDI specification point of view - it may be realtime message,
+ * SysEx, whatever.
+ * 
+ * The only field in smf_t, smf_track_t, smf_event_t and smf_tempo_t structures your
+ * code may modify is event->midi_buffer and event->midi_buffer_length.  Do not modify
+ * other fields, _ever_.  You may read them, though.
+ * 
+ * Say you want to load a SMF (.mid) file and play it back somehow.  This is (roughly)
+ * how you do this:
+ * 
+ * \code
+ * 	smf_t *smf = smf_load(file_name);
+ * 	if (smf == NULL) {
+ * 		Whoops, something went wrong.
+ * 		return;
+ * 	}
+ * 
+ * 	for (;;) {
+ * 		smf_event_t *event = smf_get_next_event(smf);
+ * 		if (event == NULL) {
+ * 			No more events, end of the song.
+ * 			return;
+ * 		}
+ *
+ *		if (smf_event_is_metadata(event))
+ *			continue;
+ * 
+ * 		wait until event->time_seconds.
+ * 		feed_to_midi_output(event->midi_buffer, event->midi_buffer_length);
+ * 	}
+ *
+ * \endcode
+ * 
+ * Saving works like this:
+ * 
+ * \code
+ *
+ * 	smf_t *smf = smf_new();
+ * 	if (smf == NULL) {
+ * 		Whoops.
+ * 		return;
+ * 	}
+ * 
+ * 	for (int i = 1; i <= number of tracks; i++) {
+ * 		smf_track_t *track = smf_track_new();
+ * 		if (track == NULL) {
+ * 			Whoops.
+ * 			return;
+ * 		}
+ * 
+ * 		smf_add_track(smf, track);
+ * 
+ * 		for (int j = 1; j <= number of events in this track; j++) {
+ * 			smf_event_t *event = smf_event_new_from_pointer(your MIDI message, message length);
+ * 			if (event == NULL) {
+ * 				Whoops.
+ * 				return;
+ * 			}
+ * 
+ * 			smf_track_add_event_seconds(track, event, seconds since start of song);
+ * 		}
+ * 
+ * 		smf_track_add_eot(track);
+ * 	}
+ * 
+ * 	ret = smf_save(smf, file_name);
+ * 	if (ret) {
+ * 		Whoops, saving failed for some reason.
+ * 		return;
+ * 	}
+ *
+ * \endcode
+ * 	
+ * Note that you always have to first add the track to smf, and then add events to the track.
+ * Otherwise you will trip asserts.  Also, try to add events at the end of the track and remove
+ * them from the end of the track, that's much more efficient.
+ * 
+ */
+
 #ifndef SMF_H
 #define SMF_H
 
