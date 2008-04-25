@@ -485,6 +485,24 @@ smf_event_is_metadata(const smf_event_t *event)
 }
 
 /**
+ * \return Nonzero if event is realtime.
+ */
+int
+smf_event_is_realtime(const smf_event_t *event)
+{
+	assert(event->midi_buffer);
+	assert(event->midi_buffer_length > 0);
+
+	if (smf_event_is_metadata(event))
+		return 0;
+	
+	if (event->midi_buffer[0] >= 0xF8)
+		return 1;
+
+	return 0;
+}
+
+/**
   * \return Nonzero if event is SysEx message.
   */
 int
@@ -709,7 +727,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 				goto error;
 			}
 
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Unknown Event: 0xFF 0x%x 0x%x 0x%x",
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Unknown Metaevent: 0xFF 0x%x 0x%x 0x%x",
 				event->midi_buffer[1], event->midi_buffer[2], event->midi_buffer[3]);
 
 			break;
@@ -721,6 +739,54 @@ error:
 	free(buf);
 
 	return NULL;
+}
+
+static char *
+smf_event_decode_realtime(const smf_event_t *event)
+{
+	int off = 0;
+	char *buf;
+
+	assert(smf_event_is_realtime(event));
+	assert(event->midi_buffer_length == 1);
+
+	buf = malloc(BUFFER_SIZE);
+	if (buf == NULL) {
+		g_critical("smf_event_decode_realtime: malloc failed.");
+		return NULL;
+	}
+
+	switch (event->midi_buffer[0]) {
+		case 0xF8:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "MIDI Clock (realtime)");
+			break;
+
+		case 0xF9:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Tick (realtime)");
+			break;
+
+		case 0xFA:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "MIDI Start (realtime)");
+			break;
+
+		case 0xFB:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "MIDI Continue (realtime)");
+			break;
+
+		case 0xFC:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "MIDI Stop (realtime)");
+			break;
+
+		case 0xFE:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Active Sense (realtime)");
+			break;
+
+		default:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Unknown Realtime Event: 0x%x", event->midi_buffer[0]);
+			break;
+	}
+
+	return buf;
 }
 
 static char *
@@ -849,6 +915,9 @@ smf_event_decode(const smf_event_t *event)
 
 	if (smf_event_is_metadata(event))
 		return smf_event_decode_metadata(event);
+
+	if (smf_event_is_realtime(event))
+		return smf_event_decode_realtime(event);
 
 	if (smf_event_is_sysex(event))
 		return smf_event_decode_sysex(event);
