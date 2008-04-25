@@ -18,6 +18,7 @@
 
 /**
  * Allocates new smf_t structure.
+ * \return pointer to smf_t or NULL.
  */
 smf_t *
 smf_new(void)
@@ -64,6 +65,7 @@ smf_delete(smf_t *smf)
 
 /**
  * Allocates new smf_track_t structure.
+ * \return pointer to smf_track_t or NULL.
  */
 smf_track_t *
 smf_track_new(void)
@@ -127,7 +129,7 @@ smf_add_track(smf_t *smf, smf_track_t *track)
 }
 
 /**
- * Removes track from smf.
+ * Detaches track from the smf.
  */
 void
 smf_remove_track(smf_track_t *track)
@@ -153,7 +155,10 @@ smf_remove_track(smf_track_t *track)
 }
 
 /**
- * Allocates new smf_event_t structure.
+ * Allocates new smf_event_t structure.  The caller is responsible for allocating
+ * event->midi_buffer, filling it with MIDI data and setting event->midi_buffer_length properly.
+ * Note that event->midi_buffer will be freed by smf_event_delete.
+ * \return pointer to smf_event_t or NULL.
  */
 smf_event_t *
 smf_event_new(void)
@@ -177,6 +182,9 @@ smf_event_new(void)
 /**
  * Allocates an smf_event_t structure and fills it with "len" bytes copied
  * from "midi_data".
+ * \param midi_data Pointer to MIDI data.  It sill be copied to the newly allocated event->midi_buffer.
+ * \param len Length of the buffer.  It must be proper MIDI event length, e.g. 3 for Note On event.
+ * \return Event containing MIDI data or NULL.
  */
 smf_event_t *
 smf_event_new_from_pointer(void *midi_data, int len)
@@ -212,6 +220,10 @@ smf_event_new_from_pointer(void *midi_data, int len)
  *
  * smf_event_new_from_bytes(0xC0, 0x42, -1);
  * 
+ * \param first_byte First byte of MIDI message.  Must be valid status byte.
+ * \param second_byte Second byte of MIDI message or -1, if message is one byte long.
+ * \param third_byte Third byte of MIDI message or -1, if message is two bytes long.
+ * \return Event containing MIDI data or NULL.
  */
 smf_event_t *
 smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
@@ -307,7 +319,10 @@ smf_event_delete(smf_event_t *event)
 	free(event);
 }
 
-gint
+/**
+ * Used for sorting track->events_array.
+ */
+static gint
 events_array_compare_function(gconstpointer aa, gconstpointer bb)
 {
 	smf_event_t *a, *b;
@@ -327,8 +342,10 @@ events_array_compare_function(gconstpointer aa, gconstpointer bb)
 }
 
 /**
- * Adds the event to the track and computes ->delta_pulses.
- * Event needs to have ->time_pulses and ->time_seconds already set.
+ * Adds the event to the track and computes ->delta_pulses.  Note that it is faster
+ * to append events to the end of the track than to insert them in the middle.
+ * Usually you want to use smf_track_add_event_seconds or smf_track_add_event_pulses
+ * instead of this one.  Event needs to have ->time_pulses and ->time_seconds already set.
  */
 void
 smf_track_add_event(smf_track_t *track, smf_event_t *event)
@@ -391,6 +408,11 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 		smf_create_tempo_map_and_compute_seconds(track->smf);
 }
 
+/**
+ * Append End Of Track metaevent at the end of the track.  This is mandatory;
+ * each track must end with EOT.
+ * \return 0 if everything went ok, nonzero otherwise.
+ */
 int
 smf_track_add_eot(smf_track_t *track)
 {
@@ -406,7 +428,7 @@ smf_track_add_eot(smf_track_t *track)
 }
 
 /**
- * Removes event from its track.
+ * Detaches event from its track.
  */
 void
 smf_track_remove_event(smf_event_t *event)
@@ -442,6 +464,9 @@ smf_track_remove_event(smf_event_t *event)
 		smf_create_tempo_map_and_compute_seconds(track->smf);
 }
 
+/**
+ * \return Nonzero if event is metaevent.
+ */
 int
 smf_event_is_metadata(const smf_event_t *event)
 {
@@ -454,6 +479,9 @@ smf_event_is_metadata(const smf_event_t *event)
 	return 0;
 }
 
+/**
+  * \return Nonzero if event is SysEx message.
+  */
 int
 smf_event_is_sysex(const smf_event_t *event)
 {
@@ -466,6 +494,9 @@ smf_event_is_sysex(const smf_event_t *event)
 	return 0;
 }
 
+/**
+  * \return Nonzero if event is Tempo Change or Time Signature metaevent.
+  */
 int
 smf_event_is_tempo_change_or_time_signature(const smf_event_t *event)
 {
@@ -480,6 +511,13 @@ smf_event_is_tempo_change_or_time_signature(const smf_event_t *event)
 	return 0;
 }
 
+/**
+  * Sets "Format" field of MThd header to the specified value.  Note that you
+  * don't really need to use this, as libsmf will automatically change format
+  * from 0 to 1 when you add the second track.
+  * \param smf SMF.
+  * \param format 0 for one track per file, 1 for several tracks per file.
+  */
 int
 smf_set_format(smf_t *smf, int format)
 {
@@ -495,6 +533,13 @@ smf_set_format(smf_t *smf, int format)
 	return 0;
 }
 
+/**
+  * Sets the PPQN ("Division") field of MThd header.  This is mandatory, you
+  * should call it right after smf_new.  Note that changing PPQN will change time_seconds
+  * of all the events.
+  * \param smf SMF.
+  * \param ppqn New PPQN.
+  */
 int
 smf_set_ppqn(smf_t *smf, int ppqn)
 {
@@ -776,6 +821,9 @@ smf_event_decode_sysex(const smf_event_t *event)
 	return buf;
 }
 
+/**
+ * \return Textual representation of the event given, or NULL, if event is unknown.
+ */
 char *
 smf_event_decode(const smf_event_t *event)
 {
@@ -842,6 +890,10 @@ smf_event_decode(const smf_event_t *event)
 	return buf;
 }
 
+/**
+  * Returns next event from the track given and advances next event counter.
+  * \return Event or NULL, if there are no more events left in this track.
+  */
 smf_event_t *
 smf_track_get_next_event(smf_track_t *track)
 {
@@ -872,6 +924,11 @@ smf_track_get_next_event(smf_track_t *track)
 	return event;
 }
 
+/**
+  * Returns next event from the track given.  Does not change next event counter,
+  * so repeatedly calling this routine will return the same event.
+  * \return Event or NULL, if there are no more events left in this track.
+  */
 static smf_event_t *
 smf_peek_next_event_from_track(smf_track_t *track)
 {
@@ -889,13 +946,19 @@ smf_peek_next_event_from_track(smf_track_t *track)
 	return event;
 }
 
+/**
+ * \return Track with a given number or NULL, if there is no such track.
+ * Tracks are numbered consecutively starting from one.
+ */
 smf_track_t *
 smf_get_track_by_number(smf_t *smf, int track_number)
 {
 	smf_track_t *track;
 
 	assert(track_number >= 1);
-	assert(track_number <= smf->number_of_tracks);
+
+	if (track_number > smf->number_of_tracks)
+		return NULL;
 
 	track = (smf_track_t *)g_ptr_array_index(smf->tracks_array, track_number - 1);
 
@@ -904,13 +967,19 @@ smf_get_track_by_number(smf_t *smf, int track_number)
 	return track;
 }
 
+/**
+ * \return Event with a given number or NULL, if there is no such event.
+ * Events are numbered consecutively starting from one.
+ */
 smf_event_t *
 smf_track_get_event_by_number(const smf_track_t *track, int event_number)
 {
 	smf_event_t *event;
 
 	assert(event_number >= 1);
-	assert(event_number <= track->number_of_events);
+
+	if (event_number > track->number_of_events)
+		return NULL;
 
 	event = g_ptr_array_index(track->events_array, event_number - 1);
 
@@ -919,16 +988,27 @@ smf_track_get_event_by_number(const smf_track_t *track, int event_number)
 	return event;
 }
 
+/**
+ * \return Last event on the track or NULL, if track is empty.
+ */
 smf_event_t *
 smf_track_get_last_event(const smf_track_t *track)
 {
 	smf_event_t *event;
+
+	if (track->number_of_events == 0)
+		return NULL;
        
 	event = smf_track_get_event_by_number(track, track->number_of_events);
 
 	return event;
 }
 
+/**
+ * Searches for track that contains next event, in time order.  In other words,
+ * returns the track that contains event that should be played next.
+ * \return Track with next event or NULL, if there are no events left.
+ */
 smf_track_t *
 smf_find_track_with_next_event(smf_t *smf)
 {
@@ -954,6 +1034,9 @@ smf_find_track_with_next_event(smf_t *smf)
 	return min_time_track;
 }
 
+/**
+  * \return Next event, in time order, or NULL, if there are none left.
+  */
 smf_event_t *
 smf_get_next_event(smf_t *smf)
 {
@@ -977,6 +1060,10 @@ smf_get_next_event(smf_t *smf)
 	return event;
 }
 
+/**
+  * \return Next event, in time order, or NULL, if there are none left.  Does
+  * not advance position in song.
+  */
 smf_event_t *
 smf_peek_next_event(smf_t *smf)
 {
@@ -998,6 +1085,10 @@ smf_peek_next_event(smf_t *smf)
 	return event;
 }
 
+/**
+  * Rewinds the SMF.  What that means is, after calling this routine, smf_get_next_event
+  * will return first event in the song.
+  */
 void
 smf_rewind(smf_t *smf)
 {
@@ -1029,6 +1120,10 @@ smf_rewind(smf_t *smf)
 	}
 }
 
+/**
+  * Seeks the SMF to the given event.  After calling this routine, smf_get_next_event
+  * will return the event that was the second argument of this call.
+  */
 int
 smf_seek_to_event(smf_t *smf, const smf_event_t *target)
 {
@@ -1055,6 +1150,10 @@ smf_seek_to_event(smf_t *smf, const smf_event_t *target)
 	return 0;
 }
 
+/**
+  * Seeks the SMF to the given position.  For example, after seeking to 1.0 seconds,
+  * smf_get_next_event will return first event that happens after the first second of song.
+  */
 int
 smf_seek_to_seconds(smf_t *smf, double seconds)
 {
@@ -1095,6 +1194,9 @@ smf_seek_to_seconds(smf_t *smf, double seconds)
 	return 0;
 }
 
+/**
+  * \return Version of libsmf.
+  */
 const char *
 smf_get_version(void)
 {

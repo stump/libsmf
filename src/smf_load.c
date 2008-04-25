@@ -628,7 +628,7 @@ event_is_end_of_track(const smf_event_t *event)
 }
 
 /**
- * Returns 1, if event is as long as it should be, from the MIDI specification point of view.
+ * \return Nonzero, if event is as long as it should be, from the MIDI specification point of view.
  * Does not work for SysExes - it doesn't recognize internal structure of SysEx.
  */
 int
@@ -650,7 +650,8 @@ smf_event_length_is_valid(const smf_event_t *event)
 }
 
 /**
- * Returns 1 if MIDI data in the event is valid, 0 otherwise.
+ * \return Nonzero, if MIDI data in the event is valid, 0 otherwise.  For example,
+ * it checks if event length is correct.
  */
 /* XXX: this routine requires some more work to detect more errors. */
 int
@@ -758,6 +759,10 @@ load_file_into_buffer(void **file_buffer, int *file_buffer_length, const char *f
 	return 0;
 }
 
+/**
+  * Creates new SMF and fills it with data loaded from the given buffer.
+ * \return SMF or NULL, if loading failed.
+  */
 smf_t *
 smf_load_from_memory(const void *buffer, const int buffer_length)
 {
@@ -807,7 +812,9 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 }
 
 /**
- * Takes a filename, loads it, parses and returns smf or NULL if there was an error.
+ * Loads SMF file.
+ * \param file_name Path to the file.
+ * \return SMF or NULL, if loading failed.
  */
 smf_t *
 smf_load(const char *file_name)

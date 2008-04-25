@@ -291,7 +291,7 @@ write_file_and_free_buffer(smf_t *smf, const char *file_name)
 }
 
 /**
- * Returns 1 if all pointers supposed to be NULL are NULL.  Triggers assertion if not.
+ * \return Nonzero, if all pointers supposed to be NULL are NULL.  Triggers assertion if not.
  */
 static int
 pointers_are_clear(smf_t *smf)
@@ -314,7 +314,7 @@ pointers_are_clear(smf_t *smf)
 }
 
 /**
- * Returns 1 if event is End Of Track event, 0 otherwise.
+ * \return Nonzero, if event is End Of Track.
  */
 int
 smf_event_is_eot(smf_event_t *event)
@@ -329,9 +329,9 @@ smf_event_is_eot(smf_event_t *event)
 }
 
 /**
- * Verifies if smf is consistent and returns 0 iff it is.
+ * \return 0, if SMF is invalid.
  */
-int
+static int
 smf_is_invalid(smf_t *smf)
 {
 	int i;
@@ -379,6 +379,12 @@ smf_is_invalid(smf_t *smf)
 	return 0;
 }
 
+/**
+  * Writes the contents of SMF to the file given.
+  * \param smf SMF.
+  * \param file_name Path to the file.
+  * \return 0, if saving was successfull.
+  */
 int
 smf_save(smf_t *smf, const char *file_name)
 {

@@ -340,7 +340,9 @@ last_event_pulses(const smf_track_t *track)
 
 /**
  * Adds event to the track at the time "pulses" clocks from the previous event in this track.
- * Note that ->delta_pulses is computed by smf.c:smf_track_add_event, not here.
+ * The remaining two time fields will be computed automatically based on the third argument
+ * and current tempo map.  Note that ->delta_pulses is computed by smf.c:smf_track_add_event,
+ * not here.
  */
 void
 smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int delta)
@@ -355,6 +357,8 @@ smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int del
 
 /**
  * Adds event to the track at the time "pulses" clocks from the start of song.
+ * The remaining two time fields will be computed automatically based on the third argument
+ * and current tempo map.
  */
 void
 smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses)
@@ -371,6 +375,8 @@ smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses)
 
 /**
  * Adds event to the track at the time "seconds" seconds from the start of song.
+ * The remaining two time fields will be computed automatically based on the third argument
+ * and current tempo map.
  */
 void
 smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double seconds)
