@@ -38,7 +38,8 @@ struct smf_struct {
 	double		last_seek_position;
 
 	/** Private, used by smf_tempo.c. */
-	GPtrArray	*tempo_array; /* Array of pointers to smf_tempo_struct. */
+	/** Array of pointers to smf_tempo_struct. */
+	GPtrArray	*tempo_array;
 };
 
 typedef struct smf_struct smf_t;
@@ -68,25 +69,42 @@ struct smf_track_struct {
 	int		last_status; /* Used for "running status". */
 
 	/** Private, used by smf.c. */
-	int		next_event_offset; /* Offset into buffer, used in parse_next_event(). */
+	/** Offset into buffer, used in parse_next_event(). */
+	int		next_event_offset;
 	int		next_event_number;
-	int		time_of_next_event; /* Absolute time of next event on events_queue. */
+
+	/** Absolute time of next event on events_queue. */
+	int		time_of_next_event;
 	GPtrArray	*events_array;
 };
 
 typedef struct smf_track_struct smf_track_t;
 
 struct smf_event_struct {
+	/** Pointer to the track, or NULL if event is not attached. */
 	smf_track_t	*track;
 
+	/** Number of this event in the track.  Events are numbered consecutively, starting from one. */
 	int		event_number;
 
+	/** Note that the time fields are invalid, if event is not attached to a track. */
+	/** Time, in pulses, since the previous event on this track. */
 	int		delta_time_pulses;
+
+	/** Time, in pulses, since the start of the song. */
 	int		time_pulses;
+
+	/** Time, in seconds, since the start of the song. */
 	double		time_seconds;
-	int		track_number; /* Tracks are numbered consecutively, starting from 1. */
+
+	/** Tracks are numbered consecutively, starting from 1. */
+	int		track_number;
+
+	/** Pointer to the buffer containing MIDI message.  This is freed by smf_event_delete. */
 	unsigned char	*midi_buffer;
-	int		midi_buffer_length; /* Length of the MIDI message in the buffer, in bytes. */
+
+	/** Length of the MIDI message in the buffer, in bytes. */
+	int		midi_buffer_length; 
 };
 
 typedef struct smf_event_struct smf_event_t;
