@@ -261,42 +261,6 @@ is_status_byte(const unsigned char status)
 	return (status & 0x80);
 }
 
-#if PARSE_REALTIME_MESSAGES
-
-/**
- * Returns 1 if the given byte is status byte for realtime message, 0 otherwise.
- */
-static int
-is_realtime_byte(const unsigned char status)
-{
-	if (status >= 0xF8 && status <= 0xFE)
-		return 1;
-
-	return 0;
-}
-
-/**
- * Creates new realtime event and attaches it to "track".  Returns 0 iff everything went OK, < 0 otherwise.
- */
-static int
-parse_realtime_event(const unsigned char status, smf_track_t *track)
-{
-	smf_event_t *event;
-
-	assert(track);
-	assert(is_realtime_byte(status));
-
-	event = smf_event_new_from_bytes(status, -1, -1);
-	if (event == NULL)
-		return -1;
-
-	smf_track_add_event_delta_pulses(track, event, 0);
-
-	return 0;
-}
-
-#endif
-
 /**
  * Just like expected_message_length(), but only for System Exclusive messages.
  */
@@ -458,19 +422,6 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 			g_critical("End of buffer in extract_midi_event().");
 			return -5;
 		}
-
-/* This actually breaks things.  I have a file that contains strings which confuse libsmf,
-   unless it ignores realtime messages, i.e. unless the following is ifdefed out. */
-#if PARSE_REALTIME_MESSAGES
-		/* Realtime message may occur anywhere, even in the middle of normal MIDI message. */
-		if (is_realtime_byte(*c)) {
-			if (parse_realtime_event(*c, track))
-				return -6;
-
-			i--;
-			continue;
-		}
-#endif
 
 		event->midi_buffer[i] = *c;
 	}
