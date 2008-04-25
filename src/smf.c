@@ -458,6 +458,9 @@ smf_track_remove_event(smf_event_t *event)
 
 	event->track = NULL;
 	event->event_number = -1;
+	event->delta_time_pulses = -1;
+	event->time_pulses = -1;
+	event->time_seconds = -1.0;
 
 	/* XXX: This may be a little slow. */
 	if (smf_event_is_tempo_change_or_time_signature(event))
