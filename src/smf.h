@@ -233,7 +233,7 @@ void smf_event_delete(smf_event_t *event);
 
 int smf_event_is_valid(const smf_event_t *event);
 int smf_event_is_metadata(const smf_event_t *event);
-int smf_event_is_realtime(const smf_event_t *event);
+int smf_event_is_system_realtime(const smf_event_t *event);
 char *smf_event_decode(const smf_event_t *event);
 char *smf_string_from_event(const smf_event_t *event);
 

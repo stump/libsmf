@@ -37,7 +37,7 @@ smf_event_is_metadata(const smf_event_t *event)
  * \return Nonzero if event is realtime.
  */
 int
-smf_event_is_realtime(const smf_event_t *event)
+smf_event_is_system_realtime(const smf_event_t *event)
 {
 	assert(event->midi_buffer);
 	assert(event->midi_buffer_length > 0);
@@ -233,17 +233,17 @@ error:
 }
 
 static char *
-smf_event_decode_realtime(const smf_event_t *event)
+smf_event_decode_system_realtime(const smf_event_t *event)
 {
 	int off = 0;
 	char *buf;
 
-	assert(smf_event_is_realtime(event));
+	assert(smf_event_is_system_realtime(event));
 	assert(event->midi_buffer_length == 1);
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
-		g_critical("smf_event_decode_realtime: malloc failed.");
+		g_critical("smf_event_decode_system_realtime: malloc failed.");
 		return NULL;
 	}
 
@@ -407,8 +407,8 @@ smf_event_decode(const smf_event_t *event)
 	if (smf_event_is_metadata(event))
 		return smf_event_decode_metadata(event);
 
-	if (smf_event_is_realtime(event))
-		return smf_event_decode_realtime(event);
+	if (smf_event_is_system_realtime(event))
+		return smf_event_decode_system_realtime(event);
 
 	if (smf_event_is_sysex(event))
 		return smf_event_decode_sysex(event);
