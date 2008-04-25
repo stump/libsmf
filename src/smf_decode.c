@@ -227,15 +227,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 			break;
 
 		default:
-			if (event->midi_buffer_length < 4) {
-				g_critical("smf_event_decode_metadata: truncated MIDI message.");
-				goto error;
-			}
-
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Unknown Metaevent: 0xFF 0x%x 0x%x 0x%x",
-				event->midi_buffer[1], event->midi_buffer[2], event->midi_buffer[3]);
-
-			break;
+			goto error;
 	}
 
 	return buf;
@@ -291,8 +283,8 @@ smf_event_decode_system_realtime(const smf_event_t *event)
 			break;
 
 		default:
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Unknown Realtime Event: 0x%x", event->midi_buffer[0]);
-			break;
+			free(buf);
+			return NULL;
 	}
 
 	return buf;
@@ -524,6 +516,7 @@ smf_event_decode(const smf_event_t *event)
 			break;
 
 		default:
+			free(buf);
 			return NULL;
 	}
 
