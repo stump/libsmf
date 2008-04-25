@@ -455,18 +455,18 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 			return -5;
 		}
 
+/* This actually breaks things.  I have a file that contains strings which confuse libsmf,
+   unless it ignores realtime messages, i.e. unless the following is ifdefed out. */
+#if 0
 		/* Realtime message may occur anywhere, even in the middle of normal MIDI message. */
 		if (is_realtime_byte(*c)) {
 			if (parse_realtime_event(*c, track))
 				return -6;
 
-			c++;
-
-			if (c >= buf + buffer_length) {
-				g_critical("End of buffer in extract_midi_event().");
-				return -7;
-			}
+			i--;
+			continue;
 		}
+#endif
 
 		event->midi_buffer[i] = *c;
 	}
