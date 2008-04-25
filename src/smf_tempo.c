@@ -13,12 +13,12 @@
 
 static double seconds_from_pulses(const smf_t *smf, int pulses);
 
-/*
+/**
  * If there is tempo starting at "pulses" already, return it.  Otherwise,
  * allocate new one, fill it with values from previous one (or default ones,
  * if there is no previous one) and attach it to "smf".
  */
-smf_tempo_t *
+static smf_tempo_t *
 new_tempo(smf_t *smf, int pulses)
 {
 	smf_tempo_t *tempo, *previous_tempo = NULL;
@@ -189,7 +189,7 @@ pulses_from_seconds(const smf_t *smf, double seconds)
 	return pulses;
 }
 
-/*
+/**
  * Computes value of event->time_seconds for all events in smf.
  * Warning: rewinds the smf.
  */
@@ -227,7 +227,7 @@ smf_get_tempo_by_number(const smf_t *smf, int number)
 	return g_ptr_array_index(smf->tempo_array, number);
 }
 
-/*
+/**
  * Return last tempo (i.e. tempo with greatest time_pulses) that happens before "pulses".
  */
 smf_tempo_t *
@@ -254,7 +254,7 @@ smf_get_tempo_by_pulses(const smf_t *smf, int pulses)
 	return NULL;
 }
 
-/*
+/**
  * Return last tempo (i.e. tempo with greatest time_seconds) that happens before "seconds".
  */
 smf_tempo_t *
@@ -282,7 +282,7 @@ smf_get_tempo_by_seconds(const smf_t *smf, double seconds)
 }
 
 
-/*
+/**
  * Return last tempo.
  */
 smf_tempo_t *
@@ -296,7 +296,7 @@ smf_get_last_tempo(const smf_t *smf)
 	return tempo;
 }
 
-/*
+/**
  * Remove any existing tempos and add default one.
  */
 int
@@ -320,7 +320,7 @@ smf_init_tempo(smf_t *smf)
 	return 0;
 }
 
-/*
+/**
  * Returns ->time_pulses of last event on the given track, or 0, if track is empty.
  */
 static int
@@ -338,7 +338,7 @@ last_event_pulses(const smf_track_t *track)
 	return 0;
 }
 
-/*
+/**
  * Adds event to the track at the time "pulses" clocks from the previous event in this track.
  * Note that ->delta_pulses is computed by smf.c:smf_track_add_event, not here.
  */
@@ -353,7 +353,7 @@ smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int del
 	smf_track_add_event_pulses(track, event, last_event_pulses(track) + delta);
 }
 
-/*
+/**
  * Adds event to the track at the time "pulses" clocks from the start of song.
  */
 void
@@ -369,7 +369,7 @@ smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses)
 	smf_track_add_event(track, event);
 }
 
-/*
+/**
  * Adds event to the track at the time "seconds" seconds from the start of song.
  */
 void

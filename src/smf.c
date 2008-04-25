@@ -16,7 +16,7 @@
 #include "smf.h"
 #include "smf_private.h"
 
-/*
+/**
  * Allocates new smf_t structure.
  */
 smf_t *
@@ -43,7 +43,7 @@ smf_new(void)
 	return smf;
 }
 
-/*
+/**
  * Frees smf and all it's descendant structures.
  */
 void
@@ -62,7 +62,7 @@ smf_delete(smf_t *smf)
 	free(smf);
 }
 
-/*
+/**
  * Allocates new smf_track_t structure.
  */
 smf_track_t *
@@ -83,7 +83,7 @@ smf_track_new(void)
 	return track;
 }
 
-/*
+/**
  * Detaches track from its smf and frees it.
  */
 void
@@ -108,7 +108,7 @@ smf_track_delete(smf_track_t *track)
 }
 
 
-/*
+/**
  * Appends smf_track_t to smf.
  */
 void
@@ -126,7 +126,7 @@ smf_add_track(smf_t *smf, smf_track_t *track)
 		smf_set_format(smf, 1);
 }
 
-/*
+/**
  * Removes track from smf.
  */
 void
@@ -152,7 +152,7 @@ smf_remove_track(smf_track_t *track)
 	track->smf = NULL;
 }
 
-/*
+/**
  * Allocates new smf_event_t structure.
  */
 smf_event_t *
@@ -174,7 +174,7 @@ smf_event_new(void)
 	return event;
 }
 
-/*
+/**
  * Allocates an smf_event_t structure and fills it with "len" bytes copied
  * from "midi_data".
  */
@@ -201,7 +201,7 @@ smf_event_new_from_pointer(void *midi_data, int len)
 	return event;
 }
 
-/*
+/**
  * Allocates an smf_event_t structure and fills it with at most three bytes of data.
  * For example, if you need to create Note On event, do something like this:
  *
@@ -291,7 +291,7 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 	return event;
 }
 
-/*
+/**
  * Detaches event from its track and frees it.
  */
 void
@@ -326,7 +326,7 @@ events_array_compare_function(gconstpointer aa, gconstpointer bb)
 	return 0;
 }
 
-/*
+/**
  * Adds the event to the track and computes ->delta_pulses.
  * Event needs to have ->time_pulses and ->time_seconds already set.
  */
@@ -405,7 +405,7 @@ smf_track_add_eot(smf_track_t *track)
 	return 0;
 }
 
-/*
+/**
  * Removes event from its track.
  */
 void

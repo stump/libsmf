@@ -16,7 +16,7 @@ smf_event_t *selected_event = NULL;
 smf_t *smf = NULL;
 char *last_file_name = NULL;
 
-void
+static void
 usage(void)
 {
 	fprintf(stderr, "usage: smfsh [file]\n");
@@ -24,15 +24,15 @@ usage(void)
 	exit(EX_USAGE);
 }
 
-void
+static void
 log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer notused)
 {
 	fprintf(stderr, "%s: %s\n", log_domain, message);
 }
 
-int cmd_track(char *arg);
+static int cmd_track(char *arg);
 
-int
+static int
 cmd_load(char *file_name)
 {
 	if (file_name == NULL) {
@@ -71,7 +71,7 @@ cmd_load(char *file_name)
 	return 0;
 }
 
-int
+static int
 cmd_save(char *file_name)
 {
 	int ret;
@@ -102,7 +102,7 @@ cmd_save(char *file_name)
 	return 0;
 }
 
-int
+static int
 cmd_ppqn(char *new_ppqn)
 {
 	int tmp;
@@ -133,7 +133,7 @@ cmd_ppqn(char *new_ppqn)
 	return 0;
 }
 
-int
+static int
 cmd_format(char *new_format)
 {
 	int tmp;
@@ -165,7 +165,7 @@ cmd_format(char *new_format)
 }
 
 
-int
+static int
 cmd_tracks(char *notused)
 {
 	if (smf->number_of_tracks > 0)
@@ -176,7 +176,7 @@ cmd_tracks(char *notused)
 	return 0;
 }
 
-int
+static int
 cmd_track(char *arg)
 {
 	int num;
@@ -214,7 +214,7 @@ cmd_track(char *arg)
 	return 0;
 }
 
-int
+static int
 cmd_trackadd(char *notused)
 {
 	selected_track = smf_track_new();
@@ -232,7 +232,7 @@ cmd_trackadd(char *notused)
 	return 0;
 }
 
-int
+static int
 cmd_trackrm(char *notused)
 {
 	if (selected_track == NULL) {
@@ -249,7 +249,7 @@ cmd_trackrm(char *notused)
 
 #define BUFFER_SIZE 1024
 
-int
+static int
 show_event(smf_event_t *event)
 {
 	int off = 0, i;
@@ -283,7 +283,7 @@ show_event(smf_event_t *event)
 	return 0;
 }
 
-int
+static int
 cmd_events(char *notused)
 {
 	smf_event_t *event;
@@ -306,7 +306,7 @@ cmd_events(char *notused)
 	return 0;
 }
 
-int
+static int
 cmd_event(char *arg)
 {
 	int num;
@@ -338,7 +338,7 @@ cmd_event(char *arg)
 	return 0;
 }
 
-int
+static int
 decode_hex(char *str, unsigned char **buffer, int *length)
 {
 	int i, value, midi_buffer_length;
@@ -384,14 +384,14 @@ error:
 	return -1;
 }
 
-void
+static void
 eventadd_usage(void)
 {
 	g_message("Usage: eventadd time-in-seconds midi-in-hex.  For example, 'eventadd 1 903C7F'");
         g_message("will add Note On event, one second from the start of song, channel 1, note C4, velocity 127.");
 }
 
-int
+static int
 cmd_eventadd(char *str)
 {
 	int midi_buffer_length;
@@ -451,7 +451,7 @@ cmd_eventadd(char *str)
 	return 0;
 }
 
-int
+static int
 cmd_eventaddeot(char *notused)
 {
 	if (selected_track == NULL) {
@@ -469,7 +469,7 @@ cmd_eventaddeot(char *notused)
 	return 0;
 }
 
-int
+static int
 cmd_eventrm(char *notused)
 {
 	if (selected_event == NULL) {
@@ -485,7 +485,7 @@ cmd_eventrm(char *notused)
 	return 0;
 }
 
-int
+static int
 cmd_tempo(char *notused)
 {
 	int i;
@@ -505,14 +505,14 @@ cmd_tempo(char *notused)
 	return 0;
 }
 
-int
+static int
 cmd_exit(char *notused)
 {
 	g_debug("Good bye.");
 	exit(0);
 }
 
-int cmd_help(char *notused);
+static int cmd_help(char *notused);
 
 struct command_struct {
 	char *name;
@@ -540,7 +540,7 @@ struct command_struct {
 		{"bye", cmd_exit, NULL},
 		{NULL, NULL, NULL}};
 
-int
+static int
 cmd_help(char *notused)
 {
 	struct command_struct *tmp;
@@ -557,12 +557,12 @@ cmd_help(char *notused)
 	return 0;
 }
 
-/*
+/**
  * Removes (in place) all whitespace characters before the first
  * non-whitespace and all trailing whitespace characters.  Replaces
  * more than one consecutive whitespace characters with one.
  */
-void
+static void
 strip_unneeded_whitespace(char *str, int len)
 {
 	char *src, *dest;
@@ -593,7 +593,7 @@ strip_unneeded_whitespace(char *str, int len)
 		dest[len - 1] = '\0';
 }
 
-char *
+static char *
 read_command(void)
 {
 	char *buf;
@@ -633,7 +633,7 @@ read_command(void)
 	return buf;
 }
 
-int
+static int
 execute_command(char *line)
 {
 	char *command, *args;
@@ -652,7 +652,7 @@ execute_command(char *line)
 	return -1;
 }
 
-void
+static void
 read_and_execute_command(void)
 {
 	int ret;
@@ -670,7 +670,7 @@ read_and_execute_command(void)
 
 #ifdef WITH_READLINE
 
-char *
+static char *
 smfsh_command_generator(const char *text, int state)
 {
 	static struct command_struct *command = commands;
@@ -690,7 +690,7 @@ smfsh_command_generator(const char *text, int state)
 	return NULL;
 }
 
-char **
+static char **
 smfsh_completion(const char *text, int start, int end)
 {
 	int i;
