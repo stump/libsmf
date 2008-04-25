@@ -34,7 +34,7 @@ smf_event_is_metadata(const smf_event_t *event)
 }
 
 /**
- * \return Nonzero if event is realtime.
+ * \return Nonzero if event is system realtime.
  */
 int
 smf_event_is_system_realtime(const smf_event_t *event)
@@ -51,6 +51,20 @@ smf_event_is_system_realtime(const smf_event_t *event)
 	return 0;
 }
 
+/**
+ * \return Nonzero if event is system common.
+ */
+int
+smf_event_is_system_common(const smf_event_t *event)
+{
+	assert(event->midi_buffer);
+	assert(event->midi_buffer_length > 0);
+
+	if (event->midi_buffer[0] >= 0xF0 && event->midi_buffer[0] <= 0xF7)
+		return 1;
+
+	return 0;
+}
 /**
   * \return Nonzero if event is SysEx message.
   */
@@ -239,7 +253,11 @@ smf_event_decode_system_realtime(const smf_event_t *event)
 	char *buf;
 
 	assert(smf_event_is_system_realtime(event));
-	assert(event->midi_buffer_length == 1);
+
+	if (event->midi_buffer_length != 1) {
+		g_critical("smf_event_decode_system_realtime: event length is not 1.");
+		return NULL;
+	}
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
@@ -383,6 +401,48 @@ smf_event_decode_sysex(const smf_event_t *event)
 	return buf;
 }
 
+static char *
+smf_event_decode_system_common(const smf_event_t *event)
+{
+	int off = 0;
+	char *buf;
+
+	assert(smf_event_is_system_common(event));
+
+	if (smf_event_is_sysex(event))
+		return smf_event_decode_sysex(event);
+
+	buf = malloc(BUFFER_SIZE);
+	if (buf == NULL) {
+		g_critical("smf_event_decode_system_realtime: malloc failed.");
+		return NULL;
+	}
+
+	switch (event->midi_buffer[0]) {
+		case 0xF1:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "MTC Quarter Frame");
+			break;
+
+		case 0xF2:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Song Position Pointer");
+			break;
+
+		case 0xF3:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Song Select");
+			break;
+
+		case 0xF6:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Tune Request");
+			break;
+
+		default:
+			free(buf);
+			return NULL;
+	}
+
+	return buf;
+}
+
 static void
 note_from_int(char *buf, int note_number)
 {
@@ -410,8 +470,8 @@ smf_event_decode(const smf_event_t *event)
 	if (smf_event_is_system_realtime(event))
 		return smf_event_decode_system_realtime(event);
 
-	if (smf_event_is_sysex(event))
-		return smf_event_decode_sysex(event);
+	if (smf_event_is_system_common(event))
+		return smf_event_decode_system_common(event);
 
 	if (!smf_event_length_is_valid(event)) {
 		g_critical("smf_event_decode: incorrect MIDI message length.");
