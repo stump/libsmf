@@ -281,6 +281,7 @@ parse_realtime_event(const unsigned char status, smf_track_t *track)
 {
 	smf_event_t *event;
 
+	assert(track);
 	assert(is_realtime_byte(status));
 
 	event = smf_event_new_from_bytes(status, -1, -1);
@@ -410,7 +411,7 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
  * Returns 0 iff everything went OK, value < 0 in case of error.
  */
 static int
-extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_t *event, int *len, int previous_status)
+extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_t *event, int *len, smf_track_t *track)
 {
 	int i, status, message_length;
 	const unsigned char *c = buf;
@@ -424,7 +425,7 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 
 	} else {
 		/* No, we use running status then. */
-		status = previous_status;
+		status = track->last_status;
 	}
 
 	if (!is_status_byte(status)) {
@@ -454,7 +455,7 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 
 		/* Realtime message may occur anywhere, even in the middle of normal MIDI message. */
 		if (is_realtime_byte(*c)) {
-			if (parse_realtime_event(*c, event->track))
+			if (parse_realtime_event(*c, track))
 				return -6;
 
 			c++;
@@ -511,7 +512,7 @@ parse_next_event(smf_track_t *track)
 		goto error;
 
 	/* Now, extract the actual event. */
-	if (extract_midi_event(c, buffer_length, event, &len, track->last_status))
+	if (extract_midi_event(c, buffer_length, event, &len, track))
 		goto error;
 
 	c += len;
