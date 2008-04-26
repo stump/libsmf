@@ -128,16 +128,15 @@ track_append(smf_track_t *track, const void *buffer, const int buffer_length)
 }
 
 /**
- * Appends event time as Variable Length Quantity.  Returns 0 if everything went 0,
- * different value in case of error.
- */
+  * Appends value, expressed as Variable Length Quantity, to event->track.
+  */
 static int
-write_event_time(smf_event_t *event)
+write_vlq(smf_event_t *event, unsigned long value)
 {
-	unsigned long value = event->delta_time_pulses, buffer;
+	unsigned long buffer;
 	int ret;
 
-	assert(event->delta_time_pulses >= 0);
+	assert(event->track);
 
 	/* Taken from http://www.borg.com/~jglatt/tech/midifile/vari.htm */
 	buffer = value & 0x7F;
@@ -147,7 +146,7 @@ write_event_time(smf_event_t *event)
 		buffer |= ((value & 0x7F) | 0x80);
 	}
 
-	while (TRUE) {
+	for (;;) {
 		ret = track_append(event->track, &buffer, 1);
 		if (ret)
 			return ret;
@@ -162,12 +161,78 @@ write_event_time(smf_event_t *event)
 }
 
 /**
+ * Appends event time as Variable Length Quantity.  Returns 0 if everything went ok,
+ * different value in case of error.
+ */
+static int
+write_event_time(smf_event_t *event)
+{
+	assert(event->delta_time_pulses >= 0);
+
+	return write_vlq(event, event->delta_time_pulses);
+}
+
+static int
+write_sysex_contents(smf_event_t *event)
+{
+	int ret;
+	unsigned char sysex_status = 0xF0;
+
+	assert(smf_event_is_sysex(event));
+
+	ret = track_append(event->track, &sysex_status, 1);
+	if (ret)
+		return ret;
+
+	/* -1, because length does not include status byte. */
+	ret = write_vlq(event, event->midi_buffer_length - 1);
+	if (ret)
+		return ret;
+
+	ret = track_append(event->track, event->midi_buffer + 1, event->midi_buffer_length - 1);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+/**
+  * Appends contents of event->midi_buffer wrapped into 0xF7 MIDI event.
+  */
+static int
+write_escaped_event_contents(smf_event_t *event)
+{
+	int ret;
+	unsigned char escape_status = 0xF7;
+
+	if (smf_event_is_sysex(event))
+		return write_sysex_contents(event);
+
+	ret = track_append(event->track, &escape_status, 1);
+	if (ret)
+		return ret;
+
+	ret = write_vlq(event, event->midi_buffer_length);
+	if (ret)
+		return ret;
+
+	ret = track_append(event->track, event->midi_buffer, event->midi_buffer_length);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+/**
  * Appends contents of event->midi_buffer.  Returns 0 if everything went 0,
  * different value in case of error.
  */
 static int
-write_event_midi_buffer(smf_event_t *event)
+write_event_contents(smf_event_t *event)
 {
+	if (smf_event_is_system_realtime(event) || smf_event_is_system_common(event))
+		return write_escaped_event_contents(event);
+
 	return track_append(event->track, event->midi_buffer, event->midi_buffer_length);
 }
 
@@ -183,7 +248,7 @@ write_event(smf_event_t *event)
 	if (ret)
 		return ret;
 
-	ret = write_event_midi_buffer(event);
+	ret = write_event_contents(event);
 	if (ret)
 		return ret;
 

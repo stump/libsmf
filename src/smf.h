@@ -100,7 +100,7 @@ extern "C" {
 #include <arpa/inet.h>
 #include <glib.h>
 
-#define SMF_VERSION "0.9"
+#define SMF_VERSION "0.10"
 
 struct smf_struct {
 	int		format;
