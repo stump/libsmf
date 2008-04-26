@@ -206,7 +206,7 @@ print_mthd(smf_t *smf)
 	else
 		off += snprintf(buf + off, sizeof(buf) - off, "; division: %d FPS, %d resolution.", smf->frames_per_second, smf->resolution);
 
-	g_debug("%s", buf);
+	g_message("%s", buf);
 
 	if (smf->format == 0 && smf->expected_number_of_tracks != 1)
 		g_warning("Warning: number of tracks is %d, but this is a single track file.", smf->expected_number_of_tracks);
@@ -272,36 +272,30 @@ is_sysex_byte(const unsigned char status)
 
 /**
  * Just like expected_message_length(), but only for System Exclusive messages.
+ * Note that value returned by this thing here is the length of SysEx "on the wire",
+ * not the number of bytes that this sysex takes in the file - in SMF format sysex
+ * contains VLQ telling how many bytes it takes, "on the wire" format does not have
+ * this.
  */
 static int
-expected_sysex_length(const unsigned char status, const unsigned char *second_byte, const int buffer_length)
+expected_sysex_length(const unsigned char status, const unsigned char *second_byte, const int buffer_length, int *consumed_bytes)
 {
-	int len;
+	int sysex_length, len;
 
 	assert(status == 0xF0);
 
-	if (buffer_length < 2) {
+	if (buffer_length < 3) {
 		g_critical("SMF error: end of buffer in expected_sysex_length().");
 		return -1;
 	}
 
-	/* Any status byte terminates the SysEx. */
-	for (len = 0; !is_status_byte(second_byte[len]); len++) {
-		if (len >= buffer_length) {
-			g_critical("SMF error: end of buffer in expected_sysex_length().");
-			return -2;
-		}
-	}
+	extract_vlq(second_byte, buffer_length, &sysex_length, &len);
 
-	if (second_byte[len] != 0xF7) {
-		g_warning("SMF warning: SysEx terminated by 0x%x instead of 0xF7.", second_byte[len]);
+	if (consumed_bytes != NULL)
+		*consumed_bytes = len;
 
-		/* "i" is the length minus starting (0xF0) status byte; terminating status byte is a part of another MIDI message. */
-		return (len + 1);
-	}
-
-	/* "i" is the length minus starting (0xF0) status byte and second byte. */
-	return (len + 2);
+	/* +1, because the length does not include status byte. */
+	return sysex_length + 1;
 }
 
 /**
@@ -314,6 +308,9 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 {
 	/* Make sure this really is a valid status byte. */
 	assert(is_status_byte(status));
+
+	/* We cannot use this routine for sysexes. */
+	assert(!is_sysex_byte(status));
 
 	/* Buffer length may be zero, for e.g. realtime messages. */
 	assert(buffer_length >= 0);
@@ -350,12 +347,14 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 			case 0xFE: /* Active Sense. */
 				return 1;
 
+#if 0
 			case 0xF0: /* System Exclusive. */
-				return expected_sysex_length(status, second_byte, buffer_length);
+				return expected_sysex_length(status, second_byte, buffer_length, NULL);
 
 			case 0xF7: /* End of SysEx. */
 				g_warning("SMF warning: status 0xF7 (End of SysEx) encountered without matching 0xF0 (Start of SysEx).");
 				return 1; /* Ignore it. */
+#endif
 
 			default:
 				g_critical("SMF error: unknown 0xFx-type status byte '0x%x'.", status);
@@ -387,7 +386,40 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 static int
 extract_sysex_event(const unsigned char *buf, const int buffer_length, smf_event_t *event, int *len, int last_status)
 {
-	return -1;
+	int status, message_length, vlq_length;
+	const unsigned char *c = buf;
+
+	status = *buf;
+
+	assert(is_sysex_byte(status));
+
+	c++;
+
+	message_length = expected_sysex_length(status, c, buffer_length - 1, &vlq_length);
+
+	if (message_length < 0)
+		return -3;
+
+	c += vlq_length;
+
+	if (vlq_length + message_length >= buffer_length) {
+		g_critical("End of buffer in extract_midi_event().");
+		return -5;
+	}
+
+	event->midi_buffer_length = message_length;
+	event->midi_buffer = malloc(event->midi_buffer_length);
+	if (event->midi_buffer == NULL) {
+		g_critical("Cannot allocate memory in extract_midi_event(): %s", strerror(errno));
+		return -4;
+	}
+
+	event->midi_buffer[0] = status;
+	memcpy(event->midi_buffer + 1, c, message_length - 1);
+
+	*len = vlq_length + message_length;
+
+	return 0;
 }
 
 /**
@@ -418,10 +450,8 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 		return -1;
 	}
 
-#if 0
 	if (is_sysex_byte(status))
 		return extract_sysex_event(buf, buffer_length, event, len, last_status);
-#endif
 
 	/* At this point, "c" points to first byte following the status byte. */
 	message_length = expected_message_length(status, c, buffer_length - (c - buf));
@@ -613,6 +643,10 @@ smf_event_length_is_valid(const smf_event_t *event)
 
 	if (event->midi_buffer_length < 1)
 		return 0;
+
+	/* We cannot use expected_message_length on sysexes. */
+	if (smf_event_is_sysex(event))
+		return 1;
 
 	if (event->midi_buffer_length != expected_message_length(event->midi_buffer[0],
 		&(event->midi_buffer[1]), event->midi_buffer_length - 1)) {
