@@ -261,6 +261,15 @@ is_status_byte(const unsigned char status)
 	return (status & 0x80);
 }
 
+static int
+is_sysex_byte(const unsigned char status)
+{
+	if (status == 0xF0)
+		return 1;
+
+	return 0;
+}
+
 /**
  * Just like expected_message_length(), but only for System Exclusive messages.
  */
@@ -375,15 +384,21 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 	}
 }
 
+static int
+extract_sysex_event(const unsigned char *buf, const int buffer_length, smf_event_t *event, int *len, int last_status)
+{
+	return -1;
+}
+
 /**
  * Puts MIDI data extracted from from "buf" into "event" and number of consumed bytes into "len".
- * In case valid status is not found, it uses "previous_status" (so called "running status").
+ * In case valid status is not found, it uses "last_status" (so called "running status").
  * Returns 0 iff everything went OK, value < 0 in case of error.
  */
 static int
-extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_t *event, int *len, smf_track_t *track)
+extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_t *event, int *len, int last_status)
 {
-	int i, status, message_length;
+	int status, message_length;
 	const unsigned char *c = buf;
 
 	assert(buffer_length > 0);
@@ -395,7 +410,7 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 
 	} else {
 		/* No, we use running status then. */
-		status = track->last_status;
+		status = last_status;
 	}
 
 	if (!is_status_byte(status)) {
@@ -403,32 +418,33 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 		return -1;
 	}
 
+#if 0
+	if (is_sysex_byte(status))
+		return extract_sysex_event(buf, buffer_length, event, len, last_status);
+#endif
+
+	/* At this point, "c" points to first byte following the status byte. */
 	message_length = expected_message_length(status, c, buffer_length - (c - buf));
 
 	if (message_length < 0)
 		return -3;
 
-	event->midi_buffer = malloc(message_length);
+	if (message_length - 1 > buffer_length - (c - buf)) {
+		g_critical("End of buffer in extract_midi_event().");
+		return -5;
+	}
+
+	event->midi_buffer_length = message_length;
+	event->midi_buffer = malloc(event->midi_buffer_length);
 	if (event->midi_buffer == NULL) {
 		g_critical("Cannot allocate memory in extract_midi_event(): %s", strerror(errno));
 		return -4;
 	}
 
 	event->midi_buffer[0] = status;
+	memcpy(event->midi_buffer + 1, c, message_length - 1);
 
-	/* Copy the rest of the MIDI event into buffer. */
-	for (i = 1; i < message_length; i++, c++) {
-		if (c >= buf + buffer_length) {
-			g_critical("End of buffer in extract_midi_event().");
-			return -5;
-		}
-
-		event->midi_buffer[i] = *c;
-	}
-
-	*len = c - buf;
-
-	event->midi_buffer_length = message_length;
+	*len = c + message_length - 1 - buf;
 
 	return 0;
 }
@@ -469,7 +485,7 @@ parse_next_event(smf_track_t *track)
 		goto error;
 
 	/* Now, extract the actual event. */
-	if (extract_midi_event(c, buffer_length, event, &len, track))
+	if (extract_midi_event(c, buffer_length, event, &len, track->last_status))
 		goto error;
 
 	c += len;
