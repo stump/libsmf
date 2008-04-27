@@ -506,6 +506,14 @@ cmd_tempo(char *notused)
 }
 
 static int
+cmd_length(char *notused)
+{
+	g_message("Length: %d pulses, %f seconds.", smf_get_length_pulses(smf), smf_get_length_seconds(smf));
+
+	return 0;
+}
+
+static int
 cmd_exit(char *notused)
 {
 	g_debug("Good bye.");
@@ -535,6 +543,7 @@ struct command_struct {
 		{"eot", cmd_eventaddeot, NULL},
 		{"eventrm", cmd_eventrm, "remove currently selected event."},
 		{"tempo", cmd_tempo, "show tempo map."},
+		{"length", cmd_length, "show length of the song."},
 		{"exit", cmd_exit, "exit to shell."},
 		{"quit", cmd_exit, NULL},
 		{"bye", cmd_exit, NULL},

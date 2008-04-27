@@ -859,6 +859,61 @@ smf_seek_to_pulses(smf_t *smf, int pulses)
 }
 
 /**
+  * \return Length of SMF, in pulses.
+  */
+int
+smf_get_length_pulses(smf_t *smf)
+{
+	int pulses = 0, i;
+
+	for (i = 1; i <= smf->number_of_tracks; i++) {
+		smf_track_t *track;
+		smf_event_t *event;
+
+	       	track = smf_get_track_by_number(smf, i);
+		assert(track);
+
+		event = smf_track_get_last_event(track);
+		/* Empty track? */
+		if (event == NULL)
+			continue;
+
+		if (event->time_pulses > pulses)
+			pulses = event->time_pulses;
+	}
+
+	return pulses;
+}
+
+/**
+  * \return Length of SMF, in seconds.
+  */
+double
+smf_get_length_seconds(smf_t *smf)
+{
+	int i;
+	double seconds = 0.0;
+
+	for (i = 1; i <= smf->number_of_tracks; i++) {
+		smf_track_t *track;
+		smf_event_t *event;
+
+	       	track = smf_get_track_by_number(smf, i);
+		assert(track);
+
+		event = smf_track_get_last_event(track);
+		/* Empty track? */
+		if (event == NULL)
+			continue;
+
+		if (event->time_seconds > seconds)
+			seconds = event->time_seconds;
+	}
+
+	return seconds;
+}
+
+/**
   * \return Version of libsmf.
   */
 const char *

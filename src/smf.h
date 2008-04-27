@@ -209,6 +209,9 @@ int smf_seek_to_seconds(smf_t *smf, double seconds);
 int smf_seek_to_pulses(smf_t *smf, int pulses);
 int smf_seek_to_event(smf_t *smf, const smf_event_t *event);
 
+int smf_get_length_pulses(smf_t *smf);
+double smf_get_length_seconds(smf_t *smf);
+
 void smf_add_track(smf_t *smf, smf_track_t *track);
 void smf_remove_track(smf_track_t *track);
 
