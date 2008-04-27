@@ -206,6 +206,7 @@ smf_event_t *smf_get_next_event(smf_t *smf);
 smf_event_t *smf_peek_next_event(smf_t *smf);
 void smf_rewind(smf_t *smf);
 int smf_seek_to_seconds(smf_t *smf, double seconds);
+int smf_seek_to_pulses(smf_t *smf, int pulses);
 int smf_seek_to_event(smf_t *smf, const smf_event_t *event);
 
 void smf_add_track(smf_t *smf, smf_track_t *track);
