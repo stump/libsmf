@@ -403,9 +403,8 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 		}
 	}
 
-	/* XXX: This may be a little slow. */
 	if (smf_event_is_tempo_change_or_time_signature(event))
-		smf_create_tempo_map_and_compute_seconds(track->smf);
+		smf_tempo_there_is_new_event(event);
 }
 
 /**
