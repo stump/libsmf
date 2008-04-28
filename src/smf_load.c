@@ -270,6 +270,15 @@ is_sysex_byte(const unsigned char status)
 	return 0;
 }
 
+static int
+is_escape_byte(const unsigned char status)
+{
+	if (status == 0xF7)
+		return 1;
+
+	return 0;
+}
+
 /**
  * Just like expected_message_length(), but only for System Exclusive messages.
  * Note that value returned by this thing here is the length of SysEx "on the wire",
@@ -298,6 +307,13 @@ expected_sysex_length(const unsigned char status, const unsigned char *second_by
 	return sysex_length + 1;
 }
 
+static int
+expected_escaped_length(const unsigned char status, const unsigned char *second_byte, const int buffer_length, int *consumed_bytes)
+{
+	/* -1, because we do not want to account for 0x7F status. */
+	return expected_sysex_length(status, second_byte, buffer_length, consumed_bytes) - 1;
+}
+
 /**
  * Returns expected length of the midi message (including the status byte), in bytes, for the given status byte.
  * The "second_byte" points to the expected second byte of the MIDI message.  "buffer_length" is the buffer
@@ -311,6 +327,9 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 
 	/* We cannot use this routine for sysexes. */
 	assert(!is_sysex_byte(status));
+
+	/* We cannot use this routine for escaped events. */
+	assert(!is_escape_byte(status));
 
 	/* Buffer length may be zero, for e.g. realtime messages. */
 	assert(buffer_length >= 0);
@@ -346,15 +365,6 @@ expected_message_length(unsigned char status, const unsigned char *second_byte, 
 			case 0xFC: /* MIDI Stop. */
 			case 0xFE: /* Active Sense. */
 				return 1;
-
-#if 0
-			case 0xF0: /* System Exclusive. */
-				return expected_sysex_length(status, second_byte, buffer_length, NULL);
-
-			case 0xF7: /* End of SysEx. */
-				g_warning("SMF warning: status 0xF7 (End of SysEx) encountered without matching 0xF0 (Start of SysEx).");
-				return 1; /* Ignore it. */
-#endif
 
 			default:
 				g_critical("SMF error: unknown 0xFx-type status byte '0x%x'.", status);
@@ -403,14 +413,14 @@ extract_sysex_event(const unsigned char *buf, const int buffer_length, smf_event
 	c += vlq_length;
 
 	if (vlq_length + message_length >= buffer_length) {
-		g_critical("End of buffer in extract_midi_event().");
+		g_critical("End of buffer in extract_sysex_event().");
 		return -5;
 	}
 
 	event->midi_buffer_length = message_length;
 	event->midi_buffer = malloc(event->midi_buffer_length);
 	if (event->midi_buffer == NULL) {
-		g_critical("Cannot allocate memory in extract_midi_event(): %s", strerror(errno));
+		g_critical("Cannot allocate memory in extract_sysex_event(): %s", strerror(errno));
 		return -4;
 	}
 
@@ -421,6 +431,54 @@ extract_sysex_event(const unsigned char *buf, const int buffer_length, smf_event
 
 	return 0;
 }
+
+static int
+extract_escaped_event(const unsigned char *buf, const int buffer_length, smf_event_t *event, int *len, int last_status)
+{
+	int status, message_length, vlq_length;
+	const unsigned char *c = buf;
+
+	status = *buf;
+
+	assert(is_escape_byte(status));
+
+	c++;
+
+	message_length = expected_escaped_length(status, c, buffer_length - 1, &vlq_length);
+
+	if (message_length < 0)
+		return -3;
+
+	c += vlq_length;
+
+	if (vlq_length + message_length >= buffer_length) {
+		g_critical("End of buffer in extract_escaped_event().");
+		return -5;
+	}
+
+	event->midi_buffer_length = message_length;
+	event->midi_buffer = malloc(event->midi_buffer_length);
+	if (event->midi_buffer == NULL) {
+		g_critical("Cannot allocate memory in extract_escaped_event(): %s", strerror(errno));
+		return -4;
+	}
+
+	memcpy(event->midi_buffer, c, message_length);
+
+	if (smf_event_is_valid(event)) {
+		g_critical("Escaped event is invalid.");
+		return -1;
+	}
+
+	if (smf_event_is_system_realtime(event) || smf_event_is_system_common(event)) {
+		g_warning("Escaped event is not system realtime nor system common.");
+	}
+
+	*len = vlq_length + message_length;
+
+	return 0;
+}
+
 
 /**
  * Puts MIDI data extracted from from "buf" into "event" and number of consumed bytes into "len".
@@ -452,6 +510,9 @@ extract_midi_event(const unsigned char *buf, const int buffer_length, smf_event_
 
 	if (is_sysex_byte(status))
 		return extract_sysex_event(buf, buffer_length, event, len, last_status);
+
+	if (is_escape_byte(status))
+		return extract_escaped_event(buf, buffer_length, event, len, last_status);
 
 	/* At this point, "c" points to first byte following the status byte. */
 	message_length = expected_message_length(status, c, buffer_length - (c - buf));
