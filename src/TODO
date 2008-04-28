@@ -1,5 +1,9 @@
 Things to do:
 
+ - Implement parsing sysexes chopped into several "packets".
+
+ - Rework removal of tempo changes.
+
  - Test tempo calculations.
 
  - Add a way to force some particular tempo during playback and ignore the following tempo changes.
