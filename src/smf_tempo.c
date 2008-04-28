@@ -222,15 +222,10 @@ smf_create_tempo_map_and_compute_seconds(smf_t *smf)
 int
 smf_tempo_there_is_new_event(smf_event_t *event)
 {
-	int song_length;
-
 	assert(event->track);
 	assert(event->track->smf);
 
-	song_length = smf_get_length_pulses(event->track->smf);
-
-	/* Are we appending this event at the end of the song? */
-	if (song_length <= event->time_pulses) {
+	if (smf_event_is_last(event)) {
 		maybe_add_to_tempo_map(event);
 		return 0;
 	}

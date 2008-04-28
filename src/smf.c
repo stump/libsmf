@@ -583,7 +583,7 @@ smf_peek_next_event_from_track(smf_track_t *track)
  * Tracks are numbered consecutively starting from one.
  */
 smf_track_t *
-smf_get_track_by_number(smf_t *smf, int track_number)
+smf_get_track_by_number(const smf_t *smf, int track_number)
 {
 	smf_track_t *track;
 
@@ -861,7 +861,7 @@ smf_seek_to_pulses(smf_t *smf, int pulses)
   * \return Length of SMF, in pulses.
   */
 int
-smf_get_length_pulses(smf_t *smf)
+smf_get_length_pulses(const smf_t *smf)
 {
 	int pulses = 0, i;
 
@@ -888,7 +888,7 @@ smf_get_length_pulses(smf_t *smf)
   * \return Length of SMF, in seconds.
   */
 double
-smf_get_length_seconds(smf_t *smf)
+smf_get_length_seconds(const smf_t *smf)
 {
 	int i;
 	double seconds = 0.0;
@@ -910,6 +910,19 @@ smf_get_length_seconds(smf_t *smf)
 	}
 
 	return seconds;
+}
+
+/**
+  * \return Nonzero, if there are no events in the SMF after this one.
+  * Note that may be more than one "last event", if they occur at the same time.
+  */
+int
+smf_event_is_last(const smf_event_t *event)
+{
+	if (smf_get_length_pulses(event->track->smf) <= event->time_pulses)
+		return 1;
+
+	return 0;
 }
 
 /**
