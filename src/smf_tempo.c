@@ -155,30 +155,6 @@ remove_tempo_at_pulses(smf_t *smf, int pulses)
 }
 
 static double
-seconds_from_pulses_old(const smf_t *smf, int pulses)
-{
-	double seconds = 0.0;
-	smf_tempo_t *tempo;
-
-	/* Go through tempos, from the last before pulses to the first, adding time. */
-	for (;;) {
-		tempo = smf_get_tempo_by_pulses(smf, pulses);
-		assert(tempo);
-		assert(tempo->time_pulses <= pulses);
-
-		seconds += (double)(pulses - tempo->time_pulses) * (tempo->microseconds_per_quarter_note / ((double)smf->ppqn * 1000000.0));
-
-		if (tempo->time_pulses == 0)
-			return seconds;
-
-		pulses = tempo->time_pulses;
-	}
-
-	/* Not reached. */
-	return -1;
-}
-
-static double
 seconds_from_pulses(const smf_t *smf, int pulses)
 {
 	double seconds;
@@ -190,8 +166,6 @@ seconds_from_pulses(const smf_t *smf, int pulses)
 
 	seconds = tempo->time_seconds + (double)(pulses - tempo->time_pulses) *
 		(tempo->microseconds_per_quarter_note / ((double)smf->ppqn * 1000000.0));
-
-	assert(fabs(seconds - seconds_from_pulses_old(smf, pulses)) < 0.00001);
 
 	return seconds;
 }
