@@ -131,12 +131,17 @@ maybe_add_to_tempo_map(smf_event_t *event)
 	return;
 }
 
+/**
+  * This is an internal function, called from smf_track_remove_event when tempo-related
+  * event being removed does not require recreation of tempo map, i.e. there are no events
+  * after that one.
+  */
 void
-remove_tempo_at_pulses(smf_t *smf, int pulses)
+remove_last_tempo_with_pulses(smf_t *smf, int pulses)
 {
 	smf_tempo_t *tempo;
 
-	/* XXX: This is a walkaround for the following problem: we have two tempo-related
+	/* XXX: This is a workaround for the following problem: we have two tempo-related
 	   events, A and B, that occur at the same time.  We remove B, then try to remove
 	   A.  However, both tempo changes got coalesced in new_tempo(), so it is impossible
 	   to remove B. */
@@ -145,7 +150,7 @@ remove_tempo_at_pulses(smf_t *smf, int pulses)
 
 	tempo = smf_get_last_tempo(smf);
 
-	/* Walkaround part two. */
+	/* Workaround part two. */
 	if (tempo->time_pulses != pulses)
 		return;
 

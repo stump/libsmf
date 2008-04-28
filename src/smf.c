@@ -465,7 +465,7 @@ smf_track_remove_event(smf_event_t *event)
 	if (smf_event_is_tempo_change_or_time_signature(event)) {
 		/* XXX: This will cause problems, when there is more than one Tempo Change event at a given time. */
 		if (was_last)
-			remove_tempo_at_pulses(event->track->smf, event->time_pulses);
+			remove_last_tempo_with_pulses(event->track->smf, event->time_pulses);
 		else
 			smf_create_tempo_map_and_compute_seconds(track->smf);
 	}
