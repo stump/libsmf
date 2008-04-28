@@ -403,8 +403,12 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 		}
 	}
 
-	if (smf_event_is_tempo_change_or_time_signature(event))
-		smf_tempo_there_is_new_event(event);
+	if (smf_event_is_tempo_change_or_time_signature(event)) {
+		if (smf_event_is_last(event))
+			maybe_add_to_tempo_map(event);
+		else
+			smf_create_tempo_map_and_compute_seconds(event->track->smf);
+	}
 }
 
 /**

@@ -90,7 +90,7 @@ add_time_signature(smf_t *smf, int pulses, int numerator, int denominator, int c
 	return 0;
 }
 
-static void
+void
 maybe_add_to_tempo_map(smf_event_t *event)
 {
 	if (!smf_event_is_metadata(event))
@@ -214,23 +214,6 @@ smf_create_tempo_map_and_compute_seconds(smf_t *smf)
 
 	/* Not reached. */
 	return -1;
-}
-
-/**
-  * This routine gets called when a new temp-related event was added to smf.
-  */
-int
-smf_tempo_there_is_new_event(smf_event_t *event)
-{
-	assert(event->track);
-	assert(event->track->smf);
-
-	if (smf_event_is_last(event)) {
-		maybe_add_to_tempo_map(event);
-		return 0;
-	}
-
-	return smf_create_tempo_map_and_compute_seconds(event->track->smf);
 }
 
 smf_tempo_t *
