@@ -82,9 +82,20 @@
  * 	}
  *
  * \endcode
+ *
+ * MIDI data (event->midi_buffer) are always in normalized form - they always begin with status byte
+ * (no running status), there are no system realtime events embedded in them etc.  Events like SysExes
+ * are in "on the wire" form, without embedded length that is used in SMF file format.  Obviously
+ * libsmf "normalizes" MIDI data during loading and "denormalizes" (adds length to SysExes, escapes
+ * System Common and System Realtime messages etc) during writing.
+ *
+ * Tempo related stuff happens automatically - for example, when you add a metaevent that
+ * is Tempo Change or Time Signature, libsmf adds that event to tempo map.  If you remove
+ * Tempo Change event that is in the middle of the song, the rest of events will have their
+ * event->time_seconds recomputed before smf_track_remove_event function returns.
  * 	
  * Note that you always have to first add the track to smf, and then add events to the track.
- * Otherwise you will trip asserts.  Also, try to add events at the end of the track and remove
+ * Doing it the other way around will trip asserts.  Also, try to add events at the end of the track and remove
  * them from the end of the track, that's much more efficient.
  * 
  */
