@@ -367,13 +367,13 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 		track->next_event_number = 1;
 	}
 
-	if (track->number_of_events > 0)
-		last_pulses = smf_track_get_last_event(track)->time_pulses;
-
 	track->number_of_events++;
 
 	/* Are we just appending element at the end of the track? */
 	if (last_pulses <= event->time_pulses) {
+		if (track->number_of_events > 0)
+			last_pulses = smf_track_get_last_event(track)->time_pulses;
+
 		event->delta_time_pulses = event->time_pulses - last_pulses;
 		assert(event->delta_time_pulses >= 0);
 		g_ptr_array_add(track->events_array, event);
