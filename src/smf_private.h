@@ -19,6 +19,7 @@ void smf_track_add_event(smf_track_t *track, smf_event_t *event);
 int smf_init_tempo(smf_t *smf);
 int smf_create_tempo_map_and_compute_seconds(smf_t *smf);
 void maybe_add_to_tempo_map(smf_event_t *event);
+void remove_tempo_at_pulses(smf_t *smf, int pulses);
 int smf_event_is_tempo_change_or_time_signature(const smf_event_t *event);
 int smf_event_length_is_valid(const smf_event_t *event);
 int smf_event_is_sysex(const smf_event_t *event);

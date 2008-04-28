@@ -131,6 +131,29 @@ maybe_add_to_tempo_map(smf_event_t *event)
 	return;
 }
 
+void
+remove_tempo_at_pulses(smf_t *smf, int pulses)
+{
+	smf_tempo_t *tempo;
+
+	/* XXX: This is a walkaround for the following problem: we have two tempo-related
+	   events, A and B, that occur at the same time.  We remove B, then try to remove
+	   A.  However, both tempo changes got coalesced in new_tempo(), so it is impossible
+	   to remove B. */
+	if (smf->tempo_array->len == 0)
+		return;
+
+	tempo = smf_get_last_tempo(smf);
+
+	/* Walkaround part two. */
+	if (tempo->time_pulses != pulses)
+		return;
+
+	free(tempo);
+
+	g_ptr_array_remove_index(smf->tempo_array, smf->tempo_array->len - 1);
+}
+
 static double
 seconds_from_pulses_old(const smf_t *smf, int pulses)
 {

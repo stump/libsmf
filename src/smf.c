@@ -367,13 +367,13 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 		track->next_event_number = 1;
 	}
 
+	if (track->number_of_events > 0)
+		last_pulses = smf_track_get_last_event(track)->time_pulses;
+
 	track->number_of_events++;
 
 	/* Are we just appending element at the end of the track? */
 	if (last_pulses <= event->time_pulses) {
-		if (track->number_of_events > 0)
-			last_pulses = smf_track_get_last_event(track)->time_pulses;
-
 		event->delta_time_pulses = event->time_pulses - last_pulses;
 		assert(event->delta_time_pulses >= 0);
 		g_ptr_array_add(track->events_array, event);
@@ -436,12 +436,15 @@ smf_track_add_eot(smf_track_t *track)
 void
 smf_track_remove_event(smf_event_t *event)
 {
-	int i;
+	int i, was_last;
 	smf_event_t *tmp;
 	smf_track_t *track;
 
 	assert(event->track != NULL);
+	assert(event->track->smf != NULL);
+
 	track = event->track;
+	was_last = smf_event_is_last(event);
 
 	/* Adjust ->delta_time_pulses of the next event. */
 	if (event->event_number < track->number_of_events) {
@@ -459,15 +462,19 @@ smf_track_remove_event(smf_event_t *event)
 		tmp->event_number = i;
 	}
 
+	if (smf_event_is_tempo_change_or_time_signature(event)) {
+		/* XXX: This will cause problems, when there is more than one Tempo Change event at a given time. */
+		if (was_last)
+			remove_tempo_at_pulses(event->track->smf, event->time_pulses);
+		else
+			smf_create_tempo_map_and_compute_seconds(track->smf);
+	}
+
 	event->track = NULL;
 	event->event_number = -1;
 	event->delta_time_pulses = -1;
 	event->time_pulses = -1;
 	event->time_seconds = -1.0;
-
-	/* XXX: This may be a little slow. */
-	if (smf_event_is_tempo_change_or_time_signature(event))
-		smf_create_tempo_map_and_compute_seconds(track->smf);
 }
 
 /**
