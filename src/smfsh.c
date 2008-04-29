@@ -164,7 +164,6 @@ cmd_format(char *new_format)
 	return 0;
 }
 
-
 static int
 cmd_tracks(char *notused)
 {
@@ -174,6 +173,40 @@ cmd_tracks(char *notused)
 		g_message("There are no tracks.");
 
 	return 0;
+}
+
+static int
+parse_track_number(const char *arg)
+{
+	int num;
+	char *end;
+
+	if (arg == NULL) {
+		if (selected_track == NULL) {
+			g_message("No track currently selected and no track number given.");
+			return -1;
+		} else {
+			return selected_track->track_number;
+		}
+	}
+
+	num = strtol(arg, &end, 10);
+	if (end - arg != strlen(arg)) {
+		g_critical("Invalid track number, garbage characters after the number.");
+		return -1;
+	}
+
+	if (num < 1 || num > smf->number_of_tracks) {
+		if (smf->number_of_tracks > 0) {
+			g_critical("Invalid track number specified; valid choices are 1 - %d.", smf->number_of_tracks);
+		} else {
+			g_critical("There are no tracks.");
+		}
+
+		return -1;
+	}
+
+	return num;
 }
 
 static int
@@ -193,11 +226,9 @@ cmd_track(char *arg)
 			return -1;
 		}
 
-		num = atoi(arg);
-		if (num < 1 || num > smf->number_of_tracks) {
-			g_critical("Invalid track number specified; valid choices are 1 - %d.", smf->number_of_tracks);
-			return -2;
-		}
+		num = parse_track_number(arg);
+		if (num < 0)
+			return -1;
 
 		selected_track = smf_get_track_by_number(smf, num);
 		if (selected_track == NULL) {
@@ -233,16 +264,21 @@ cmd_trackadd(char *notused)
 }
 
 static int
-cmd_trackrm(char *notused)
+cmd_trackrm(char *arg)
 {
-	if (selected_track == NULL) {
-		g_critical("No track selected - please use 'track [number]' command first.");
+	int num = parse_track_number(arg);
+
+	if (num < 0)
 		return -1;
+
+	if (selected_track != NULL && num == selected_track->track_number) {
+		selected_track = NULL;
+		selected_event = NULL;
 	}
 
-	selected_event = NULL;
-	smf_track_delete(selected_track);
-	selected_track = NULL;
+	smf_track_delete(smf_get_track_by_number(smf, num));
+
+	g_message("Track #%d removed.", num);
 
 	return 0;
 }
@@ -307,6 +343,45 @@ cmd_events(char *notused)
 }
 
 static int
+parse_event_number(const char *arg)
+{
+	int num;
+	char *end;
+
+	if (selected_track == NULL) {
+		g_critical("You need to select track first (using 'track <number>').");
+		return -1;
+	}
+
+	if (arg == NULL) {
+		if (selected_event == NULL) {
+			g_message("No event currently selected and no event number given.");
+			return -1;
+		} else {
+			return selected_event->event_number;
+		}
+	}
+
+	num = strtol(arg, &end, 10);
+	if (end - arg != strlen(arg)) {
+		g_critical("Invalid event number, garbage characters after the number.");
+		return -1;
+	}
+
+	if (num < 1 || num > selected_track->number_of_events) {
+		if (selected_track->number_of_events > 0) {
+			g_critical("Invalid event number specified; valid choices are 1 - %d.", selected_track->number_of_events);
+		} else {
+			g_critical("There are no events in currently selected track.");
+		}
+
+		return -1;
+	}
+
+	return num;
+}
+
+static int
 cmd_event(char *arg)
 {
 	int num;
@@ -319,11 +394,9 @@ cmd_event(char *arg)
 			show_event(selected_event);
 		}
 	} else {
-		num = atoi(arg);
-		if (num < 1 || num > selected_track->number_of_events) {
-			g_critical("Invalid event number specified; valid choices are 1 - %d.", selected_track->number_of_events);
+		num = parse_event_number(arg);
+		if (num < 0)
 			return -1;
-		}
 
 		selected_event = smf_track_get_event_by_number(selected_track, num);
 		if (selected_event == NULL) {
@@ -470,17 +543,19 @@ cmd_eventaddeot(char *notused)
 }
 
 static int
-cmd_eventrm(char *notused)
+cmd_eventrm(char *number)
 {
-	if (selected_event == NULL) {
-		g_critical("No event selected - please use 'event [number]' command first.");
+	int num = parse_event_number(number);
+
+	if (num < 0)
 		return -1;
-	}
 
-	smf_event_delete(selected_event);
-	selected_event = NULL;
+	if (selected_event != NULL && num == selected_event->event_number)
+		selected_event = NULL;
 
-	g_message("Event removed.");
+	smf_event_delete(smf_track_get_event_by_number(selected_track, num));
+
+	g_message("Event #%d removed.", num);
 
 	return 0;
 }
@@ -542,6 +617,7 @@ struct command_struct {
 		{"eventaddeot", cmd_eventaddeot, "add an End Of Track event."},
 		{"eot", cmd_eventaddeot, NULL},
 		{"eventrm", cmd_eventrm, "remove currently selected event."},
+		{"rm", cmd_eventrm, NULL},
 		{"tempo", cmd_tempo, "show tempo map."},
 		{"length", cmd_length, "show length of the song."},
 		{"exit", cmd_exit, "exit to shell."},
