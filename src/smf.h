@@ -69,7 +69,7 @@
  * 				return;
  * 			}
  * 
- * 			smf_track_add_event_seconds(track, event, seconds since start of song);
+ * 			smf_track_add_event_seconds(track, event, seconds since start of the song);
  * 		}
  * 	}
  * 
