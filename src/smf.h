@@ -71,8 +71,6 @@
  * 
  * 			smf_track_add_event_seconds(track, event, seconds since start of song);
  * 		}
- * 
- * 		smf_track_add_eot(track);
  * 	}
  * 
  * 	ret = smf_save(smf, file_name);
@@ -82,6 +80,10 @@
  * 	}
  *
  * \endcode
+ *
+ * All the libsmf functions have prefix "smf_".  Library does not use any global variables and is thread-safe,
+ * as long as you don't try to work on the same SMF (smf_t and it's descendant tracks and events) from several
+ * threads at once without protecting it with mutex.
  *
  * MIDI data (event->midi_buffer) are always in normalized form - they always begin with status byte
  * (no running status), there are no system realtime events embedded in them etc.  Events like SysExes
@@ -238,7 +240,9 @@ smf_event_t *smf_track_get_last_event(const smf_track_t *track);
 void smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int pulses);
 void smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses);
 void smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double seconds);
-int smf_track_add_eot(smf_track_t *track);
+int smf_track_add_eot_delta_pulses(smf_track_t *track, int delta);
+int smf_track_add_eot_pulses(smf_track_t *track, int pulses);
+int smf_track_add_eot_seconds(smf_track_t *track, double seconds);
 void smf_track_remove_event(smf_event_t *event);
 
 /* Routines for manipulating smf_event_t. */

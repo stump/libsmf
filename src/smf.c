@@ -412,12 +412,16 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 }
 
 /**
- * Append End Of Track metaevent at the end of the track.  This is mandatory;
- * each track must end with EOT.
+ * Add End Of Track metaevent.  Using it is optional, libsmf will automatically
+ * add it to the tracks during smf_save.  Note that the functions below do not
+ * check for adding EOT in the middle of the track or adding it several times;
+ * if you try to do that, these functions will not fail.  What will fail is smf_save,
+ * which verifies that kind of things.
+ *
  * \return 0 if everything went ok, nonzero otherwise.
  */
 int
-smf_track_add_eot(smf_track_t *track)
+smf_track_add_eot_delta_pulses(smf_track_t *track, int delta)
 {
 	smf_event_t *event;
 
@@ -425,7 +429,35 @@ smf_track_add_eot(smf_track_t *track)
 	if (event == NULL)
 		return -1;
 
-	smf_track_add_event_delta_pulses(track, event, 0);
+	smf_track_add_event_delta_pulses(track, event, delta);
+
+	return 0;
+}
+
+int
+smf_track_add_eot_pulses(smf_track_t *track, int pulses)
+{
+	smf_event_t *event;
+
+	event = smf_event_new_from_bytes(0xFF, 0x2F, 0x00);
+	if (event == NULL)
+		return -1;
+
+	smf_track_add_event_pulses(track, event, pulses);
+
+	return 0;
+}
+
+int
+smf_track_add_eot_seconds(smf_track_t *track, double seconds)
+{
+	smf_event_t *event;
+
+	event = smf_event_new_from_bytes(0xFF, 0x2F, 0x00);
+	if (event == NULL)
+		return -1;
+
+	smf_track_add_event_seconds(track, event, seconds);
 
 	return 0;
 }

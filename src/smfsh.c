@@ -525,16 +525,30 @@ cmd_eventadd(char *str)
 }
 
 static int
-cmd_eventaddeot(char *notused)
+cmd_eventaddeot(char *time)
 {
+	double seconds;
+	char *end;
+
 	if (selected_track == NULL) {
 		g_critical("Please select a track first.");
 		return -1;
 	}
 
-	if (smf_track_add_eot(selected_track)) {
-		g_critical("smf_track_add_eot() failed.");
+	if (time == NULL) {
+		g_critical("Please specify the time, in seconds.");
 		return -2;
+	}
+
+	seconds = strtod(time, &end);
+	if (end - time != strlen(time)) {
+		g_critical("Time is supposed to be a number, without trailing characters.");
+		return -3;
+	}
+
+	if (smf_track_add_eot_seconds(selected_track, seconds)) {
+		g_critical("smf_track_add_eot() failed.");
+		return -4;
 	}
 
 	g_message("Event created.");

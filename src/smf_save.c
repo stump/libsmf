@@ -394,12 +394,14 @@ smf_event_is_eot(smf_event_t *event)
 }
 
 /**
- * \return 0, if SMF is invalid.
+ * Check if SMF is valid and add missing EOT events.
+ *
+ * \return 0, if SMF is valid.
  */
 static int
-smf_is_invalid(smf_t *smf)
+smf_validate(smf_t *smf)
 {
-	int i;
+	int trackno, eventno, eot_found;
 	smf_track_t *track;
 	smf_event_t *event;
 
@@ -423,22 +425,33 @@ smf_is_invalid(smf_t *smf)
 		return -4;
 	}
 
-	for (i = 1; i <= smf->number_of_tracks; i++) {
-		track = smf_get_track_by_number(smf, i);
+	for (trackno = 1; trackno <= smf->number_of_tracks; trackno++) {
+		track = smf_get_track_by_number(smf, trackno);
 		assert(track);
 
-		if (track->number_of_events < 1) {
-			g_critical("SMF error: track #%d is empty.", track->track_number);
-			return -5;
+		eot_found = 0;
+
+		for (eventno = 1; eventno <= track->number_of_events; eventno++) {
+			event = smf_track_get_event_by_number(track, eventno);
+			assert(event);
+
+			if (!smf_event_is_valid(event)) {
+				g_critical("Event #%d on track #%d is invalid.", eventno, trackno);
+				return -5;
+			}
+
+			if (smf_event_is_eot(event)) {
+				if (eot_found) {
+					g_critical("Duplicate End Of Track event on track #%d.", trackno);
+					return -6;
+				}
+
+				eot_found = 1;
+			}
 		}
 
-		event = smf_track_get_last_event(track);
-		assert(event);
-
-		if (!smf_event_is_eot(event)) {
-			g_critical("SMF error: track #%d does not end with End Of Track event.", track->track_number);
-			return -6;
-		}
+		if (!eot_found)
+			smf_track_add_eot_delta_pulses(track, 0);
 	}
 
 	return 0;
@@ -460,7 +473,7 @@ smf_save(smf_t *smf, const char *file_name)
 
 	assert(pointers_are_clear(smf));
 
-	if (smf_is_invalid(smf))
+	if (smf_validate(smf))
 		return -1;
 
 	if (write_mthd_header(smf))
