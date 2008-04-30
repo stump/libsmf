@@ -81,25 +81,52 @@
  *
  * \endcode
  *
- * All the libsmf functions have prefix "smf_".  Library does not use any global variables and is thread-safe,
- * as long as you don't try to work on the same SMF (smf_t and it's descendant tracks and events) from several
- * threads at once without protecting it with mutex.
+ * There are two basic ways of getting MIDI data out of smf - sequential or by track/event number.  You may
+ * mix them if you need to.  First one is used in the example above - seek to the point from which you want
+ * the playback to start (using smf_seek_to_seconds, for example) and then do smf_get_next_event in loop,
+ * until it returns NULL.  After smf_load smf is rewound to the start of the song.
  *
+ * Getting events by number works like this:
+ *
+ * \code
+ *
+ * smf_track_t *track = smf_get_track_by_number(smf, track_number);
+ * smf_event_t *event = smf_track_get_event_by_number(track, event_number);
+ *
+ * \endcode
+ *
+ * Tracks and events are numbered consecutively, starting from one.  If you remove a track or event,
+ * the rest of tracks/events will be renumbered.  To get number of event in its track, use event->event_number.
+ * To get the number of track in its smf, use track->track_number.  To get the number of events in the track,
+ * use track->number_of_events.  To get the number of tracks in the smf, use smf->number_of_tracks.
+ *
+ * Each event carries three time values - event->time_seconds, which is seconds since the start of the song,
+ * event->time_pulses, which is PPQN clocks since the start of the song, and event->delta_pulses, which is PPQN clocks
+ * since the previous event in that track.  These values are invalid if the event is not attached to the track.
+ * If event is attached, all three values are valid.  Time of the event is specified when adding the event
+ * (smf_track_add_event_seconds/smf_track_add_event_pulses/smf_track_add_event_delta_pulses); the remaining
+ * two values are computed from that.
+ *
+ * Tempo related stuff happens automatically - when you add a metaevent that
+ * is Tempo Change or Time Signature, libsmf adds that event to the tempo map.  If you remove
+ * Tempo Change event that is in the middle of the song, the rest of the events will have their
+ * event->time_seconds recomputed from event->time_pulses before smf_track_remove_event function returns.
+ * Adding Tempo Change in the middle of the song works in a similar way.
+ * 	
  * MIDI data (event->midi_buffer) are always in normalized form - they always begin with status byte
  * (no running status), there are no system realtime events embedded in them etc.  Events like SysExes
  * are in "on the wire" form, without embedded length that is used in SMF file format.  Obviously
- * libsmf "normalizes" MIDI data during loading and "denormalizes" (adds length to SysExes, escapes
+ * libsmf "normalizes" MIDI data during loading and "denormalizes" (adding length to SysExes, escaping
  * System Common and System Realtime messages etc) during writing.
  *
- * Tempo related stuff happens automatically - for example, when you add a metaevent that
- * is Tempo Change or Time Signature, libsmf adds that event to tempo map.  If you remove
- * Tempo Change event that is in the middle of the song, the rest of events will have their
- * event->time_seconds recomputed before smf_track_remove_event function returns.
- * 	
  * Note that you always have to first add the track to smf, and then add events to the track.
  * Doing it the other way around will trip asserts.  Also, try to add events at the end of the track and remove
  * them from the end of the track, that's much more efficient.
  * 
+ * All the libsmf functions have prefix "smf_".  Library does not use any global variables and is thread-safe,
+ * as long as you don't try to work on the same SMF (smf_t and it's descendant tracks and events) from several
+ * threads at once without protecting it with mutex.
+ *
  */
 
 #ifndef SMF_H
