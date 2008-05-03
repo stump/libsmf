@@ -806,7 +806,9 @@ smf_seek_to_event(smf_t *smf, const smf_event_t *target)
 
 	smf_rewind(smf);
 
+#if 0
 	g_debug("Seeking to event %d, track %d.", target->event_number, target->track->track_number);
+#endif
 
 	for (;;) {
 		event = smf_peek_next_event(smf);
@@ -845,7 +847,9 @@ smf_seek_to_seconds(smf_t *smf, double seconds)
 
 	smf_rewind(smf);
 
+#if 0
 	g_debug("Seeking to %f seconds.", seconds);
+#endif
 
 	for (;;) {
 		event = smf_peek_next_event(smf);
@@ -879,7 +883,9 @@ smf_seek_to_pulses(smf_t *smf, int pulses)
 
 	smf_rewind(smf);
 
+#if 0
 	g_debug("Seeking to %d pulses.", pulses);
+#endif
 
 	for (;;) {
 		event = smf_peek_next_event(smf);
