@@ -125,7 +125,8 @@
  * 
  * All the libsmf functions have prefix "smf_".  Library does not use any global variables and is thread-safe,
  * as long as you don't try to work on the same SMF (smf_t and it's descendant tracks and events) from several
- * threads at once without protecting it with mutex.
+ * threads at once without protecting it with mutex.  Library depends on glib and nothing else.  License is
+ * Public Domain.
  *
  */
 
