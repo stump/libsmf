@@ -413,7 +413,7 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 
 /**
  * Add End Of Track metaevent.  Using it is optional, libsmf will automatically
- * add it to the tracks during smf_save.  Note that the functions below do not
+ * add EOT to the tracks during smf_save, with delta_pulses 0.  Note that the functions below do not
  * check for adding EOT in the middle of the track or adding it several times;
  * if you try to do that, these functions will not fail.  What will fail is smf_save,
  * which verifies that kind of things.
