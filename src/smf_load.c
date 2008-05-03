@@ -171,49 +171,6 @@ parse_mthd_chunk(smf_t *smf)
 }
 
 /**
- * Prints out one-line summary of data extracted from MThd header by parse_mthd_chunk().
- */
-static void
-print_mthd(smf_t *smf)
-{
-	int off = 0;
-	char buf[256];
-
-	off += snprintf(buf + off, sizeof(buf) - off, "SMF header contents: format: %d ", smf->format);
-
-	switch (smf->format) {
-		case 0:
-			off += snprintf(buf + off, sizeof(buf) - off, "(single track)");
-			break;
-
-		case 1:
-			off += snprintf(buf + off, sizeof(buf) - off, "(several simultaneous tracks)");
-			break;
-
-		case 2:
-			off += snprintf(buf + off, sizeof(buf) - off, "(several independent tracks)");
-			break;
-
-		default:
-			off += snprintf(buf + off, sizeof(buf) - off, "(INVALID FORMAT)");
-			break;
-	}
-
-	off += snprintf(buf + off, sizeof(buf) - off, "; number of tracks: %d", smf->expected_number_of_tracks);
-
-	if (smf->ppqn != 0)
-		off += snprintf(buf + off, sizeof(buf) - off, "; division: %d PPQN.", smf->ppqn);
-	else
-		off += snprintf(buf + off, sizeof(buf) - off, "; division: %d FPS, %d resolution.", smf->frames_per_second, smf->resolution);
-
-	g_message("%s", buf);
-
-	if (smf->format == 0 && smf->expected_number_of_tracks != 1)
-		g_warning("Warning: number of tracks is %d, but this is a single track file.", smf->expected_number_of_tracks);
-
-}
-
-/**
  * Interprets Variable Length Quantity pointed at by "buf" and puts its value into "value" and number
  * of bytes consumed into "len", making sure it does not read past "buf" + "buffer_length".
  * Explanation of Variable Length Quantities is here: http://www.borg.com/~jglatt/tech/midifile/vari.htm
@@ -845,8 +802,6 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 
 	if (parse_mthd_chunk(smf))
 		return NULL;
-
-	print_mthd(smf);
 
 	for (i = 1; i <= smf->expected_number_of_tracks; i++) {
 		smf_track_t *track = smf_track_new();

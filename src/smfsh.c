@@ -65,6 +65,7 @@ cmd_load(char *file_name)
 	}
 
 	g_message("File '%s' loaded.", file_name);
+	g_message("%s.", smf_decode(smf));
 
 	cmd_track("1");
 

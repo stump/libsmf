@@ -241,6 +241,8 @@ void smf_delete(smf_t *smf);
 int smf_set_format(smf_t *smf, int format);
 int smf_set_ppqn(smf_t *smf, int format);
 
+char *smf_decode(const smf_t *smf);
+
 smf_track_t *smf_get_track_by_number(const smf_t *smf, int track_number);
 smf_event_t *smf_get_next_event(smf_t *smf);
 smf_event_t *smf_peek_next_event(smf_t *smf);

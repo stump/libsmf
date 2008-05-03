@@ -449,6 +449,8 @@ note_from_int(char *buf, int note_number)
 
 /**
  * \return Textual representation of the event given, or NULL, if event is unknown.
+ * Returned string looks like this:
+ * Note On, channel 0, note F#3, velocity 0
  */
 char *
 smf_event_decode(const smf_event_t *event)
@@ -523,4 +525,50 @@ smf_event_decode(const smf_event_t *event)
 	return buf;
 }
 
+/**
+ * \return Textual representation of the data extracted from MThd header, or NULL, if something goes wrong.
+ * Returned string looks like this:
+ * format: 1 (several simultaneous tracks); number of tracks: 4; division: 192 PPQN.
+ */
+char *
+smf_decode(const smf_t *smf)
+{
+	int off = 0;
+	char *buf;
+
+	buf = malloc(BUFFER_SIZE);
+	if (buf == NULL) {
+		g_critical("smf_event_decode: malloc failed.");
+		return NULL;
+	}
+
+	off += snprintf(buf + off, BUFFER_SIZE - off, "format: %d ", smf->format);
+
+	switch (smf->format) {
+		case 0:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "(single track)");
+			break;
+
+		case 1:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "(several simultaneous tracks)");
+			break;
+
+		case 2:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "(several independent tracks)");
+			break;
+
+		default:
+			off += snprintf(buf + off, BUFFER_SIZE - off, "(INVALID FORMAT)");
+			break;
+	}
+
+	off += snprintf(buf + off, BUFFER_SIZE - off, "; number of tracks: %d", smf->number_of_tracks);
+
+	if (smf->ppqn != 0)
+		off += snprintf(buf + off, BUFFER_SIZE - off, "; division: %d PPQN", smf->ppqn);
+	else
+		off += snprintf(buf + off, BUFFER_SIZE - off, "; division: %d FPS, %d resolution", smf->frames_per_second, smf->resolution);
+
+	return buf;
+}
 
