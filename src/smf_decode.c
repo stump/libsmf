@@ -106,7 +106,7 @@ smf_event_decode_textual(const smf_event_t *event, const char *name)
 static char *
 smf_event_decode_metadata(const smf_event_t *event)
 {
-	int off = 0;
+	int off = 0, mspqn;
 	char *buf;
 
 	assert(smf_event_is_metadata(event));
@@ -183,8 +183,10 @@ smf_event_decode_metadata(const smf_event_t *event)
 				goto error;
 			}
 
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Tempo: %d microseconds per quarter note",
-				(event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5]);
+			mspqn = (event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
+
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Tempo: %d microseconds per quarter note, %f BPM",
+				mspqn, 60000000.0 / (double)mspqn);
 			break;
 
 		case 0x54:
