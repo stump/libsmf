@@ -366,11 +366,34 @@ events_array_compare_function(gconstpointer aa, gconstpointer bb)
 	return 0;
 }
 
+/*
+ * An assumption here is that if there is an EOT event, it will be at the end of the track.
+ */
+static void
+remove_eot_if_before_pulses(smf_track_t *track, int pulses)
+{
+	smf_event_t *event;
+
+	event = smf_track_get_last_event(track);
+
+	if (event == NULL)
+		return;
+
+	if (!smf_event_is_eot(event))
+		return;
+
+	if (event->time_pulses > pulses)
+		return;
+
+	smf_track_remove_event(event);
+}
+
 /**
  * Adds the event to the track and computes ->delta_pulses.  Note that it is faster
  * to append events to the end of the track than to insert them in the middle.
  * Usually you want to use smf_track_add_event_seconds or smf_track_add_event_pulses
  * instead of this one.  Event needs to have ->time_pulses and ->time_seconds already set.
+ * If you try to add event after an EOT, EOT event will be automatically deleted.
  */
 void
 smf_track_add_event(smf_track_t *track, smf_event_t *event)
@@ -383,6 +406,8 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 	assert(event->delta_time_pulses == -1);
 	assert(event->time_pulses >= 0);
 	assert(event->time_seconds >= 0.0);
+
+	remove_eot_if_before_pulses(track, event->time_pulses);
 
 	event->track = track;
 	event->track_number = track->track_number;
@@ -439,7 +464,9 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 /**
  * Add End Of Track metaevent.  Using it is optional, libsmf will automatically
  * add EOT to the tracks during smf_save, with delta_pulses 0.  If you try to add EOT
- * in the middle of the track or add it several times, nonzero will be returned.
+ * in the middle of the track, it will fail and nonzero value will be returned.
+ * If you try to add EOT after another EOT event, it will be added, but the existing
+ * EOT event will be removed.
  *
  * \return 0 if everything went ok, nonzero otherwise.
  */
@@ -464,9 +491,6 @@ smf_track_add_eot_pulses(smf_track_t *track, int pulses)
 
 	last_event = smf_track_get_last_event(track);
 	if (last_event != NULL) {
-		if (smf_event_is_eot(last_event))
-			return -1;
-
 		if (last_event->time_pulses > pulses)
 			return -2;
 	}
@@ -487,9 +511,6 @@ smf_track_add_eot_seconds(smf_track_t *track, double seconds)
 
 	last_event = smf_track_get_last_event(track);
 	if (last_event != NULL) {
-		if (smf_event_is_eot(last_event))
-			return -1;
-
 		if (last_event->time_seconds > seconds)
 			return -2;
 	}
@@ -528,6 +549,9 @@ smf_track_remove_event(smf_event_t *event)
 
 	track->number_of_events--;
 	g_ptr_array_remove(track->events_array, event);
+
+	if (track->number_of_events == 0)
+		track->next_event_number = -1;
 
 	/* Renumber the rest of the events, so they are consecutively numbered. */
 	for (i = event->event_number; i <= track->number_of_events; i++) {
