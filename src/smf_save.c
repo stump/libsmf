@@ -407,7 +407,7 @@ pointers_are_clear(smf_t *smf)
  * \return Nonzero, if event is End Of Track.
  */
 int
-smf_event_is_eot(smf_event_t *event)
+smf_event_is_eot(const smf_event_t *event)
 {
 	if (event->midi_buffer_length != 3)
 		return 0;

@@ -438,10 +438,8 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 
 /**
  * Add End Of Track metaevent.  Using it is optional, libsmf will automatically
- * add EOT to the tracks during smf_save, with delta_pulses 0.  Note that the functions below do not
- * check for adding EOT in the middle of the track or adding it several times;
- * if you try to do that, these functions will not fail.  What will fail is smf_save,
- * which verifies that kind of things.
+ * add EOT to the tracks during smf_save, with delta_pulses 0.  If you try to add EOT
+ * in the middle of the track or add it several times, nonzero will be returned.
  *
  * \return 0 if everything went ok, nonzero otherwise.
  */
@@ -462,11 +460,20 @@ smf_track_add_eot_delta_pulses(smf_track_t *track, int delta)
 int
 smf_track_add_eot_pulses(smf_track_t *track, int pulses)
 {
-	smf_event_t *event;
+	smf_event_t *event, *last_event;
+
+	last_event = smf_track_get_last_event(track);
+	if (last_event != NULL) {
+		if (smf_event_is_eot(last_event))
+			return -1;
+
+		if (last_event->time_pulses > pulses)
+			return -2;
+	}
 
 	event = smf_event_new_from_bytes(0xFF, 0x2F, 0x00);
 	if (event == NULL)
-		return -1;
+		return -3;
 
 	smf_track_add_event_pulses(track, event, pulses);
 
@@ -476,7 +483,16 @@ smf_track_add_eot_pulses(smf_track_t *track, int pulses)
 int
 smf_track_add_eot_seconds(smf_track_t *track, double seconds)
 {
-	smf_event_t *event;
+	smf_event_t *event, *last_event;
+
+	last_event = smf_track_get_last_event(track);
+	if (last_event != NULL) {
+		if (smf_event_is_eot(last_event))
+			return -1;
+
+		if (last_event->time_seconds > seconds)
+			return -2;
+	}
 
 	event = smf_event_new_from_bytes(0xFF, 0x2F, 0x00);
 	if (event == NULL)
