@@ -42,7 +42,7 @@
  * code may modify is event->midi_buffer and event->midi_buffer_length.  Do not modify
  * other fields, _ever_.  You may read them, though.
  * 
- * Say you want to load a SMF (.mid) file and play it back somehow.  This is (roughly)
+ * Say you want to load a Standard MIDI File (.mid) file and play it back somehow.  This is (roughly)
  * how you do this:
  * 
  * \code
@@ -124,6 +124,13 @@
  * the rest of tracks/events will be renumbered.  To get number of event in its track, use event->event_number.
  * To get the number of track in its smf, use track->track_number.  To get the number of events in the track,
  * use track->number_of_events.  To get the number of tracks in the smf, use smf->number_of_tracks.
+ *
+ * In SMF File Format, each track has to end with End Of Track metaevent.  If you load SMF file using smf_load,
+ * that will be the case.  If you want to create or edit an SMF, you don't need to worry about EOT events,
+ * libsmf automatically takes care of them for you.  If you try to save an SMF with tracks that do not end
+ * with EOTs, smf_save will append them.  If you try to add event that happens after EOT metaevent, libsmf
+ * will remove the EOT.  If you want to add EOT automatically, you can, of course, using smf_track_add_eot_seconds
+ * or smf_track_add_eot_pulses.
  *
  * Each event carries three time values - event->time_seconds, which is seconds since the start of the song,
  * event->time_pulses, which is PPQN clocks since the start of the song, and event->delta_pulses, which is PPQN clocks

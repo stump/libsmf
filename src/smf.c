@@ -632,6 +632,10 @@ smf_set_ppqn(smf_t *smf, int ppqn)
 
 /**
   * Returns next event from the track given and advances next event counter.
+  * Do not depend on End Of Track event being the last event on the track - it
+  * is possible that the track will not end with EOT if you haven't added it
+  * yet.  EOTs are added automatically during smf_save().
+  *
   * \return Event or NULL, if there are no more events left in this track.
   */
 smf_event_t *
