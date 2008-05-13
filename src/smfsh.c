@@ -631,6 +631,14 @@ cmd_length(char *notused)
 }
 
 static int
+cmd_version(char *notused)
+{
+	g_message("libsmf version %s.", smf_get_version());
+
+	return 0;
+}
+
+static int
 cmd_exit(char *notused)
 {
 	g_debug("Good bye.");
@@ -662,6 +670,7 @@ struct command_struct {
 		{"rm", cmd_eventrm, NULL},
 		{"tempo", cmd_tempo, "show tempo map."},
 		{"length", cmd_length, "show length of the song."},
+		{"version", cmd_version, "show libsmf version."},
 		{"exit", cmd_exit, "exit to shell."},
 		{"quit", cmd_exit, NULL},
 		{"bye", cmd_exit, NULL},
