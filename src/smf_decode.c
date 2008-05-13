@@ -36,6 +36,7 @@
 #include <math.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <sys/stdint.h>
 #include "smf.h"
 #include "smf_private.h"
 
@@ -131,8 +132,14 @@ smf_event_decode_textual(const smf_event_t *event, const char *name)
 static char *
 smf_event_decode_metadata(const smf_event_t *event)
 {
-	int off = 0, mspqn;
+	int off = 0, mspqn, flats, isminor;
 	char *buf;
+
+	static const char *const major_keys[] = {"Fb", "Cb", "Gb", "Db", "Ab",
+		"Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "F#", "C#", "G#"};
+
+	static const char *const minor_keys[] = {"Dbm", "Abm", "Ebm", "Bbm", "Fm",
+		"Cm", "Gm", "Dm", "Am", "Em", "Bm", "F#m", "C#m", "G#m", "D#m", "A#m", "E#m"};
 
 	assert(smf_event_is_metadata(event));
 
@@ -236,15 +243,30 @@ smf_event_decode_metadata(const smf_event_t *event)
 				goto error;
 			}
 
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Key Signature, %d", abs(event->midi_buffer[3]));
-			if (event->midi_buffer[3] == 0)
-				off += snprintf(buf + off, BUFFER_SIZE - off, " flat");
-			else if ((int)(signed char)(event->midi_buffer[3]) >= 0)
-				off += snprintf(buf + off, BUFFER_SIZE - off, " sharp");
-			else
-				off += snprintf(buf + off, BUFFER_SIZE - off, " flat");
+			flats = event->midi_buffer[3];
+			isminor = event->midi_buffer[4];
 
-			off += snprintf(buf + off, BUFFER_SIZE - off, ", %s", event->midi_buffer[4] == 0 ? "major" : "minor");
+			if (isminor != 0 && isminor != 1) {
+				g_critical("smf_event_decode_metadata: last byte of the Key Signature event has invalid value %d.", isminor);
+				goto error;
+			}
+
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Key Signature: ");
+
+			if (flats > 8 && flats < 248) {
+				off += snprintf(buf + off, BUFFER_SIZE - off, "%d %s, %s key", abs((int8_t)flats),
+					flats > 127 ? "flats" : "sharps", isminor ? "minor" : "major");
+			} else {
+				int i = (flats - 248) & 255;
+
+				assert(i >= 0 && i < sizeof(minor_keys) / sizeof(*minor_keys));
+				assert(i >= 0 && i < sizeof(major_keys) / sizeof(*major_keys));
+
+				if (isminor)
+					off += snprintf(buf + off, BUFFER_SIZE - off, "%s", minor_keys[i]);
+				else
+					off += snprintf(buf + off, BUFFER_SIZE - off, "%s", major_keys[i]);
+			}
 
 			break;
 
