@@ -210,7 +210,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 
 			mspqn = (event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
 
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Tempo: %d microseconds per quarter note, %f BPM",
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Tempo: %d microseconds per quarter note, %.2f BPM",
 				mspqn, 60000000.0 / (double)mspqn);
 			break;
 
