@@ -5,5 +5,5 @@ libsmf_a_CFLAGS = $(GLIB_CFLAGS) -DG_LOG_DOMAIN=\"libsmf\"
 bin_PROGRAMS = smfsh
 smfsh_SOURCES = smfsh.c
 smfsh_CFLAGS = $(GLIB_CFLAGS) -DG_LOG_DOMAIN=\"smfsh\"
-smfsh_LDADD = libsmf.a $(GLIB_LIBS)
+smfsh_LDADD = libsmf.a $(GLIB_LIBS) $(READLINE_LIBS)
 

@@ -32,7 +32,7 @@
 #include "smf.h"
 #include "config.h"
 
-#ifdef WITH_READLINE
+#ifdef HAVE_LIBREADLINE
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
@@ -735,7 +735,7 @@ read_command(void)
 	char *buf;
 	int len;
 
-#ifdef WITH_READLINE
+#ifdef HAVE_LIBREADLINE
 	buf = readline("smfsh> ");
 #else
 	buf = malloc(1024);
@@ -762,7 +762,7 @@ read_command(void)
 	if (len == 0)
 		return read_command();
 
-#ifdef WITH_READLINE
+#ifdef HAVE_LIBREADLINE
 	add_history(buf);
 #endif
 
@@ -804,7 +804,7 @@ read_and_execute_command(void)
 	free(command);
 }
 
-#ifdef WITH_READLINE
+#ifdef HAVE_LIBREADLINE
 
 static char *
 smfsh_command_generator(const char *text, int state)
@@ -865,7 +865,7 @@ int main(int argc, char *argv[])
 		cmd_trackadd(NULL);
 	}
 
-#ifdef WITH_READLINE
+#ifdef HAVE_LIBREADLINE
 	rl_readline_name = "smfsh";
 	rl_attempted_completion_function = smfsh_completion;
 #endif
