@@ -37,7 +37,7 @@
 #include <math.h>
 #include <errno.h>
 #include <arpa/inet.h>
-#include <sys/stdint.h>
+#include <stdint.h>
 #include "smf.h"
 #include "smf_private.h"
 
