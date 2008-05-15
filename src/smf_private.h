@@ -28,6 +28,10 @@
 #ifndef SMF_PRIVATE_H
 #define SMF_PRIVATE_H
 
+#include "config.h"
+
+#define SMF_VERSION PACKAGE_VERSION
+
 /* Structures used in smf_load.c and smf_save.c. */
 struct chunk_header_struct {
 	char		id[4];

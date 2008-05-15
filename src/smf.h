@@ -174,8 +174,6 @@ extern "C" {
 #include <arpa/inet.h>
 #include <glib.h>
 
-#define SMF_VERSION "0.13"
-
 struct smf_struct {
 	int		format;
 	int		expected_number_of_tracks;
