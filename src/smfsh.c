@@ -80,7 +80,7 @@ cmd_load(char *file_name)
 	last_file_name = strdup(file_name);
 	smf = smf_load(file_name);
 	if (smf == NULL) {
-		g_critical("Couln't load '%s'.", file_name);
+		g_critical("Couldn't load '%s'.", file_name);
 
 		smf = smf_new();
 		if (smf == NULL) {
@@ -121,7 +121,7 @@ cmd_save(char *file_name)
 	last_file_name = strdup(file_name);
 	ret = smf_save(smf, file_name);
 	if (ret) {
-		g_critical("Couln't save '%s'", file_name);
+		g_critical("Couldn't save '%s'", file_name);
 		return -1;
 	}
 
