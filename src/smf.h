@@ -110,7 +110,7 @@
  * There are two basic ways of getting MIDI data out of smf - sequential or by track/event number.  You may
  * mix them if you need to.  First one is used in the example above - seek to the point from which you want
  * the playback to start (using smf_seek_to_seconds, for example) and then do smf_get_next_event in loop,
- * until it returns NULL.  After smf_load smf is rewound to the start of the song.
+ * until it returns NULL.  After smf_load, smf is rewound to the start of the song.
  *
  * Getting events by number works like this:
  *
@@ -127,10 +127,10 @@
  * use track->number_of_events.  To get the number of tracks in the smf, use smf->number_of_tracks.
  *
  * In SMF File Format, each track has to end with End Of Track metaevent.  If you load SMF file using smf_load,
- * that will be the case.  If you want to create or edit an SMF, you don't need to worry about EOT events,
+ * that will be the case.  If you want to create or edit an SMF, you don't need to worry about EOT events;
  * libsmf automatically takes care of them for you.  If you try to save an SMF with tracks that do not end
  * with EOTs, smf_save will append them.  If you try to add event that happens after EOT metaevent, libsmf
- * will remove the EOT.  If you want to add EOT automatically, you can, of course, using smf_track_add_eot_seconds
+ * will remove the EOT.  If you want to add EOT manually, you can, of course, using smf_track_add_eot_seconds
  * or smf_track_add_eot_pulses.
  *
  * Each event carries three time values - event->time_seconds, which is seconds since the start of the song,
@@ -146,7 +146,7 @@
  * event->time_seconds recomputed from event->time_pulses before smf_track_remove_event function returns.
  * Adding Tempo Change in the middle of the song works in a similar way.
  * 	
- * MIDI data (event->midi_buffer) are always in normalized form - they always begin with status byte
+ * MIDI data (event->midi_buffer) is always in normalized form - it always begins with status byte
  * (no running status), there are no system realtime events embedded in them etc.  Events like SysExes
  * are in "on the wire" form, without embedded length that is used in SMF file format.  Obviously
  * libsmf "normalizes" MIDI data during loading and "denormalizes" (adding length to SysExes, escaping
@@ -157,9 +157,9 @@
  * them from the end of the track, that's much more efficient.
  * 
  * All the libsmf functions have prefix "smf_".  Library does not use any global variables and is thread-safe,
- * as long as you don't try to work on the same SMF (smf_t and it's descendant tracks and events) from several
+ * as long as you don't try to work on the same SMF (smf_t and its descendant tracks and events) from several
  * threads at once without protecting it with mutex.  Library depends on glib and nothing else.  License is
- * BSD, two clause.
+ * BSD, two clause, which basically means you can use it freely in your software, both open and closed source.
  *
  */
 
