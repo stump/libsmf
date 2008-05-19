@@ -203,7 +203,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 				goto error;
 			}
 
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Midi Port: %d.", event->midi_buffer[3]);
+			off += snprintf(buf + off, BUFFER_SIZE - off, "MIDI Port: %d.", event->midi_buffer[3]);
 			break;
 
 		case 0x2F:
@@ -423,7 +423,7 @@ smf_event_decode_sysex(const smf_event_t *event)
 		off += snprintf(buf + off, BUFFER_SIZE - off, ", Single Note Tuning Change (Bank)");
 
 	else if (subid == 0x09)
-		off += snprintf(buf + off, BUFFER_SIZE - off, ", General Midi %s", subid2 == 0 ? "disable" : "enable");
+		off += snprintf(buf + off, BUFFER_SIZE - off, ", General MIDI %s", subid2 == 0 ? "disable" : "enable");
 
 	else if (subid == 0x7C)
 		off += snprintf(buf + off, BUFFER_SIZE - off, ", Sample Dump Wait");
