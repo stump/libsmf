@@ -59,7 +59,7 @@ smf_extend(smf_t *smf, const int length)
 	if (smf->file_buffer == NULL) {
 		g_critical("realloc(3) failed: %s", strerror(errno));
 		smf->file_buffer_length = 0;
-		return NULL;
+		return (NULL);
 	}
 
 	/* Fix up pointers.  XXX: omgwtf. */
@@ -70,7 +70,7 @@ smf_extend(smf_t *smf, const int length)
 			track->file_buffer = (char *)track->file_buffer + ((char *)smf->file_buffer - previous_file_buffer);
 	}
 
-	return (char *)smf->file_buffer + previous_file_buffer_length;
+	return ((char *)smf->file_buffer + previous_file_buffer_length);
 }
 
 /**
@@ -85,12 +85,12 @@ smf_append(smf_t *smf, const void *buffer, const int buffer_length)
 	dest = smf_extend(smf, buffer_length);
 	if (dest == NULL) {
 		g_critical("Cannot extend track buffer.");
-		return -1;
+		return (-1);
 	}
 
 	memcpy(dest, buffer, buffer_length);
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -107,7 +107,7 @@ write_mthd_header(smf_t *smf)
 	mthd_chunk.number_of_tracks = htons(smf->number_of_tracks);
 	mthd_chunk.division = htons(smf->ppqn);
 
-	return smf_append(smf, &mthd_chunk, sizeof(mthd_chunk));
+	return (smf_append(smf, &mthd_chunk, sizeof(mthd_chunk)));
 }
 
 /**
@@ -124,13 +124,13 @@ track_extend(smf_track_t *track, const int length)
 
 	buf = smf_extend(track->smf, length);
 	if (buf == NULL)
-		return NULL;
+		return (NULL);
 
 	track->file_buffer_length += length;
 	if (track->file_buffer == NULL)
 		track->file_buffer = buf;
 
-	return buf;
+	return (buf);
 }
 
 /**
@@ -145,12 +145,12 @@ track_append(smf_track_t *track, const void *buffer, const int buffer_length)
 	dest = track_extend(track, buffer_length);
 	if (dest == NULL) {
 		g_critical("Cannot extend track buffer.");
-		return -1;
+		return (-1);
 	}
 
 	memcpy(dest, buffer, buffer_length);
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -175,7 +175,7 @@ write_vlq(smf_event_t *event, unsigned long value)
 	for (;;) {
 		ret = track_append(event->track, &buffer, 1);
 		if (ret)
-			return ret;
+			return (ret);
 
 		if (buffer & 0x80)
 			buffer >>= 8;
@@ -183,7 +183,7 @@ write_vlq(smf_event_t *event, unsigned long value)
 			break;
 	}
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -195,7 +195,7 @@ write_event_time(smf_event_t *event)
 {
 	assert(event->delta_time_pulses >= 0);
 
-	return write_vlq(event, event->delta_time_pulses);
+	return (write_vlq(event, event->delta_time_pulses));
 }
 
 static int
@@ -208,18 +208,18 @@ write_sysex_contents(smf_event_t *event)
 
 	ret = track_append(event->track, &sysex_status, 1);
 	if (ret)
-		return ret;
+		return (ret);
 
 	/* -1, because length does not include status byte. */
 	ret = write_vlq(event, event->midi_buffer_length - 1);
 	if (ret)
-		return ret;
+		return (ret);
 
 	ret = track_append(event->track, event->midi_buffer + 1, event->midi_buffer_length - 1);
 	if (ret)
-		return ret;
+		return (ret);
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -232,21 +232,21 @@ write_escaped_event_contents(smf_event_t *event)
 	unsigned char escape_status = 0xF7;
 
 	if (smf_event_is_sysex(event))
-		return write_sysex_contents(event);
+		return (write_sysex_contents(event));
 
 	ret = track_append(event->track, &escape_status, 1);
 	if (ret)
-		return ret;
+		return (ret);
 
 	ret = write_vlq(event, event->midi_buffer_length);
 	if (ret)
-		return ret;
+		return (ret);
 
 	ret = track_append(event->track, event->midi_buffer, event->midi_buffer_length);
 	if (ret)
-		return ret;
+		return (ret);
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -257,9 +257,9 @@ static int
 write_event_contents(smf_event_t *event)
 {
 	if (smf_event_is_system_realtime(event) || smf_event_is_system_common(event))
-		return write_escaped_event_contents(event);
+		return (write_escaped_event_contents(event));
 
-	return track_append(event->track, event->midi_buffer, event->midi_buffer_length);
+	return (track_append(event->track, event->midi_buffer, event->midi_buffer_length));
 }
 
 /**
@@ -272,13 +272,13 @@ write_event(smf_event_t *event)
 
 	ret = write_event_time(event);
 	if (ret)
-		return ret;
+		return (ret);
 
 	ret = write_event_contents(event);
 	if (ret)
-		return ret;
+		return (ret);
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -291,7 +291,7 @@ write_mtrk_header(smf_track_t *track)
 
 	memcpy(mtrk_header.id, "MTrk", 4);
 
-	return track_append(track, &mtrk_header, sizeof(mtrk_header));
+	return (track_append(track, &mtrk_header, sizeof(mtrk_header)));
 }
 
 /**
@@ -308,7 +308,7 @@ write_mtrk_length(smf_track_t *track)
 	mtrk_header = (struct chunk_header_struct *)track->file_buffer;
 	mtrk_header->length = htonl(track->file_buffer_length - sizeof(struct chunk_header_struct));
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -322,19 +322,19 @@ write_track(smf_track_t *track)
 
 	ret = write_mtrk_header(track);
 	if (ret)
-		return ret;
+		return (ret);
 
 	while ((event = smf_track_get_next_event(track)) != NULL) {
 		ret = write_event(event);
 		if (ret)
-			return ret;
+			return (ret);
 	}
 
 	ret = write_mtrk_length(track);
 	if (ret)
-		return ret;
+		return (ret);
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -351,19 +351,19 @@ write_file_and_free_buffer(smf_t *smf, const char *file_name)
 	if (stream == NULL) {
 		g_critical("Cannot open input file: %s", strerror(errno));
 
-		return -1;
+		return (-1);
 	}
 
 	if (fwrite(smf->file_buffer, 1, smf->file_buffer_length, stream) != smf->file_buffer_length) {
 		g_critical("fwrite(3) failed: %s", strerror(errno));
 
-		return -2;
+		return (-2);
 	}
 
 	if (fclose(stream)) {
 		g_critical("fclose(3) failed: %s", strerror(errno));
 
-		return -3;
+		return (-3);
 	}
 
 	/* Clear the pointers. */
@@ -378,7 +378,7 @@ write_file_and_free_buffer(smf_t *smf, const char *file_name)
 		track->file_buffer_length = 0;
 	}
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -401,7 +401,7 @@ pointers_are_clear(smf_t *smf)
 		assert(track->file_buffer_length == 0);
 	}
 
-	return 1;
+	return (1);
 }
 
 /**
@@ -411,12 +411,12 @@ int
 smf_event_is_eot(const smf_event_t *event)
 {
 	if (event->midi_buffer_length != 3)
-		return 0;
+		return (0);
 
 	if (event->midi_buffer[0] != 0xFF || event->midi_buffer[1] != 0x2F || event->midi_buffer[2] != 0x00)
-		return 0;
+		return (0);
 
-	return 1;
+	return (1);
 }
 
 /**
@@ -433,22 +433,22 @@ smf_validate(smf_t *smf)
 
 	if (smf->format < 0 || smf->format > 2) {
 		g_critical("SMF error: smf->format is less than zero of greater than two.");
-		return -1;
+		return (-1);
 	}
 
 	if (smf->number_of_tracks < 1) {
 		g_critical("SMF error: number of tracks is less than one.");
-		return -2;
+		return (-2);
 	}
 
 	if (smf->format == 0 && smf->number_of_tracks > 1) {
 		g_critical("SMF error: format is 0, but number of tracks is more than one.");
-		return -3;
+		return (-3);
 	}
 
 	if (smf->ppqn <= 0) {
 		g_critical("SMF error: PPQN has to be > 0.");
-		return -4;
+		return (-4);
 	}
 
 	for (trackno = 1; trackno <= smf->number_of_tracks; trackno++) {
@@ -463,13 +463,13 @@ smf_validate(smf_t *smf)
 
 			if (!smf_event_is_valid(event)) {
 				g_critical("Event #%d on track #%d is invalid.", eventno, trackno);
-				return -5;
+				return (-5);
 			}
 
 			if (smf_event_is_eot(event)) {
 				if (eot_found) {
 					g_critical("Duplicate End Of Track event on track #%d.", trackno);
-					return -6;
+					return (-6);
 				}
 
 				eot_found = 1;
@@ -480,7 +480,7 @@ smf_validate(smf_t *smf)
 			smf_track_add_eot_delta_pulses(track, 0);
 	}
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -500,10 +500,10 @@ smf_save(smf_t *smf, const char *file_name)
 	assert(pointers_are_clear(smf));
 
 	if (smf_validate(smf))
-		return -1;
+		return (-1);
 
 	if (write_mthd_header(smf))
-		return -2;
+		return (-2);
 
 	for (i = 1; i <= smf->number_of_tracks; i++) {
 		track = smf_get_track_by_number(smf, i);
@@ -512,12 +512,12 @@ smf_save(smf_t *smf, const char *file_name)
 
 		ret = write_track(track);
 		if (ret)
-			return ret;
+			return (ret);
 	}
 
 	if (write_file_and_free_buffer(smf, file_name))
-		return -3;
+		return (-3);
 
-	return 0;
+	return (0);
 }
 

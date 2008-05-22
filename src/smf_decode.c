@@ -55,9 +55,9 @@ smf_event_is_metadata(const smf_event_t *event)
 	assert(event->midi_buffer_length > 0);
 	
 	if (event->midi_buffer[0] == 0xFF)
-		return 1;
+		return (1);
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -70,12 +70,12 @@ smf_event_is_system_realtime(const smf_event_t *event)
 	assert(event->midi_buffer_length > 0);
 
 	if (smf_event_is_metadata(event))
-		return 0;
+		return (0);
 	
 	if (event->midi_buffer[0] >= 0xF8)
-		return 1;
+		return (1);
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -88,9 +88,9 @@ smf_event_is_system_common(const smf_event_t *event)
 	assert(event->midi_buffer_length > 0);
 
 	if (event->midi_buffer[0] >= 0xF0 && event->midi_buffer[0] <= 0xF7)
-		return 1;
+		return (1);
 
-	return 0;
+	return (0);
 }
 /**
   * \return Nonzero if event is SysEx message.
@@ -102,9 +102,9 @@ smf_event_is_sysex(const smf_event_t *event)
 	assert(event->midi_buffer_length > 0);
 	
 	if (event->midi_buffer[0] == 0xF0)
-		return 1;
+		return (1);
 
-	return 0;
+	return (0);
 }
 
 static char *
@@ -116,18 +116,18 @@ smf_event_decode_textual(const smf_event_t *event, const char *name)
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
 		g_critical("smf_event_decode_textual: malloc failed.");
-		return NULL;
+		return (NULL);
 	}
 
 	extracted = smf_string_from_event(event);
 	if (extracted == NULL) {
 		free(buf);
-		return NULL;
+		return (NULL);
 	}
 
 	snprintf(buf + off, BUFFER_SIZE - off, "%s: %s", name, extracted);
 
-	return buf;
+	return (buf);
 }
 
 static char *
@@ -146,31 +146,31 @@ smf_event_decode_metadata(const smf_event_t *event)
 
 	switch (event->midi_buffer[1]) {
 		case 0x01:
-			return smf_event_decode_textual(event, "Text");
+			return (smf_event_decode_textual(event, "Text"));
 
 		case 0x02:
-			return smf_event_decode_textual(event, "Copyright");
+			return (smf_event_decode_textual(event, "Copyright"));
 
 		case 0x03:
-			return smf_event_decode_textual(event, "Sequence/Track Name");
+			return (smf_event_decode_textual(event, "Sequence/Track Name"));
 
 		case 0x04:
-			return smf_event_decode_textual(event, "Instrument");
+			return (smf_event_decode_textual(event, "Instrument"));
 
 		case 0x05:
-			return smf_event_decode_textual(event, "Lyric");
+			return (smf_event_decode_textual(event, "Lyric"));
 
 		case 0x06:
-			return smf_event_decode_textual(event, "Marker");
+			return (smf_event_decode_textual(event, "Marker"));
 
 		case 0x07:
-			return smf_event_decode_textual(event, "Cue Point");
+			return (smf_event_decode_textual(event, "Cue Point"));
 
 		case 0x08:
-			return smf_event_decode_textual(event, "Program Name");
+			return (smf_event_decode_textual(event, "Program Name"));
 
 		case 0x09:
-			return smf_event_decode_textual(event, "Device (Port) Name");
+			return (smf_event_decode_textual(event, "Device (Port) Name"));
 
 		default:
 			break;
@@ -179,7 +179,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
 		g_critical("smf_event_decode_metadata: malloc failed.");
-		return NULL;
+		return (NULL);
 	}
 
 	switch (event->midi_buffer[1]) {
@@ -280,12 +280,12 @@ smf_event_decode_metadata(const smf_event_t *event)
 			goto error;
 	}
 
-	return buf;
+	return (buf);
 
 error:
 	free(buf);
 
-	return NULL;
+	return (NULL);
 }
 
 static char *
@@ -298,13 +298,13 @@ smf_event_decode_system_realtime(const smf_event_t *event)
 
 	if (event->midi_buffer_length != 1) {
 		g_critical("smf_event_decode_system_realtime: event length is not 1.");
-		return NULL;
+		return (NULL);
 	}
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
 		g_critical("smf_event_decode_system_realtime: malloc failed.");
-		return NULL;
+		return (NULL);
 	}
 
 	switch (event->midi_buffer[0]) {
@@ -334,10 +334,10 @@ smf_event_decode_system_realtime(const smf_event_t *event)
 
 		default:
 			free(buf);
-			return NULL;
+			return (NULL);
 	}
 
-	return buf;
+	return (buf);
 }
 
 static char *
@@ -350,13 +350,13 @@ smf_event_decode_sysex(const smf_event_t *event)
 
 	if (event->midi_buffer_length < 5) {
 		g_critical("smf_event_decode_sysex: truncated MIDI message.");
-		return NULL;
+		return (NULL);
 	}
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
 		g_critical("smf_event_decode_sysex: malloc failed.");
-		return NULL;
+		return (NULL);
 	}
 
 	manufacturer = event->midi_buffer[1];
@@ -368,7 +368,7 @@ smf_event_decode_sysex(const smf_event_t *event)
 	} else {
 		off += snprintf(buf + off, BUFFER_SIZE - off, "SysEx, manufacturer 0x%x", manufacturer);
 
-		return buf;
+		return (buf);
 	}
 
 	subid = event->midi_buffer[3];
@@ -440,7 +440,7 @@ smf_event_decode_sysex(const smf_event_t *event)
 	else
 		off += snprintf(buf + off, BUFFER_SIZE - off, ", Unknown");
 
-	return buf;
+	return (buf);
 }
 
 static char *
@@ -452,12 +452,12 @@ smf_event_decode_system_common(const smf_event_t *event)
 	assert(smf_event_is_system_common(event));
 
 	if (smf_event_is_sysex(event))
-		return smf_event_decode_sysex(event);
+		return (smf_event_decode_sysex(event));
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
 		g_critical("smf_event_decode_system_realtime: malloc failed.");
-		return NULL;
+		return (NULL);
 	}
 
 	switch (event->midi_buffer[0]) {
@@ -479,10 +479,10 @@ smf_event_decode_system_common(const smf_event_t *event)
 
 		default:
 			free(buf);
-			return NULL;
+			return (NULL);
 	}
 
-	return buf;
+	return (buf);
 }
 
 static void
@@ -509,23 +509,23 @@ smf_event_decode(const smf_event_t *event)
 	char *buf, note[5];
 
 	if (smf_event_is_metadata(event))
-		return smf_event_decode_metadata(event);
+		return (smf_event_decode_metadata(event));
 
 	if (smf_event_is_system_realtime(event))
-		return smf_event_decode_system_realtime(event);
+		return (smf_event_decode_system_realtime(event));
 
 	if (smf_event_is_system_common(event))
-		return smf_event_decode_system_common(event);
+		return (smf_event_decode_system_common(event));
 
 	if (!smf_event_length_is_valid(event)) {
 		g_critical("smf_event_decode: incorrect MIDI message length.");
-		return NULL;
+		return (NULL);
 	}
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
 		g_critical("smf_event_decode: malloc failed.");
-		return NULL;
+		return (NULL);
 	}
 
 	switch (event->midi_buffer[0] & 0xF0) {
@@ -569,10 +569,10 @@ smf_event_decode(const smf_event_t *event)
 
 		default:
 			free(buf);
-			return NULL;
+			return (NULL);
 	}
 
-	return buf;
+	return (buf);
 }
 
 /**
@@ -589,7 +589,7 @@ smf_decode(const smf_t *smf)
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
 		g_critical("smf_event_decode: malloc failed.");
-		return NULL;
+		return (NULL);
 	}
 
 	off += snprintf(buf + off, BUFFER_SIZE - off, "format: %d ", smf->format);
@@ -619,6 +619,6 @@ smf_decode(const smf_t *smf)
 	else
 		off += snprintf(buf + off, BUFFER_SIZE - off, "; division: %d FPS, %d resolution", smf->frames_per_second, smf->resolution);
 
-	return buf;
+	return (buf);
 }
 

@@ -52,7 +52,7 @@ smf_new(void)
 	smf_t *smf = malloc(sizeof(smf_t));
 	if (smf == NULL) {
 		g_critical("Cannot allocate smf_t structure: %s", strerror(errno));
-		return NULL;
+		return (NULL);
 	}
 
 	memset(smf, 0, sizeof(smf_t));
@@ -67,7 +67,7 @@ smf_new(void)
 	smf_set_format(smf, 0);
 	smf_init_tempo(smf);
 
-	return smf;
+	return (smf);
 }
 
 /**
@@ -99,7 +99,7 @@ smf_track_new(void)
 	smf_track_t *track = malloc(sizeof(smf_track_t));
 	if (track == NULL) {
 		g_critical("Cannot allocate smf_track_t structure: %s", strerror(errno));
-		return NULL;
+		return (NULL);
 	}
 
 	memset(track, 0, sizeof(smf_track_t));
@@ -108,7 +108,7 @@ smf_track_new(void)
 	track->events_array = g_ptr_array_new();
 	assert(track->events_array);
 
-	return track;
+	return (track);
 }
 
 /**
@@ -192,7 +192,7 @@ smf_event_new(void)
 	smf_event_t *event = malloc(sizeof(smf_event_t));
 	if (event == NULL) {
 		g_critical("Cannot allocate smf_event_t structure: %s", strerror(errno));
-		return NULL;
+		return (NULL);
 	}
 
 	memset(event, 0, sizeof(smf_event_t));
@@ -202,7 +202,7 @@ smf_event_new(void)
 	event->time_seconds = -1.0;
 	event->track_number = -1;
 
-	return event;
+	return (event);
 }
 
 /**
@@ -219,7 +219,7 @@ smf_event_new_from_pointer(void *midi_data, int len)
 
 	event = smf_event_new();
 	if (event == NULL)
-		return NULL;
+		return (NULL);
 
 	event->midi_buffer_length = len;
 	event->midi_buffer = malloc(event->midi_buffer_length);
@@ -227,12 +227,12 @@ smf_event_new_from_pointer(void *midi_data, int len)
 		g_critical("Cannot allocate MIDI buffer structure: %s", strerror(errno));
 		smf_event_delete(event);
 
-		return NULL; 
+		return (NULL); 
 	}
 
 	memcpy(event->midi_buffer, midi_data, len);
 
-	return event;
+	return (event);
 }
 
 /**
@@ -260,23 +260,23 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 
 	event = smf_event_new();
 	if (event == NULL)
-		return NULL;
+		return (NULL);
 
 	if (first_byte < 0) {
 		g_critical("First byte of MIDI message cannot be < 0");
 		smf_event_delete(event);
 
-		return NULL;
+		return (NULL);
 	}
 
 	if (first_byte > 255) {
 		g_critical("smf_event_new_from_bytes: first byte is %d, which is larger than 255.", first_byte);
-		return NULL;
+		return (NULL);
 	}
 
 	if (!is_status_byte(first_byte)) {
 		g_critical("smf_event_new_from_bytes: first byte is not a valid status byte.");
-		return NULL;
+		return (NULL);
 	}
 
 
@@ -290,24 +290,24 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 	if (len > 1) {
 		if (second_byte > 255) {
 			g_critical("smf_event_new_from_bytes: second byte is %d, which is larger than 255.", second_byte);
-			return NULL;
+			return (NULL);
 		}
 
 		if (is_status_byte(second_byte)) {
 			g_critical("smf_event_new_from_bytes: second byte cannot be a status byte.");
-			return NULL;
+			return (NULL);
 		}
 	}
 
 	if (len > 2) {
 		if (third_byte > 255) {
 			g_critical("smf_event_new_from_bytes: third byte is %d, which is larger than 255.", third_byte);
-			return NULL;
+			return (NULL);
 		}
 
 		if (is_status_byte(third_byte)) {
 			g_critical("smf_event_new_from_bytes: third byte cannot be a status byte.");
-			return NULL;
+			return (NULL);
 		}
 	}
 
@@ -317,7 +317,7 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 		g_critical("Cannot allocate MIDI buffer structure: %s", strerror(errno));
 		smf_event_delete(event);
 
-		return NULL; 
+		return (NULL); 
 	}
 
 	event->midi_buffer[0] = first_byte;
@@ -326,7 +326,7 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 	if (len > 2)
 		event->midi_buffer[2] = third_byte;
 
-	return event;
+	return (event);
 }
 
 /**
@@ -359,12 +359,12 @@ events_array_compare_function(gconstpointer aa, gconstpointer bb)
 	b = (smf_event_t *)*(gpointer *)bb;
 
 	if (a->time_pulses < b->time_pulses)
-		return -1;
+		return (-1);
 
 	if (a->time_pulses > b->time_pulses)
-		return 1;
+		return (1);
 
-	return 0;
+	return (0);
 }
 
 /*
@@ -478,11 +478,11 @@ smf_track_add_eot_delta_pulses(smf_track_t *track, int delta)
 
 	event = smf_event_new_from_bytes(0xFF, 0x2F, 0x00);
 	if (event == NULL)
-		return -1;
+		return (-1);
 
 	smf_track_add_event_delta_pulses(track, event, delta);
 
-	return 0;
+	return (0);
 }
 
 int
@@ -493,16 +493,16 @@ smf_track_add_eot_pulses(smf_track_t *track, int pulses)
 	last_event = smf_track_get_last_event(track);
 	if (last_event != NULL) {
 		if (last_event->time_pulses > pulses)
-			return -2;
+			return (-2);
 	}
 
 	event = smf_event_new_from_bytes(0xFF, 0x2F, 0x00);
 	if (event == NULL)
-		return -3;
+		return (-3);
 
 	smf_track_add_event_pulses(track, event, pulses);
 
-	return 0;
+	return (0);
 }
 
 int
@@ -513,16 +513,16 @@ smf_track_add_eot_seconds(smf_track_t *track, double seconds)
 	last_event = smf_track_get_last_event(track);
 	if (last_event != NULL) {
 		if (last_event->time_seconds > seconds)
-			return -2;
+			return (-2);
 	}
 
 	event = smf_event_new_from_bytes(0xFF, 0x2F, 0x00);
 	if (event == NULL)
-		return -1;
+		return (-1);
 
 	smf_track_add_event_seconds(track, event, seconds);
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -582,14 +582,14 @@ int
 smf_event_is_tempo_change_or_time_signature(const smf_event_t *event)
 {
 	if (!smf_event_is_metadata(event))
-		return 0;
+		return (0);
 
 	assert(event->midi_buffer_length >= 2);
 
 	if (event->midi_buffer[1] == 0x51 || event->midi_buffer[1] == 0x58)
-		return 1;
+		return (1);
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -606,12 +606,12 @@ smf_set_format(smf_t *smf, int format)
 
 	if (smf->number_of_tracks > 1 && format == 0) {
 		g_critical("There is more than one track, cannot set format to 0.");
-		return -1;
+		return (-1);
 	}
 
 	smf->format = format;
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -628,7 +628,7 @@ smf_set_ppqn(smf_t *smf, int ppqn)
 
 	smf->ppqn = ppqn;
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -646,7 +646,7 @@ smf_track_get_next_event(smf_track_t *track)
 
 	/* End of track? */
 	if (track->next_event_number == -1)
-		return NULL;
+		return (NULL);
 
 	assert(track->next_event_number >= 1);
 	assert(track->number_of_events > 0);
@@ -666,7 +666,7 @@ smf_track_get_next_event(smf_track_t *track)
 		track->next_event_number = -1;
 	}
 
-	return event;
+	return (event);
 }
 
 /**
@@ -681,14 +681,14 @@ smf_peek_next_event_from_track(smf_track_t *track)
 
 	/* End of track? */
 	if (track->next_event_number == -1)
-		return NULL;
+		return (NULL);
 
 	assert(track->next_event_number >= 1);
 	assert(track->events_array->len != 0);
 
 	event = smf_track_get_event_by_number(track, track->next_event_number);
 
-	return event;
+	return (event);
 }
 
 /**
@@ -703,13 +703,13 @@ smf_get_track_by_number(const smf_t *smf, int track_number)
 	assert(track_number >= 1);
 
 	if (track_number > smf->number_of_tracks)
-		return NULL;
+		return (NULL);
 
 	track = (smf_track_t *)g_ptr_array_index(smf->tracks_array, track_number - 1);
 
 	assert(track);
 
-	return track;
+	return (track);
 }
 
 /**
@@ -724,13 +724,13 @@ smf_track_get_event_by_number(const smf_track_t *track, int event_number)
 	assert(event_number >= 1);
 
 	if (event_number > track->number_of_events)
-		return NULL;
+		return (NULL);
 
 	event = g_ptr_array_index(track->events_array, event_number - 1);
 
 	assert(event);
 
-	return event;
+	return (event);
 }
 
 /**
@@ -742,11 +742,11 @@ smf_track_get_last_event(const smf_track_t *track)
 	smf_event_t *event;
 
 	if (track->number_of_events == 0)
-		return NULL;
+		return (NULL);
        
 	event = smf_track_get_event_by_number(track, track->number_of_events);
 
-	return event;
+	return (event);
 }
 
 /**
@@ -776,7 +776,7 @@ smf_find_track_with_next_event(smf_t *smf)
 		}
 	}
 
-	return min_time_track;
+	return (min_time_track);
 }
 
 /**
@@ -793,7 +793,7 @@ smf_get_next_event(smf_t *smf)
 		g_debug("End of the song.");
 #endif
 
-		return NULL;
+		return (NULL);
 	}
 
 	event = smf_track_get_next_event(track);
@@ -802,7 +802,7 @@ smf_get_next_event(smf_t *smf)
 
 	event->track->smf->last_seek_position = -1.0;
 
-	return event;
+	return (event);
 }
 
 /**
@@ -820,14 +820,14 @@ smf_peek_next_event(smf_t *smf)
 		g_debug("End of the song.");
 #endif
 
-		return NULL;
+		return (NULL);
 	}
 
 	event = smf_peek_next_event_from_track(track);
 	
 	assert(event != NULL);
 
-	return event;
+	return (event);
 }
 
 /**
@@ -894,7 +894,7 @@ smf_seek_to_event(smf_t *smf, const smf_event_t *target)
 
 	smf->last_seek_position = event->time_seconds;
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -912,7 +912,7 @@ smf_seek_to_seconds(smf_t *smf, double seconds)
 #if 0
 		g_debug("Avoiding seek to %f seconds.", seconds);
 #endif
-		return 0;
+		return (0);
 	}
 
 	smf_rewind(smf);
@@ -926,7 +926,7 @@ smf_seek_to_seconds(smf_t *smf, double seconds)
 
 		if (event == NULL) {
 			g_critical("Trying to seek past the end of song.");
-			return -1;
+			return (-1);
 		}
 
 		if (event->time_seconds < seconds)
@@ -937,7 +937,7 @@ smf_seek_to_seconds(smf_t *smf, double seconds)
 
 	smf->last_seek_position = seconds;
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -962,7 +962,7 @@ smf_seek_to_pulses(smf_t *smf, int pulses)
 
 		if (event == NULL) {
 			g_critical("Trying to seek past the end of song.");
-			return -1;
+			return (-1);
 		}
 
 		if (event->time_pulses < pulses)
@@ -973,7 +973,7 @@ smf_seek_to_pulses(smf_t *smf, int pulses)
 
 	smf->last_seek_position = event->time_seconds;
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -1000,7 +1000,7 @@ smf_get_length_pulses(const smf_t *smf)
 			pulses = event->time_pulses;
 	}
 
-	return pulses;
+	return (pulses);
 }
 
 /**
@@ -1028,7 +1028,7 @@ smf_get_length_seconds(const smf_t *smf)
 			seconds = event->time_seconds;
 	}
 
-	return seconds;
+	return (seconds);
 }
 
 /**
@@ -1039,9 +1039,9 @@ int
 smf_event_is_last(const smf_event_t *event)
 {
 	if (smf_get_length_pulses(event->track->smf) <= event->time_pulses)
-		return 1;
+		return (1);
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -1050,6 +1050,6 @@ smf_event_is_last(const smf_event_t *event)
 const char *
 smf_get_version(void)
 {
-	return SMF_VERSION;
+	return (SMF_VERSION);
 }
 

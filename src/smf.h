@@ -26,7 +26,7 @@
  */
 
 /*
- * This is the include file for libsmf, Standard Midi File format library.
+ * This is the include file for libsmf, Standard MIDI File format library.
  * For questions and comments, contact Edward Tomasz Napierala <trasz@FreeBSD.org>.
  */
 

@@ -54,13 +54,13 @@ new_tempo(smf_t *smf, int pulses)
 
 		/* If previous tempo starts at the same time as new one, reuse it, updating in place. */
 		if (previous_tempo->time_pulses == pulses)
-			return previous_tempo;
+			return (previous_tempo);
 	}
 
 	tempo = malloc(sizeof(smf_tempo_t));
 	if (tempo == NULL) {
 		g_critical("Cannot allocate smf_tempo_t.");
-		return NULL;
+		return (NULL);
 	}
 
 	tempo->time_pulses = pulses;
@@ -86,7 +86,7 @@ new_tempo(smf_t *smf, int pulses)
 	else
 		tempo->time_seconds = seconds_from_pulses(smf, pulses);
 
-	return tempo;
+	return (tempo);
 }
 
 static int
@@ -94,11 +94,11 @@ add_tempo(smf_t *smf, int pulses, int tempo)
 {
 	smf_tempo_t *smf_tempo = new_tempo(smf, pulses);
 	if (smf_tempo == NULL)
-		return -1;
+		return (-1);
 
 	smf_tempo->microseconds_per_quarter_note = tempo;
 
-	return 0;
+	return (0);
 }
 
 static int
@@ -106,14 +106,14 @@ add_time_signature(smf_t *smf, int pulses, int numerator, int denominator, int c
 {
 	smf_tempo_t *smf_tempo = new_tempo(smf, pulses);
 	if (smf_tempo == NULL)
-		return -1;
+		return (-1);
 
 	smf_tempo->numerator = numerator;
 	smf_tempo->denominator = denominator;
 	smf_tempo->clocks_per_click = clocks_per_click;
 	smf_tempo->notes_per_note = notes_per_note;
 
-	return 0;
+	return (0);
 }
 
 void
@@ -198,7 +198,7 @@ seconds_from_pulses(const smf_t *smf, int pulses)
 	seconds = tempo->time_seconds + (double)(pulses - tempo->time_pulses) *
 		(tempo->microseconds_per_quarter_note / ((double)smf->ppqn * 1000000.0));
 
-	return seconds;
+	return (seconds);
 }
 
 static int
@@ -214,14 +214,14 @@ pulses_from_seconds(const smf_t *smf, double seconds)
 	pulses = tempo->time_pulses + (seconds - tempo->time_seconds) *
 		((double)smf->ppqn * 1000000.0 / tempo->microseconds_per_quarter_note);
 
-	return pulses;
+	return (pulses);
 }
 
 /**
  * Computes value of event->time_seconds for all events in smf.
  * Warning: rewinds the smf.
  */
-int
+void
 smf_create_tempo_map_and_compute_seconds(smf_t *smf)
 {
 	smf_event_t *event;
@@ -233,7 +233,7 @@ smf_create_tempo_map_and_compute_seconds(smf_t *smf)
 		event = smf_get_next_event(smf);
 		
 		if (event == NULL)
-			return 0;
+			return;
 
 		maybe_add_to_tempo_map(event);
 
@@ -241,7 +241,6 @@ smf_create_tempo_map_and_compute_seconds(smf_t *smf)
 	}
 
 	/* Not reached. */
-	return -1;
 }
 
 smf_tempo_t *
@@ -250,9 +249,9 @@ smf_get_tempo_by_number(const smf_t *smf, int number)
 	assert(number >= 0);
 
 	if (number >= smf->tempo_array->len)
-		return NULL;
+		return (NULL);
 
-	return g_ptr_array_index(smf->tempo_array, number);
+	return (g_ptr_array_index(smf->tempo_array, number));
 }
 
 /**
@@ -267,7 +266,7 @@ smf_get_tempo_by_pulses(const smf_t *smf, int pulses)
 	assert(pulses >= 0);
 
 	if (pulses == 0)
-		return smf_get_tempo_by_number(smf, 0);
+		return (smf_get_tempo_by_number(smf, 0));
 
 	assert(smf->tempo_array != NULL);
 	
@@ -276,10 +275,10 @@ smf_get_tempo_by_pulses(const smf_t *smf, int pulses)
 
 		assert(tempo);
 		if (tempo->time_pulses < pulses)
-			return tempo;
+			return (tempo);
 	}
 
-	return NULL;
+	return (NULL);
 }
 
 /**
@@ -294,7 +293,7 @@ smf_get_tempo_by_seconds(const smf_t *smf, double seconds)
 	assert(seconds >= 0.0);
 
 	if (seconds == 0.0)
-		return smf_get_tempo_by_number(smf, 0);
+		return (smf_get_tempo_by_number(smf, 0));
 
 	assert(smf->tempo_array != NULL);
 	
@@ -303,10 +302,10 @@ smf_get_tempo_by_seconds(const smf_t *smf, double seconds)
 
 		assert(tempo);
 		if (tempo->time_seconds < seconds)
-			return tempo;
+			return (tempo);
 	}
 
-	return NULL;
+	return (NULL);
 }
 
 
@@ -321,7 +320,7 @@ smf_get_last_tempo(const smf_t *smf)
 	tempo = smf_get_tempo_by_number(smf, smf->tempo_array->len - 1);
 	assert(tempo);
 
-	return tempo;
+	return (tempo);
 }
 
 /**
@@ -343,9 +342,9 @@ smf_init_tempo(smf_t *smf)
 
 	tempo = new_tempo(smf, 0);
 	if (tempo == NULL)
-		return -1;
+		return (-1);
 
-	return 0;
+	return (0);
 }
 
 /**
@@ -360,10 +359,10 @@ last_event_pulses(const smf_track_t *track)
 		assert(previous_event);
 		assert(previous_event->time_pulses >= 0);
 
-		return previous_event->time_pulses;
+		return (previous_event->time_pulses);
 	}
 
-	return 0;
+	return (0);
 }
 
 /**
