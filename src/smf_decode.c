@@ -501,12 +501,12 @@ note_from_int(char *buf, int note_number)
 /**
  * \return Textual representation of the event given, or NULL, if event is unknown.
  * Returned string looks like this:
- * Note On, channel 0, note F#3, velocity 0
+ * Note On, channel 1, note F#3, velocity 0
  */
 char *
 smf_event_decode(const smf_event_t *event)
 {
-	int off = 0;
+	int off = 0, channel;
 	char *buf, note[5];
 
 	if (smf_event_is_metadata(event))
@@ -529,43 +529,46 @@ smf_event_decode(const smf_event_t *event)
 		return (NULL);
 	}
 
+	/* + 1, because user-visible channels used to be in range <1-16>. */
+	channel = (event->midi_buffer[0] & 0x0F) + 1;
+
 	switch (event->midi_buffer[0] & 0xF0) {
 		case 0x80:
 			note_from_int(note, event->midi_buffer[1]);
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Note Off, channel %d, note %s, velocity %d",
-					event->midi_buffer[0] & 0x0F, note, event->midi_buffer[2]);
+					channel, note, event->midi_buffer[2]);
 			break;
 
 		case 0x90:
 			note_from_int(note, event->midi_buffer[1]);
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Note On, channel %d, note %s, velocity %d",
-					event->midi_buffer[0] & 0x0F, note, event->midi_buffer[2]);
+					channel, note, event->midi_buffer[2]);
 			break;
 
 		case 0xA0:
 			note_from_int(note, event->midi_buffer[1]);
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Aftertouch, channel %d, note %s, pressure %d",
-					event->midi_buffer[0] & 0x0F, note, event->midi_buffer[2]);
+					channel, note, event->midi_buffer[2]);
 			break;
 
 		case 0xB0:
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Controller, channel %d, controller %d, value %d",
-					event->midi_buffer[0] & 0x0F, event->midi_buffer[1], event->midi_buffer[2]);
+					channel, event->midi_buffer[1], event->midi_buffer[2]);
 			break;
 
 		case 0xC0:
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Program Change, channel %d, controller %d",
-					event->midi_buffer[0] & 0x0F, event->midi_buffer[1]);
+					channel, event->midi_buffer[1]);
 			break;
 
 		case 0xD0:
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Channel Pressure, channel %d, pressure %d",
-					event->midi_buffer[0] & 0x0F, event->midi_buffer[1]);
+					channel, event->midi_buffer[1]);
 			break;
 
 		case 0xE0:
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Pitch Wheel, channel %d, value %d",
-					event->midi_buffer[0] & 0x0F, ((int)event->midi_buffer[2] << 7) | (int)event->midi_buffer[2]);
+					channel, ((int)event->midi_buffer[2] << 7) | (int)event->midi_buffer[2]);
 			break;
 
 		default:
