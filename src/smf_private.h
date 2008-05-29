@@ -62,7 +62,6 @@ void maybe_add_to_tempo_map(smf_event_t *event);
 void remove_last_tempo_with_pulses(smf_t *smf, int pulses);
 int smf_event_is_tempo_change_or_time_signature(const smf_event_t *event);
 int smf_event_length_is_valid(const smf_event_t *event);
-int smf_event_is_sysex(const smf_event_t *event);
 int is_status_byte(const unsigned char status);
 
 #endif /* SMF_PRIVATE_H */
