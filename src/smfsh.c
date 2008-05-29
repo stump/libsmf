@@ -502,7 +502,7 @@ error:
 static void
 eventadd_usage(void)
 {
-	g_message("Usage: eventadd time-in-seconds midi-in-hex.  For example, 'eventadd 1 903C7F'");
+	g_message("Usage: add time-in-seconds midi-in-hex.  For example, 'add 1 903C7F'");
         g_message("will add Note On event, one second from the start of song, channel 1, note C4, velocity 127.");
 }
 
@@ -524,8 +524,14 @@ cmd_eventadd(char *str)
 		return (-2);
 	}
 
-	/* Extract the time. */
-	time = strsep(&str, " ");
+	/* Extract the time.  Don't use strsep(3), it doesn't work on SunOS. */
+	time = str;
+	str = strchr(str, ' ');
+	if (str != NULL) {
+		*str = '\0';
+		str++;
+	}
+
 	seconds = strtod(time, &endtime);
 	if (endtime - time != strlen(time)) {
 		g_critical("Time is supposed to be a number, without trailing characters.");
@@ -801,8 +807,12 @@ execute_command(char *line)
 	char *command, *args;
 	struct command_struct *tmp;
 
-	args = line;
-	command = strsep(&args, " ");
+	command = line;
+	args = strchr(line, ' ');
+	if (args != NULL) {
+		*args = '\0';
+		args++;
+	}
 
 	for (tmp = commands; tmp->name != NULL; tmp++) {
 		if (strcmp(tmp->name, command) == 0)
