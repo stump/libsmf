@@ -32,6 +32,10 @@
 
 #define SMF_VERSION PACKAGE_VERSION
 
+/**
+ * This is a private header.  Applications using libsmf should use smf.h.
+ */
+
 /* Structures used in smf_load.c and smf_save.c. */
 struct chunk_header_struct {
 	char		id[4];
@@ -46,7 +50,6 @@ struct mthd_chunk_struct {
 } __attribute__((__packed__));
 
 void smf_track_add_event(smf_track_t *track, smf_event_t *event);
-
 int smf_init_tempo(smf_t *smf);
 void smf_create_tempo_map_and_compute_seconds(smf_t *smf);
 void maybe_add_to_tempo_map(smf_event_t *event);
