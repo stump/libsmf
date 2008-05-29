@@ -43,6 +43,8 @@
 #include "smf.h"
 #include "smf_private.h"
 
+#define MAX_VLQ_LENGTH 128
+
 /**
  * Extends (reallocates) smf->file_buffer and returns pointer to the newly added space,
  * that is, pointer to the first byte after the previous buffer end.  Returns NULL in case
@@ -154,17 +156,12 @@ track_append(smf_track_t *track, const void *buffer, const int buffer_length)
 	return (0);
 }
 
-/**
-  * Appends value, expressed as Variable Length Quantity, to event->track.
-  */
 static int
-write_vlq(smf_event_t *event, unsigned long value)
+format_vlq(unsigned char *buf, int length, unsigned long value)
 {
-	unsigned long buffer;
-	int ret;
+	int i;
 	unsigned char tmp;
-
-	assert(event->track);
+	unsigned long buffer;
 
 	/* Taken from http://www.borg.com/~jglatt/tech/midifile/vari.htm */
 	buffer = value & 0x7F;
@@ -174,11 +171,9 @@ write_vlq(smf_event_t *event, unsigned long value)
 		buffer |= ((value & 0x7F) | 0x80);
 	}
 
-	for (;;) {
+	for (i = 0;; i++) {
 		tmp = buffer;
-		ret = track_append(event->track, &tmp, 1);
-		if (ret)
-			return (ret);
+		buf[i] = tmp;
 
 		if (buffer & 0x80)
 			buffer >>= 8;
@@ -186,7 +181,61 @@ write_vlq(smf_event_t *event, unsigned long value)
 			break;
 	}
 
-	return (0);
+	assert(i <= length);
+
+	/* + 1, because "i" is an offset, not a count. */
+	return (i + 1);
+}
+
+smf_event_t *
+smf_event_new_textual(int type, const char *text)
+{
+	int vlq_length, text_length, copied_length;
+	smf_event_t *event;
+
+	assert(type >= 1 && type <= 9);
+
+	text_length = strlen(text);
+
+	event = smf_event_new();
+	if (event == NULL)
+		return (NULL);
+
+	/* "2 +" is for leading 0xFF 0xtype. */
+	event->midi_buffer_length = 2 + text_length + MAX_VLQ_LENGTH;
+	event->midi_buffer = malloc(event->midi_buffer_length);
+	if (event->midi_buffer == NULL) {
+		g_critical("Cannot allocate MIDI buffer structure: %s", strerror(errno));
+		smf_event_delete(event);
+
+		return (NULL); 
+	}
+
+	event->midi_buffer[0] = 0xFF;
+	event->midi_buffer[1] = type;
+
+	vlq_length = format_vlq(event->midi_buffer + 2, MAX_VLQ_LENGTH - 2, text_length);
+	copied_length = snprintf((char *)event->midi_buffer + vlq_length + 2, event->midi_buffer_length - vlq_length - 2, "%s", text);
+
+	assert(copied_length == text_length);
+
+	event->midi_buffer_length = 2 + vlq_length + text_length;
+
+	return event;
+}
+
+/**
+  * Appends value, expressed as Variable Length Quantity, to event->track.
+  */
+static int
+write_vlq(smf_event_t *event, unsigned long value)
+{
+	unsigned char buf[MAX_VLQ_LENGTH];
+	int vlq_length;
+
+	vlq_length = format_vlq(buf, MAX_VLQ_LENGTH, value);
+
+	return (track_append(event->track, buf, vlq_length));
 }
 
 /**

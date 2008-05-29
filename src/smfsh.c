@@ -573,6 +573,58 @@ cmd_eventadd(char *str)
 }
 
 static int
+cmd_text(char *str)
+{
+	double seconds;
+	char *time, *endtime;
+
+	if (selected_track == NULL) {
+		g_critical("Please select a track first, using 'track <number>' command.");
+		return (-1);
+	}
+
+	if (str == NULL) {
+		g_critical("Usage: text time-in-seconds text-itself");
+		return (-2);
+	}
+
+	/* Extract the time.  Don't use strsep(3), it doesn't work on SunOS. */
+	time = str;
+	str = strchr(str, ' ');
+	if (str != NULL) {
+		*str = '\0';
+		str++;
+	}
+
+	seconds = strtod(time, &endtime);
+	if (endtime - time != strlen(time)) {
+		g_critical("Time is supposed to be a number, without trailing characters.");
+		return (-3);
+	}
+
+	/* Called with one parameter? */
+	if (str == NULL) {
+		g_critical("Usage: text time-in-seconds text-itself");
+		return (-4);
+	}
+
+	selected_event = smf_event_new_textual(1, str);
+	if (selected_event == NULL) {
+		g_critical("smf_event_new_textual() failed, event not created.");
+		return (-6);
+	}
+
+	assert(smf_event_is_valid(selected_event));
+
+	smf_track_add_event_seconds(selected_track, selected_event, seconds);
+
+	g_message("Event created.");
+
+	return (0);
+}
+
+
+static int
 cmd_eventaddeot(char *time)
 {
 	double seconds;
@@ -686,6 +738,7 @@ static struct command_struct {
 		{"events", cmd_events, "Show events in the currently selected track."},
 		{"event", cmd_event, "Show number of currently selected event, or select an event."},
 		{"add", cmd_eventadd, "Add an event and select it."},
+		{"text", cmd_text, "Add textual event and select it."},
 		{"eventadd", cmd_eventadd, NULL},
 		{"eot", cmd_eventaddeot, "Add an End Of Track event."},
 		{"eventaddeot", cmd_eventaddeot, NULL},
