@@ -36,6 +36,7 @@
 #include <sysexits.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 #include "smf.h"
 #include "config.h"
 
@@ -48,6 +49,8 @@ smf_track_t *selected_track = NULL;
 smf_event_t *selected_event = NULL;
 smf_t *smf = NULL;
 char *last_file_name = NULL;
+
+#define COMMAND_LENGTH 10
 
 static void
 usage(void)
@@ -359,7 +362,7 @@ cmd_events(char *notused)
 	smf_event_t *event;
 
 	if (selected_track == NULL) {
-		g_critical("No track selected - please use 'track [number]' command first.");
+		g_critical("No track selected - please use 'track <number>' command first.");
 		return (-1);
 	}
 
@@ -512,7 +515,7 @@ cmd_eventadd(char *str)
 	char *time, *endtime;
 
 	if (selected_track == NULL) {
-		g_critical("Please select a track first.");
+		g_critical("Please select a track first, using 'track <number>' command.");
 		return (-1);
 	}
 
@@ -570,7 +573,7 @@ cmd_eventaddeot(char *time)
 	char *end;
 
 	if (selected_track == NULL) {
-		g_critical("Please select a track first.");
+		g_critical("Please select a track first, using 'track <number>' command.");
 		return (-1);
 	}
 
@@ -663,27 +666,29 @@ static struct command_struct {
 	char *name;
 	int (*function)(char *command);
 	char *help;
-} commands[] = {{"help", cmd_help, "show this help."},
-		{"load", cmd_load, "load named file."},
-		{"save", cmd_save, "save to named file."},
-		{"ppqn", cmd_ppqn, "show ppqn (aka division), or set ppqn if used with parameter."},
-		{"format", cmd_format, "show format, or set format if used with parameter."},
-		{"tracks", cmd_tracks, "show number of tracks."},
-		{"track", cmd_track, "show number of currently selected track, or select a track."},
-		{"trackadd", cmd_trackadd, "add a track and select it."},
-		{"trackrm", cmd_trackrm, "remove currently selected track."},
-		{"events", cmd_events, "show events in the currently selected track."},
-		{"event", cmd_event, "show number of currently selected event, or select an event."},
-		{"eventadd", cmd_eventadd, "add an event and select it."},
-		{"add", cmd_eventadd, NULL},
-		{"eventaddeot", cmd_eventaddeot, "add an End Of Track event."},
-		{"eot", cmd_eventaddeot, NULL},
-		{"eventrm", cmd_eventrm, "remove currently selected event."},
-		{"rm", cmd_eventrm, NULL},
-		{"tempo", cmd_tempo, "show tempo map."},
-		{"length", cmd_length, "show length of the song."},
-		{"version", cmd_version, "show libsmf version."},
-		{"exit", cmd_exit, "exit to shell."},
+} commands[] = {{"help", cmd_help, "Show this help."},
+		{"?", cmd_help, NULL},
+		{"load", cmd_load, "Load named file."},
+		{"open", cmd_load},
+		{"save", cmd_save, "Save to named file."},
+		{"ppqn", cmd_ppqn, "Show ppqn (aka division), or set ppqn if used with parameter."},
+		{"format", cmd_format, "Show format, or set format if used with parameter."},
+		{"tracks", cmd_tracks, "Show number of tracks."},
+		{"track", cmd_track, "Show number of currently selected track, or select a track."},
+		{"trackadd", cmd_trackadd, "Add a track and select it."},
+		{"trackrm", cmd_trackrm, "Remove currently selected track."},
+		{"events", cmd_events, "Show events in the currently selected track."},
+		{"event", cmd_event, "Show number of currently selected event, or select an event."},
+		{"add", cmd_eventadd, "Add an event and select it."},
+		{"eventadd", cmd_eventadd, NULL},
+		{"eot", cmd_eventaddeot, "Add an End Of Track event."},
+		{"eventaddeot", cmd_eventaddeot, NULL},
+		{"eventrm", cmd_eventrm, NULL},
+		{"rm", cmd_eventrm, "Remove currently selected event."},
+		{"tempo", cmd_tempo, "Show tempo map."},
+		{"length", cmd_length, "Show length of the song."},
+		{"version", cmd_version, "Show libsmf version."},
+		{"exit", cmd_exit, "Exit to shell."},
 		{"quit", cmd_exit, NULL},
 		{"bye", cmd_exit, NULL},
 		{NULL, NULL, NULL}};
@@ -691,6 +696,8 @@ static struct command_struct {
 static int
 cmd_help(char *notused)
 {
+	int i, padding_length;
+	char padding[COMMAND_LENGTH + 1];
 	struct command_struct *tmp;
 
 	g_message("Available commands:");
@@ -699,7 +706,14 @@ cmd_help(char *notused)
 		/* Skip commands with no help string. */
 		if (tmp->help == NULL)
 			continue;
-		g_message("%s: %s", tmp->name, tmp->help);
+
+		padding_length = COMMAND_LENGTH - strlen(tmp->name);
+		assert(padding_length >= 0);
+		for (i = 0; i < padding_length; i++)
+			padding[i] = ' ';
+		padding[i] = '\0';
+
+		g_message("%s:%s%s", tmp->name, padding, tmp->help);
 	}
 
 	return (0);
