@@ -162,6 +162,7 @@ write_vlq(smf_event_t *event, unsigned long value)
 {
 	unsigned long buffer;
 	int ret;
+	unsigned char tmp;
 
 	assert(event->track);
 
@@ -174,7 +175,8 @@ write_vlq(smf_event_t *event, unsigned long value)
 	}
 
 	for (;;) {
-		ret = track_append(event->track, &buffer, 1);
+		tmp = buffer;
+		ret = track_append(event->track, &tmp, 1);
 		if (ret)
 			return (ret);
 
