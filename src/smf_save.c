@@ -479,8 +479,13 @@ smf_validate(smf_t *smf)
 			}
 		}
 
-		if (!eot_found)
-			smf_track_add_eot_delta_pulses(track, 0);
+		if (!eot_found) {
+			if (smf_track_add_eot_delta_pulses(track, 0)) {
+				g_critical("smf_track_add_eot_delta_pulses failed.");
+				return (-6);
+			}
+		}
+				
 	}
 
 	return (0);

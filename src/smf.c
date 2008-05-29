@@ -50,6 +50,8 @@
 smf_t *
 smf_new(void)
 {
+	int cantfail;
+
 	smf_t *smf = malloc(sizeof(smf_t));
 	if (smf == NULL) {
 		g_critical("Cannot allocate smf_t structure: %s", strerror(errno));
@@ -64,8 +66,12 @@ smf_new(void)
 	smf->tempo_array = g_ptr_array_new();
 	assert(smf->tempo_array);
 
-	smf_set_ppqn(smf, 120);
-	smf_set_format(smf, 0);
+	cantfail = smf_set_ppqn(smf, 120);
+	assert(!cantfail);
+
+	cantfail = smf_set_format(smf, 0);
+	assert(!cantfail);
+
 	smf_init_tempo(smf);
 
 	return (smf);
@@ -143,6 +149,8 @@ smf_track_delete(smf_track_t *track)
 void
 smf_add_track(smf_t *smf, smf_track_t *track)
 {
+	int cantfail;
+
 	assert(track->smf == NULL);
 
 	track->smf = smf;
@@ -151,8 +159,10 @@ smf_add_track(smf_t *smf, smf_track_t *track)
 	smf->number_of_tracks++;
 	track->track_number = smf->number_of_tracks;
 
-	if (smf->number_of_tracks > 1)
-		smf_set_format(smf, 1);
+	if (smf->number_of_tracks > 1) {
+		cantfail = smf_set_format(smf, 1);
+		assert(!cantfail);
+	}
 }
 
 /**
@@ -400,8 +410,7 @@ remove_eot_if_before_pulses(smf_track_t *track, int pulses)
 void
 smf_track_add_event(smf_track_t *track, smf_event_t *event)
 {
-	int i;
-	int last_pulses = 0;
+	int i, last_pulses = 0;
 
 	assert(track->smf != NULL);
 	assert(event->track == NULL);
@@ -806,6 +815,14 @@ smf_get_next_event(smf_t *smf)
 	return (event);
 }
 
+void
+smf_skip_next_event(smf_t *smf)
+{
+	void *notused;
+
+	notused = smf_get_next_event(smf);
+}
+
 /**
   * \return Next event, in time order, or NULL, if there are none left.  Does
   * not advance position in song.
@@ -888,7 +905,7 @@ smf_seek_to_event(smf_t *smf, const smf_event_t *target)
 		assert(event);
 
 		if (event != target)
-			smf_get_next_event(smf);
+			smf_skip_next_event(smf);
 		else
 			break;
 	}	
@@ -931,7 +948,7 @@ smf_seek_to_seconds(smf_t *smf, double seconds)
 		}
 
 		if (event->time_seconds < seconds)
-			smf_get_next_event(smf);
+			smf_skip_next_event(smf);
 		else
 			break;
 	}
@@ -967,7 +984,7 @@ smf_seek_to_pulses(smf_t *smf, int pulses)
 		}
 
 		if (event->time_pulses < pulses)
-			smf_get_next_event(smf);
+			smf_skip_next_event(smf);
 		else
 			break;
 	}

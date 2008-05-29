@@ -326,8 +326,10 @@ smf_get_last_tempo(const smf_t *smf)
 
 /**
  * Remove any existing tempos and add default one.
+ *
+ * \bug This will abort (by calling g_error) if new_tempo() (memory allocation there) fails.
  */
-int
+void
 smf_init_tempo(smf_t *smf)
 {
 	smf_tempo_t *tempo;
@@ -343,9 +345,7 @@ smf_init_tempo(smf_t *smf)
 
 	tempo = new_tempo(smf, 0);
 	if (tempo == NULL)
-		return (-1);
-
-	return (0);
+		g_error("tempo_init failed, sorry.");
 }
 
 /**
