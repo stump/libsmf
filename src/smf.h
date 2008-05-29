@@ -321,6 +321,7 @@ int smf_event_is_metadata(const smf_event_t *event);
 int smf_event_is_system_realtime(const smf_event_t *event);
 int smf_event_is_system_common(const smf_event_t *event);
 int smf_event_is_eot(const smf_event_t *event);
+int smf_event_is_textual(const smf_event_t *event);
 char *smf_event_decode(const smf_event_t *event);
 char *smf_event_extract_text(const smf_event_t *event);
 

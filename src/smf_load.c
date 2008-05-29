@@ -610,12 +610,37 @@ make_string(const unsigned char *buf, const int buffer_length, int len)
 }
 
 /**
- * Returns zero-terminated string extracted from "text events" or NULL, if there was any problem.
+ * \return 1, if passed a metaevent containing text, that is, Text, Copyright,
+ * Sequence/Track Name, Instrument, Lyric, Marker, Cue Point, Program Name,
+ * or Device Name; 0 otherwise.
+ */
+int
+smf_event_is_textual(const smf_event_t *event)
+{
+	if (!smf_event_is_metadata(event))
+		return (0);
+
+	if (event->midi_buffer_length < 4)
+		return (0);
+
+	if (event->midi_buffer[3] < 1 && event->midi_buffer[3] > 9)
+		return (0);
+
+	return (1);
+}
+
+/**
+ * Extracts text from "textual metaevents", such as Text or Lyric.
+ *
+ * \return Zero-terminated string extracted from "text events" or NULL, if there was any problem.
  */
 char *
 smf_event_extract_text(const smf_event_t *event)
 {
 	int string_length = -1, length_length = -1;
+
+	if (!smf_event_is_textual(event))
+		return (NULL);
 
 	if (event->midi_buffer_length < 3) {
 		g_critical("smf_event_extract_text: truncated MIDI message.");
