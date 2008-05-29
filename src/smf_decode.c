@@ -120,7 +120,7 @@ smf_event_decode_textual(const smf_event_t *event, const char *name)
 		return (NULL);
 	}
 
-	extracted = smf_string_from_event(event);
+	extracted = smf_event_extract_text(event);
 	if (extracted == NULL) {
 		free(buf);
 		return (NULL);

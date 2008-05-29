@@ -613,19 +613,19 @@ make_string(const unsigned char *buf, const int buffer_length, int len)
  * Returns zero-terminated string extracted from "text events" or NULL, if there was any problem.
  */
 char *
-smf_string_from_event(const smf_event_t *event)
+smf_event_extract_text(const smf_event_t *event)
 {
 	int string_length = -1, length_length = -1;
 
 	if (event->midi_buffer_length < 3) {
-		g_critical("smf_string_from_event: truncated MIDI message.");
+		g_critical("smf_event_extract_text: truncated MIDI message.");
 		return (NULL);
 	}
 
 	extract_vlq((void *)&(event->midi_buffer[2]), event->midi_buffer_length - 2, &string_length, &length_length);
 
 	if (string_length <= 0) {
-		g_critical("smf_string_from_event: truncated MIDI message.");
+		g_critical("smf_event_extract_text: truncated MIDI message.");
 		return (NULL);
 	}
 

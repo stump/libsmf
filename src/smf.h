@@ -322,7 +322,7 @@ int smf_event_is_system_realtime(const smf_event_t *event);
 int smf_event_is_system_common(const smf_event_t *event);
 int smf_event_is_eot(const smf_event_t *event);
 char *smf_event_decode(const smf_event_t *event);
-char *smf_string_from_event(const smf_event_t *event);
+char *smf_event_extract_text(const smf_event_t *event);
 
 /* Routines for loading SMF files. */
 smf_t *smf_load(const char *file_name);
