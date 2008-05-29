@@ -38,12 +38,13 @@
  * This is a private header.  Applications using libsmf should use smf.h.
  */
 
-/* Structures used in smf_load.c and smf_save.c. */
+/** SMF chunk header, used in smf_load.c and smf_save.c. */
 struct chunk_header_struct {
 	char		id[4];
 	uint32_t	length; 
 } __attribute__((__packed__));
 
+/** SMF chunk, used in smf_load.c and smf_save.c. */
 struct mthd_chunk_struct {
 	struct chunk_header_struct	mthd_header;
 	uint16_t			format;

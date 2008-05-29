@@ -173,6 +173,7 @@ extern "C" {
 #include <stdio.h>
 #include <glib.h>
 
+/** Represents a "song", i.e. collection of one or more tracks. */
 struct smf_struct {
 	int		format;
 	int		expected_number_of_tracks;
@@ -200,7 +201,7 @@ struct smf_struct {
 
 typedef struct smf_struct smf_t;
 
-/** This structure describes a single tempo change. */
+/** Describes a single tempo or time signature change. */
 struct smf_tempo_struct {
 	int time_pulses;
 	double time_seconds;
@@ -213,6 +214,7 @@ struct smf_tempo_struct {
 
 typedef struct smf_tempo_struct smf_tempo_t;
 
+/** Represents a single track. */
 struct smf_track_struct {
 	smf_t		*smf;
 
@@ -236,6 +238,7 @@ struct smf_track_struct {
 
 typedef struct smf_track_struct smf_track_t;
 
+/** Represents a single MIDI event or metaevent. */
 struct smf_event_struct {
 	/** Pointer to the track, or NULL if event is not attached. */
 	smf_track_t	*track;
