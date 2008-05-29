@@ -28,6 +28,8 @@
 #ifndef SMF_PRIVATE_H
 #define SMF_PRIVATE_H
 
+#include <sys/types.h>
+
 #include "config.h"
 
 #define SMF_VERSION PACKAGE_VERSION
