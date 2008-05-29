@@ -363,6 +363,11 @@ cmd_events(char *notused)
 		return (-1);
 	}
 
+	if (selected_track->number_of_events == 0) {
+		g_message("Selected track is empty.");
+		return (0);
+	}
+
 	g_message("List of events in track %d follows:", selected_track->track_number);
 
 	smf_rewind(smf);
