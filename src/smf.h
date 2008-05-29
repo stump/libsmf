@@ -25,9 +25,10 @@
  *
  */
 
-/*
- * This is the include file for libsmf, Standard MIDI File format library.
- * For questions and comments, contact Edward Tomasz Napierala <trasz@FreeBSD.org>.
+/**
+ * \file
+ *
+ * Public interface declaration for libsmf, Standard MIDI File format library.
  */
 
 /**
@@ -147,7 +148,7 @@
  * Adding Tempo Change in the middle of the song works in a similar way.
  * 	
  * MIDI data (event->midi_buffer) is always in normalized form - it always begins with status byte
- * (no running status), there are no system realtime events embedded in them etc.  Events like SysExes
+ * (no running status), there are no System Realtime events embedded in them etc.  Events like SysExes
  * are in "on the wire" form, without embedded length that is used in SMF file format.  Obviously
  * libsmf "normalizes" MIDI data during loading and "denormalizes" (adding length to SysExes, escaping
  * System Common and System Realtime messages etc) during writing.
@@ -174,7 +175,7 @@ extern "C" {
 #include <stdio.h>
 #include <glib.h>
 
-/** Represents a "song", i.e. collection of one or more tracks. */
+/** Represents a "song", that is, collection of one or more tracks. */
 struct smf_struct {
 	int		format;
 	int		expected_number_of_tracks;

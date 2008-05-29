@@ -25,6 +25,12 @@
  *
  */
 
+/**
+ * \file
+ *
+ * "SMF shell", command line utility.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sysexits.h>
@@ -648,7 +654,7 @@ cmd_exit(char *notused)
 
 static int cmd_help(char *notused);
 
-struct command_struct {
+static struct command_struct {
 	char *name;
 	int (*function)(char *command);
 	char *help;

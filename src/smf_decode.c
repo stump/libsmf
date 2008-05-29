@@ -25,10 +25,11 @@
  *
  */
 
-/*
- * This is Standard MIDI File format implementation, event decoding routines.
+/**
+ * \file
  *
- * For questions and comments, contact Edward Tomasz Napierala <trasz@FreeBSD.org>.
+ * Event decoding routines.
+ *
  */
 
 #include <stdlib.h>
@@ -61,7 +62,7 @@ smf_event_is_metadata(const smf_event_t *event)
 }
 
 /**
- * \return Nonzero if event is system realtime.
+ * \return Nonzero if event is System Realtime.
  */
 int
 smf_event_is_system_realtime(const smf_event_t *event)
@@ -79,7 +80,7 @@ smf_event_is_system_realtime(const smf_event_t *event)
 }
 
 /**
- * \return Nonzero if event is system common.
+ * \return Nonzero if event is System Common.
  */
 int
 smf_event_is_system_common(const smf_event_t *event)

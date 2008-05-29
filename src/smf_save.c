@@ -25,10 +25,11 @@
  *
  */
 
-/*
- * This is Standard MIDI File writer.
+/**
+ * \file
  *
- * For questions and comments, contact Edward Tomasz Napierala <trasz@FreeBSD.org>.
+ * Standard MIDI File writer.
+ *
  */
 
 /* Reference: http://www.borg.com/~jglatt/tech/midifile.htm */
@@ -405,7 +406,7 @@ pointers_are_clear(smf_t *smf)
 }
 
 /**
- * \return Nonzero, if event is End Of Track.
+ * \return Nonzero, if event is End Of Track metaevent.
  */
 int
 smf_event_is_eot(const smf_event_t *event)

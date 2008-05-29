@@ -25,10 +25,11 @@
  *
  */
 
-/*
- * This is Standard MIDI File loader.
+/**
+ * \file
  *
- * For questions and comments, contact Edward Tomasz Napierala <trasz@FreeBSD.org>.
+ * Standard MIDI File format loader.
+ *
  */
 
 /* Reference: http://www.borg.com/~jglatt/tech/midifile.htm */
@@ -454,7 +455,7 @@ extract_escaped_event(const unsigned char *buf, const int buffer_length, smf_eve
 	}
 
 	if (smf_event_is_system_realtime(event) || smf_event_is_system_common(event)) {
-		g_warning("Escaped event is not system realtime nor system common.");
+		g_warning("Escaped event is not System Realtime nor System Common.");
 	}
 
 	*len = vlq_length + message_length;

@@ -25,10 +25,11 @@
  *
  */
 
-/*
- * This is Standard MIDI File format implementation.
+/**
+ * \file
  *
- * For questions and comments, contact Edward Tomasz Napierala <trasz@FreeBSD.org>.
+ * Various functions.
+ *
  */
 
 /* Reference: http://www.borg.com/~jglatt/tech/midifile.htm */

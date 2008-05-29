@@ -25,10 +25,11 @@
  *
  */
 
-/*
- * This is Standard MIDI File format implementation, tempo map related part.
+/**
+ * \file
  *
- * For questions and comments, contact Edward Tomasz Napierala <trasz@FreeBSD.org>.
+ * Tempo map related part.
+ *
  */
 
 #include <stdlib.h>
