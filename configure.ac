@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([libsmf], [1.1], [trasz@FreeBSD.org])
+AC_INIT([libsmf],[1.1],[trasz@FreeBSD.org])
 AM_INIT_AUTOMAKE([-Wall foreign])
 AC_CONFIG_SRCDIR([src/smf.c])
 AC_CONFIG_HEADER([config.h])
@@ -11,6 +11,9 @@ AC_CONFIG_HEADER([config.h])
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
+AC_PROG_LN_S
+AC_PROG_MAKE_SET
+AC_PROG_RANLIB
 
 # Checks for libraries.
 AC_CHECK_LIB([m], [pow])
@@ -46,11 +49,11 @@ AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
 AC_FUNC_REALLOC
 AC_FUNC_STRTOD
-AC_CHECK_FUNCS([memset pow strdup strerror strtol])
+AC_CHECK_FUNCS([memset pow strdup strerror strtol strchr])
 
 PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.2)
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile smf.pc src/Makefile])
 AC_OUTPUT
