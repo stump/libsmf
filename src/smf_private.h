@@ -28,6 +28,7 @@
 #ifndef SMF_PRIVATE_H
 #define SMF_PRIVATE_H
 
+#include <stdint.h>
 #include <sys/types.h>
 
 #include "config.h"
