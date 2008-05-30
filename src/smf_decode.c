@@ -195,7 +195,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 				goto error;
 			}
 
-			off += snprintf(buf + off, BUFFER_SIZE - off, "Channel Prefix: %d.", event->midi_buffer[3]);
+			off += snprintf(buf + off, BUFFER_SIZE - off, "Channel Prefix: %d", event->midi_buffer[3]);
 			break;
 
 		case 0x21:
@@ -204,7 +204,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 				goto error;
 			}
 
-			off += snprintf(buf + off, BUFFER_SIZE - off, "MIDI Port: %d.", event->midi_buffer[3]);
+			off += snprintf(buf + off, BUFFER_SIZE - off, "MIDI Port: %d", event->midi_buffer[3]);
 			break;
 
 		case 0x2F:
