@@ -862,7 +862,7 @@ read_command(void)
 
 	if (buf == NULL) {
 		fprintf(stdout, "exit\n");
-		return ("exit");
+		return (strdup("exit"));
 	}
 
 	strip_unneeded_whitespace(buf, 1024);
@@ -906,16 +906,28 @@ static void
 read_and_execute_command(void)
 {
 	int ret;
-	char *command;
+	char *command_line, *command, *next_command;
 
-	command = read_command();
+	command = command_line = read_command();
 
-	ret = execute_command(command);
-	if (ret) {
-		g_warning("Command finished with error.");
-	}
+	do {
+		next_command = strchr(command, ';');
+		if (next_command != NULL) {
+			*next_command = '\0';
+			next_command++;
+		}
 
-	free(command);
+		strip_unneeded_whitespace(command, 1024);
+
+		ret = execute_command(command);
+		if (ret)
+			g_warning("Command finished with error.");
+
+		command = next_command;
+
+	} while (command);
+
+	free(command_line);
 }
 
 #ifdef HAVE_LIBREADLINE
