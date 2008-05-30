@@ -575,8 +575,8 @@ cmd_eventadd(char *str)
 static int
 cmd_text(char *str)
 {
-	double seconds;
-	char *time, *endtime;
+	double seconds, type;
+	char *time, *typestr, *end;
 
 	if (selected_track == NULL) {
 		g_critical("Please select a track first, using 'track <number>' command.");
@@ -584,7 +584,7 @@ cmd_text(char *str)
 	}
 
 	if (str == NULL) {
-		g_critical("Usage: text time-in-seconds text-itself");
+		g_critical("Usage: text time-in-seconds event-type text-itself");
 		return (-2);
 	}
 
@@ -596,19 +596,44 @@ cmd_text(char *str)
 		str++;
 	}
 
-	seconds = strtod(time, &endtime);
-	if (endtime - time != strlen(time)) {
+	seconds = strtod(time, &end);
+	if (end - time != strlen(time)) {
 		g_critical("Time is supposed to be a number, without trailing characters.");
 		return (-3);
 	}
 
 	/* Called with one parameter? */
 	if (str == NULL) {
-		g_critical("Usage: text time-in-seconds text-itself");
+		g_critical("Usage: text time-in-seconds event-type text-itself");
 		return (-4);
 	}
 
-	selected_event = smf_event_new_textual(1, str);
+	/* Extract the event type. */
+	typestr = str;
+	str = strchr(str, ' ');
+	if (str != NULL) {
+		*str = '\0';
+		str++;
+	}
+
+	type = strtod(typestr, &end);
+	if (end - typestr != strlen(typestr)) {
+		g_critical("Type is supposed to be a number, without trailing characters.");
+		return (-4);
+	}
+
+	if (type < 1 || type > 9) {
+		g_critical("Valid values for type are 1 - 9, inlusive.");
+		return (-5);
+	}
+
+	/* Called with one parameter? */
+	if (str == NULL) {
+		g_critical("Usage: text time-in-seconds event-type text-itself");
+		return (-4);
+	}
+
+	selected_event = smf_event_new_textual(type, str);
 	if (selected_event == NULL) {
 		g_critical("smf_event_new_textual() failed, event not created.");
 		return (-6);
