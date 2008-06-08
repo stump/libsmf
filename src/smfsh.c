@@ -80,11 +80,13 @@ cmd_load(char *file_name)
 		file_name = last_file_name;
 	}
 
-	if (smf != NULL)
-		smf_delete(smf);
-
 	selected_track = NULL;
 	selected_event = NULL;
+
+	if (smf != NULL) {
+		smf_delete(smf);
+		smf = NULL;
+	}
 
 	if (last_file_name != NULL)
 		free(last_file_name);
