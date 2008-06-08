@@ -77,7 +77,9 @@ cmd_load(char *file_name)
 			return (-1);
 		}
 
-		file_name = last_file_name;
+		file_name = strdup(last_file_name);
+	} else {
+		file_name = strdup(file_name);
 	}
 
 	selected_track = NULL;
@@ -110,6 +112,8 @@ cmd_load(char *file_name)
 
 	cmd_track("1");
 
+	free(file_name);
+
 	return (0);
 }
 
@@ -125,11 +129,8 @@ cmd_save(char *file_name)
 		}
 
 		file_name = last_file_name;
-	}
-
-	if (file_name == NULL) {
-		g_critical("Please specify file name.");
-		return (-1);
+	} else {
+		file_name = strdup(file_name);
 	}
 
 	if (last_file_name != NULL)
@@ -143,6 +144,8 @@ cmd_save(char *file_name)
 	}
 
 	g_message("File '%s' saved.", file_name);
+
+	free(file_name);
 
 	return (0);
 }
@@ -994,8 +997,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (argc == 2) {
-		last_file_name = strdup(argv[1]);
-		cmd_load(last_file_name);
+		cmd_load(argv[1]);
 	} else {
 		cmd_trackadd(NULL);
 	}
