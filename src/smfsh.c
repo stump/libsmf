@@ -132,7 +132,7 @@ cmd_save(char *file_name)
 			return (-1);
 		}
 
-		file_name = last_file_name;
+		file_name = strdup(last_file_name);
 	} else {
 		file_name = strdup(file_name);
 	}
