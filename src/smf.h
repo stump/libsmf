@@ -180,7 +180,6 @@ extern "C" {
 /** Represents a "song", that is, collection of one or more tracks. */
 struct smf_struct {
 	int		format;
-	int		expected_number_of_tracks;
 
 	/** These fields are extracted from "division" field of MThd header.  Valid is _either_ ppqn or frames_per_second/resolution. */
 	int		ppqn;
@@ -193,6 +192,7 @@ struct smf_struct {
 	void		*file_buffer;
 	int		file_buffer_length;
 	int		next_chunk_offset;
+	int		expected_number_of_tracks;
 
 	/** Private, used by smf.c. */
 	GPtrArray	*tracks_array;
