@@ -71,6 +71,8 @@ static int cmd_track(char *arg);
 static int
 cmd_load(char *file_name)
 {
+	char *decoded;
+
 	if (file_name == NULL) {
 		if (last_file_name == NULL) {
 			g_critical("Please specify file name.");
@@ -108,7 +110,9 @@ cmd_load(char *file_name)
 	}
 
 	g_message("File '%s' loaded.", file_name);
-	g_message("%s.", smf_decode(smf));
+	decoded = smf_decode(smf);
+	g_message("%s.", decoded);
+	free(decoded);
 
 	cmd_track("1");
 
