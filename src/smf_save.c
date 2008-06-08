@@ -433,6 +433,8 @@ write_file_and_free_buffer(smf_t *smf, const char *file_name)
 	return (0);
 }
 
+#ifndef NDEBUG
+
 /**
  * \return Nonzero, if all pointers supposed to be NULL are NULL.  Triggers assertion if not.
  */
@@ -455,6 +457,8 @@ pointers_are_clear(smf_t *smf)
 
 	return (1);
 }
+
+#endif /* !NDEBUG */
 
 /**
  * \return Nonzero, if event is End Of Track metaevent.
@@ -539,6 +543,8 @@ smf_validate(smf_t *smf)
 
 	return (0);
 }
+
+#ifndef NDEBUG
 
 /**
   * \return 1, if events a and b are identical.
@@ -630,6 +636,8 @@ smf_saved_correctly(const smf_t *smf, const char *file_name)
 
 	return (identical);
 }
+
+#endif /* !NDEBUG */
 
 /**
   * Writes the contents of SMF to the file given.
