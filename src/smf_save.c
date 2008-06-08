@@ -160,7 +160,6 @@ static int
 format_vlq(unsigned char *buf, int length, unsigned long value)
 {
 	int i;
-	unsigned char tmp;
 	unsigned long buffer;
 
 	/* Taken from http://www.borg.com/~jglatt/tech/midifile/vari.htm */
@@ -172,8 +171,7 @@ format_vlq(unsigned char *buf, int length, unsigned long value)
 	}
 
 	for (i = 0;; i++) {
-		tmp = buffer;
-		buf[i] = tmp;
+		buf[i] = buffer;
 
 		if (buffer & 0x80)
 			buffer >>= 8;
