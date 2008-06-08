@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+#include <string.h>
 #include "smf.h"
 #include "smf_private.h"
 
@@ -168,7 +169,7 @@ remove_last_tempo_with_pulses(smf_t *smf, int pulses)
 {
 	smf_tempo_t *tempo;
 
-	/* XXX: This is a workaround for the following problem: we have two tempo-related
+	/* XXX: This is a partial workaround for the following problem: we have two tempo-related
 	   events, A and B, that occur at the same time.  We remove B, then try to remove
 	   A.  However, both tempo changes got coalesced in new_tempo(), so it is impossible
 	   to remove B. */
@@ -181,6 +182,7 @@ remove_last_tempo_with_pulses(smf_t *smf, int pulses)
 	if (tempo->time_pulses != pulses)
 		return;
 
+	memset(tempo, 0, sizeof(smf_tempo_t));
 	free(tempo);
 
 	g_ptr_array_remove_index(smf->tempo_array, smf->tempo_array->len - 1);
@@ -325,6 +327,27 @@ smf_get_last_tempo(const smf_t *smf)
 }
 
 /**
+  * Remove all smf_tempo_t structures from SMF.
+  */
+void
+smf_fini_tempo(smf_t *smf)
+{
+	smf_tempo_t *tempo;
+
+	while (smf->tempo_array->len > 0) {
+		tempo = g_ptr_array_index(smf->tempo_array, smf->tempo_array->len - 1);
+		assert(tempo);
+
+		memset(tempo, 0, sizeof(smf_tempo_t));
+		free(tempo);
+
+		g_ptr_array_remove_index(smf->tempo_array, smf->tempo_array->len - 1);
+	}
+
+	assert(smf->tempo_array->len == 0);
+}
+
+/**
  * Remove any existing tempos and add default one.
  *
  * \bug This will abort (by calling g_error) if new_tempo() (memory allocation there) fails.
@@ -334,14 +357,7 @@ smf_init_tempo(smf_t *smf)
 {
 	smf_tempo_t *tempo;
 
-	while (smf->tempo_array->len > 0) {
-		smf_tempo_t *tempo = g_ptr_array_index(smf->tempo_array, smf->tempo_array->len - 1);
-		assert(tempo);
-		free(tempo);
-		g_ptr_array_remove_index(smf->tempo_array, smf->tempo_array->len - 1);
-	}
-
-	assert(smf->tempo_array->len == 0);
+	smf_fini_tempo(smf);
 
 	tempo = new_tempo(smf, 0);
 	if (tempo == NULL)

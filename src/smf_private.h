@@ -60,6 +60,7 @@ struct mthd_chunk_struct {
 
 void smf_track_add_event(smf_track_t *track, smf_event_t *event);
 void smf_init_tempo(smf_t *smf);
+void smf_fini_tempo(smf_t *smf);
 void smf_create_tempo_map_and_compute_seconds(smf_t *smf);
 void maybe_add_to_tempo_map(smf_event_t *event);
 void remove_last_tempo_with_pulses(smf_t *smf, int pulses);

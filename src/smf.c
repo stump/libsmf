@@ -87,6 +87,8 @@ smf_delete(smf_t *smf)
 	while (smf->tracks_array->len > 0)
 		smf_track_delete(g_ptr_array_index(smf->tracks_array, smf->tracks_array->len - 1));
 
+	smf_fini_tempo(smf);
+
 	assert(smf->tracks_array->len == 0);
 	assert(smf->number_of_tracks == 0);
 	g_ptr_array_free(smf->tracks_array, TRUE);
@@ -349,8 +351,10 @@ smf_event_delete(smf_event_t *event)
 	if (event->track != NULL)
 		smf_track_remove_event(event);
 
-	if (event->midi_buffer != NULL)
+	if (event->midi_buffer != NULL) {
+		memset(event->midi_buffer, 0, event->midi_buffer_length);
 		free(event->midi_buffer);
+	}
 
 	memset(event, 0, sizeof(smf_event_t));
 	free(event);
