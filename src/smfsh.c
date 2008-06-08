@@ -86,7 +86,10 @@ cmd_load(char *file_name)
 	selected_track = NULL;
 	selected_event = NULL;
 
+	if (last_file_name != NULL)
+		free(last_file_name);
 	last_file_name = strdup(file_name);
+
 	smf = smf_load(file_name);
 	if (smf == NULL) {
 		g_critical("Couldn't load '%s'.", file_name);
@@ -127,7 +130,10 @@ cmd_save(char *file_name)
 		return (-1);
 	}
 
+	if (last_file_name != NULL)
+		free(last_file_name);
 	last_file_name = strdup(file_name);
+
 	ret = smf_save(smf, file_name);
 	if (ret) {
 		g_critical("Couldn't save '%s'", file_name);
@@ -986,7 +992,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (argc == 2) {
-		last_file_name = argv[1];
+		last_file_name = strdup(argv[1]);
 		cmd_load(last_file_name);
 	} else {
 		cmd_trackadd(NULL);
