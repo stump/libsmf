@@ -918,10 +918,11 @@ read_and_execute_command(void)
 		}
 
 		strip_unneeded_whitespace(command, 1024);
-
-		ret = execute_command(command);
-		if (ret)
-			g_warning("Command finished with error.");
+		if (strlen(command) > 0) {
+			ret = execute_command(command);
+			if (ret)
+				g_warning("Command finished with error.");
+		}
 
 		command = next_command;
 
