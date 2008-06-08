@@ -541,6 +541,97 @@ smf_validate(smf_t *smf)
 }
 
 /**
+  * \return 1, if events a and b are identical.
+  */
+static int
+smf_event_is_identical(const smf_event_t *a, const smf_event_t *b)
+{
+	if (a->event_number != b->event_number ||
+	    a->delta_time_pulses != b->delta_time_pulses ||
+	    a->time_pulses != b->time_pulses ||
+	    a->time_seconds != b->time_seconds ||
+	    a->track_number != b->track_number ||
+	    a->midi_buffer_length != b->midi_buffer_length ||
+	    memcmp(a->midi_buffer, b->midi_buffer, a->midi_buffer_length)) {
+		
+		return (0);
+	}
+
+	return (1);
+}
+
+/**
+  * \return 1, if contents of tracks a and b are identical, 0 otherwise.
+  */
+static int
+smf_track_is_identical(const smf_track_t *a, const smf_track_t *b)
+{
+	int i;
+
+	if (a->track_number != b->track_number ||
+	    a->number_of_events != b->number_of_events) {
+
+		return (0);
+	}
+
+	for (i = 1; i <= a->number_of_events; i++) {
+		if (smf_event_is_identical(smf_track_get_event_by_number(a, i), smf_track_get_event_by_number(b, i)) == 0)
+			return (0);
+	}
+
+	return (1);
+}
+
+/**
+  * \return 1, if contents (header fields and tracks) of a and b are identical, 0 otherwise.
+  */
+static int
+smf_is_identical(const smf_t *a, const smf_t *b)
+{
+	int i;
+
+	if (a->format != b->format ||
+	    a->ppqn != b->ppqn ||
+	    a->frames_per_second != b->frames_per_second ||
+	    a->resolution != b->resolution ||
+	    a->number_of_tracks != b->number_of_tracks) {
+
+		return (0);
+	}
+
+	for (i = 1; i <= a->number_of_tracks; i++) {
+		if (smf_track_is_identical(smf_get_track_by_number(a, i), smf_get_track_by_number(b, i)) == 0)
+			return (0);
+	}
+
+	/* We do not need to compare tempos explicitly, as tempo is always computed from track contents. */
+
+	return (1);
+}
+
+/**
+  * Load file_name and compare with smf.
+  *
+  * \return 1, if smf loaded from file_name is the same as the smf argument; 0 otherwise.
+  */
+static int
+smf_saved_correctly(const smf_t *smf, const char *file_name)
+{
+	int identical;
+	smf_t *saved;
+
+	saved = smf_load(file_name);
+	if (saved == NULL)
+		return (0);
+
+	identical = smf_is_identical(smf, saved);
+
+	smf_delete(saved);
+
+	return (identical);
+}
+
+/**
   * Writes the contents of SMF to the file given.
   * \param smf SMF.
   * \param file_name Path to the file.
@@ -574,6 +665,8 @@ smf_save(smf_t *smf, const char *file_name)
 
 	if (write_file_and_free_buffer(smf, file_name))
 		return (-3);
+
+	assert(smf_saved_correctly(smf, file_name));
 
 	return (0);
 }
