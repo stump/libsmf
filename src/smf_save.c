@@ -417,6 +417,7 @@ write_file_and_free_buffer(smf_t *smf, const char *file_name)
 	}
 
 	/* Clear the pointers. */
+	memset(smf->file_buffer, 0, smf->file_buffer_length);
 	free(smf->file_buffer);
 	smf->file_buffer = NULL;
 	smf->file_buffer_length = 0;

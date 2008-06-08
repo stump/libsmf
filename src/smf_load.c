@@ -889,6 +889,7 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 
 /**
  * Loads SMF file.
+ *
  * \param file_name Path to the file.
  * \return SMF or NULL, if loading failed.
  */
@@ -904,6 +905,7 @@ smf_load(const char *file_name)
 
 	smf = smf_load_from_memory(file_buffer, file_buffer_length);
 
+	memset(file_buffer, 0, file_buffer_length);
 	free(file_buffer);
 
 	if (smf == NULL)
