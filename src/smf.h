@@ -283,6 +283,7 @@ char *smf_decode(const smf_t *smf) WARN_UNUSED_RESULT;
 
 smf_track_t *smf_get_track_by_number(const smf_t *smf, int track_number) WARN_UNUSED_RESULT;
 smf_event_t *smf_get_next_event(smf_t *smf) WARN_UNUSED_RESULT;
+void smf_skip_next_event(smf_t *smf);
 smf_event_t *smf_peek_next_event(smf_t *smf) WARN_UNUSED_RESULT;
 void smf_rewind(smf_t *smf);
 int smf_seek_to_seconds(smf_t *smf, double seconds) WARN_UNUSED_RESULT;

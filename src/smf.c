@@ -819,6 +819,10 @@ smf_get_next_event(smf_t *smf)
 	return (event);
 }
 
+/**
+  * Advance the "next event counter".  This is functionally the same as calling
+  * smf_get_next_event and ignoring the return value.
+  */
 void
 smf_skip_next_event(smf_t *smf)
 {
