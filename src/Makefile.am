@@ -9,3 +9,5 @@ smfsh_SOURCES = smfsh.c
 smfsh_CFLAGS = $(GLIB_CFLAGS) -DG_LOG_DOMAIN=\"smfsh\"
 smfsh_LDADD = libsmf.la $(GLIB_LIBS) $(READLINE_LIBS) -lm
 
+EXTRA_DIST = RCS
+
