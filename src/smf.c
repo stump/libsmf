@@ -134,7 +134,7 @@ smf_track_delete(smf_track_t *track)
 		smf_event_delete(g_ptr_array_index(track->events_array, track->events_array->len - 1));
 
 	if (track->smf)
-		smf_remove_track(track);
+		smf_track_remove_from_smf(track);
 
 	assert(track->events_array->len == 0);
 	assert(track->number_of_events == 0);
@@ -171,7 +171,7 @@ smf_add_track(smf_t *smf, smf_track_t *track)
  * Detaches track from the smf.
  */
 void
-smf_remove_track(smf_track_t *track)
+smf_track_remove_from_smf(smf_track_t *track)
 {
 	int i;
 	smf_track_t *tmp;
@@ -349,7 +349,7 @@ void
 smf_event_delete(smf_event_t *event)
 {
 	if (event->track != NULL)
-		smf_track_remove_event(event);
+		smf_event_remove_from_track(event);
 
 	if (event->midi_buffer != NULL) {
 		memset(event->midi_buffer, 0, event->midi_buffer_length);
@@ -401,7 +401,7 @@ remove_eot_if_before_pulses(smf_track_t *track, int pulses)
 	if (event->time_pulses > pulses)
 		return;
 
-	smf_track_remove_event(event);
+	smf_event_remove_from_track(event);
 }
 
 /**
@@ -543,7 +543,7 @@ smf_track_add_eot_seconds(smf_track_t *track, double seconds)
  * Detaches event from its track.
  */
 void
-smf_track_remove_event(smf_event_t *event)
+smf_event_remove_from_track(smf_event_t *event)
 {
 	int i, was_last;
 	smf_event_t *tmp;

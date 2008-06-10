@@ -144,7 +144,7 @@
  * Tempo related stuff happens automatically - when you add a metaevent that
  * is Tempo Change or Time Signature, libsmf adds that event to the tempo map.  If you remove
  * Tempo Change event that is in the middle of the song, the rest of the events will have their
- * event->time_seconds recomputed from event->time_pulses before smf_track_remove_event function returns.
+ * event->time_seconds recomputed from event->time_pulses before smf_event_remove_from_track function returns.
  * Adding Tempo Change in the middle of the song works in a similar way.
  * 	
  * MIDI data (event->midi_buffer) is always in normalized form - it always begins with status byte
@@ -157,7 +157,9 @@
  * Doing it the other way around will trip asserts.  Also, try to add events at the end of the track and remove
  * them from the end of the track, that's much more efficient.
  * 
- * All the libsmf functions have prefix "smf_".  Library does not use any global variables and is thread-safe,
+ * All the libsmf functions have prefix "smf_".  First argument for routines whose names start with
+ * "smf_event_" is "smf_event_t *", for routines whose names start with "smf_track_" - "smf_track_t *",
+ * and for plain "smf_" - "smf_t *".  Library does not use any global variables and is thread-safe,
  * as long as you don't try to work on the same SMF (smf_t and its descendant tracks and events) from several
  * threads at once without protecting it with mutex.  Library depends on glib and nothing else.  License is
  * BSD, two clause, which basically means you can use it freely in your software, both Open Source (including
@@ -295,7 +297,7 @@ double smf_get_length_seconds(const smf_t *smf) WARN_UNUSED_RESULT;
 int smf_event_is_last(const smf_event_t *event) WARN_UNUSED_RESULT;
 
 void smf_add_track(smf_t *smf, smf_track_t *track);
-void smf_remove_track(smf_track_t *track);
+void smf_track_remove_from_smf(smf_track_t *track);
 
 /* Routines for manipulating smf_track_t. */
 smf_track_t *smf_track_new(void) WARN_UNUSED_RESULT;
@@ -311,7 +313,7 @@ void smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double 
 int smf_track_add_eot_delta_pulses(smf_track_t *track, int delta) WARN_UNUSED_RESULT;
 int smf_track_add_eot_pulses(smf_track_t *track, int pulses) WARN_UNUSED_RESULT;
 int smf_track_add_eot_seconds(smf_track_t *track, double seconds) WARN_UNUSED_RESULT;
-void smf_track_remove_event(smf_event_t *event);
+void smf_event_remove_from_track(smf_event_t *event);
 
 /* Routines for manipulating smf_event_t. */
 smf_event_t *smf_event_new(void) WARN_UNUSED_RESULT;
