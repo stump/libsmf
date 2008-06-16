@@ -35,8 +35,6 @@
 
 #define SMF_VERSION PACKAGE_VERSION
 
-#define WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
-
 /**
  * \file
  *

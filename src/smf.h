@@ -177,7 +177,11 @@ extern "C" {
 #include <stdio.h>
 #include <glib.h>
 
+#if defined(__GNUC__) && __GNUC__ >= 4
 #define WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
+#else
+#define WARN_UNUSED_RESULT
+#endif
 
 /** Represents a "song", that is, collection of one or more tracks. */
 struct smf_struct {
