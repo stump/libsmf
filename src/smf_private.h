@@ -42,11 +42,18 @@
  *
  */
 
+#if defined(__GNUC__)
+#define ATTRIBUTE_PACKED  __attribute__((__packed__))
+#else
+#define ATTRIBUTE_PACKED
+#pragma pack(1)
+#endif
+
 /** SMF chunk header, used only by smf_load.c and smf_save.c. */
 struct chunk_header_struct {
 	char		id[4];
 	uint32_t	length; 
-} __attribute__((__packed__));
+} ATTRIBUTE_PACKED;
 
 /** SMF chunk, used only by smf_load.c and smf_save.c. */
 struct mthd_chunk_struct {
@@ -54,7 +61,11 @@ struct mthd_chunk_struct {
 	uint16_t			format;
 	uint16_t			number_of_tracks;
 	uint16_t			division;
-} __attribute__((__packed__));
+} ATTRIBUTE_PACKED;
+
+#if (!defined __GNUC__)
+#pragma pack()
+#endif
 
 void smf_track_add_event(smf_track_t *track, smf_event_t *event);
 void smf_init_tempo(smf_t *smf);
