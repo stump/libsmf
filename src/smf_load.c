@@ -72,6 +72,10 @@ next_chunk(smf_t *smf)
 		return (NULL);
 	}
 
+	/*
+	 * XXX: On SPARC, after compiling with "-fast" option there will be SIGBUS here.
+	 * Please compile with -xmemalign=8i".
+	 */
 	smf->next_chunk_offset += sizeof(struct chunk_header_struct) + ntohl(chunk->length);
 
 	if (smf->next_chunk_offset > smf->file_buffer_length) {
