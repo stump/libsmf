@@ -379,6 +379,18 @@ events_array_compare_function(gconstpointer aa, gconstpointer bb)
 	if (a->time_pulses > b->time_pulses)
 		return (1);
 
+	/*
+	 * We need to preserve original order, otherwise things will break
+	 * when there are several events with the same ->time_pulses.
+	 * XXX: This is an ugly hack; we should remove sorting altogether.
+	 */
+
+	if (a->event_number < b->event_number)
+		return (-1);
+
+	if (a->event_number > b->event_number)
+		return (1);
+
 	return (0);
 }
 
@@ -465,6 +477,15 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 					smf_track_get_event_by_number(track, i - 1)->time_pulses;
 				assert(tmp->delta_time_pulses >= 0);
 			}
+		}
+
+		/* Adjust ->delta_time_pulses of the next event. */
+		if (event->event_number < track->number_of_events) {
+			smf_event_t *next_event = smf_track_get_event_by_number(track, event->event_number + 1);
+			assert(next_event);
+			assert(next_event->time_pulses >= event->time_pulses);
+			next_event->delta_time_pulses -= event->delta_time_pulses;
+			assert(next_event->delta_time_pulses >= 0);
 		}
 	}
 
