@@ -545,95 +545,58 @@ smf_validate(smf_t *smf)
 
 #ifndef NDEBUG
 
-/**
-  * \return 1, if events a and b are identical.
-  */
-static int
-smf_event_is_identical(const smf_event_t *a, const smf_event_t *b)
+static void
+assert_smf_event_is_identical(const smf_event_t *a, const smf_event_t *b)
 {
-	if (a->event_number != b->event_number ||
-	    a->delta_time_pulses != b->delta_time_pulses ||
-	    a->time_pulses != b->time_pulses ||
-	    a->time_seconds != b->time_seconds ||
-	    a->track_number != b->track_number ||
-	    a->midi_buffer_length != b->midi_buffer_length ||
-	    memcmp(a->midi_buffer, b->midi_buffer, a->midi_buffer_length)) {
-		
-		return (0);
-	}
-
-	return (1);
+	assert(a->event_number == b->event_number);
+	assert(a->delta_time_pulses == b->delta_time_pulses);
+	assert(abs(a->time_pulses - b->time_pulses) <= 2);
+	assert(fabs(a->time_seconds - b->time_seconds) <= 0.01);
+	assert(a->track_number == b->track_number);
+	assert(a->midi_buffer_length == b->midi_buffer_length);
+	assert(memcmp(a->midi_buffer, b->midi_buffer, a->midi_buffer_length) == 0);
 }
 
-/**
-  * \return 1, if contents of tracks a and b are identical, 0 otherwise.
-  */
-static int
-smf_track_is_identical(const smf_track_t *a, const smf_track_t *b)
+static void
+assert_smf_track_is_identical(const smf_track_t *a, const smf_track_t *b)
 {
 	int i;
 
-	if (a->track_number != b->track_number ||
-	    a->number_of_events != b->number_of_events) {
+	assert(a->track_number == b->track_number);
+	assert(a->number_of_events == b->number_of_events);
 
-		return (0);
-	}
-
-	for (i = 1; i <= a->number_of_events; i++) {
-		if (smf_event_is_identical(smf_track_get_event_by_number(a, i), smf_track_get_event_by_number(b, i)) == 0)
-			return (0);
-	}
-
-	return (1);
+	for (i = 1; i <= a->number_of_events; i++)
+		assert_smf_event_is_identical(smf_track_get_event_by_number(a, i), smf_track_get_event_by_number(b, i));
 }
 
-/**
-  * \return 1, if contents (header fields and tracks) of a and b are identical, 0 otherwise.
-  */
-static int
-smf_is_identical(const smf_t *a, const smf_t *b)
+static void
+assert_smf_is_identical(const smf_t *a, const smf_t *b)
 {
 	int i;
 
-	if (a->format != b->format ||
-	    a->ppqn != b->ppqn ||
-	    a->frames_per_second != b->frames_per_second ||
-	    a->resolution != b->resolution ||
-	    a->number_of_tracks != b->number_of_tracks) {
+	assert(a->format == b->format);
+	assert(a->ppqn == b->ppqn);
+	assert(a->frames_per_second == b->frames_per_second);
+	assert(a->resolution == b->resolution);
+	assert(a->number_of_tracks == b->number_of_tracks);
 
-		return (0);
-	}
-
-	for (i = 1; i <= a->number_of_tracks; i++) {
-		if (smf_track_is_identical(smf_get_track_by_number(a, i), smf_get_track_by_number(b, i)) == 0)
-			return (0);
-	}
+	for (i = 1; i <= a->number_of_tracks; i++)
+		assert_smf_track_is_identical(smf_get_track_by_number(a, i), smf_get_track_by_number(b, i));
 
 	/* We do not need to compare tempos explicitly, as tempo is always computed from track contents. */
-
-	return (1);
 }
 
-/**
-  * Load file_name and compare with smf.
-  *
-  * \return 1, if smf loaded from file_name is the same as the smf argument; 0 otherwise.
-  */
-static int
-smf_saved_correctly(const smf_t *smf, const char *file_name)
+static void
+assert_smf_saved_correctly(const smf_t *smf, const char *file_name)
 {
-	int identical;
 	smf_t *saved;
 
 	saved = smf_load(file_name);
-	if (saved == NULL)
-		return (0);
+	assert(saved != NULL);
 
-	identical = smf_is_identical(smf, saved);
+	assert_smf_is_identical(smf, saved);
 
 	smf_delete(saved);
-
-	return (identical);
 }
 
 #endif /* !NDEBUG */
@@ -673,7 +636,9 @@ smf_save(smf_t *smf, const char *file_name)
 	if (write_file_and_free_buffer(smf, file_name))
 		return (-3);
 
-	assert(smf_saved_correctly(smf, file_name));
+#ifndef NDEBUG
+	assert_smf_saved_correctly(smf, file_name);
+#endif
 
 	return (0);
 }
