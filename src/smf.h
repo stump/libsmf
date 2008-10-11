@@ -42,7 +42,9 @@
  * 
  * The only field in smf_t, smf_track_t, smf_event_t and smf_tempo_t structures your
  * code may modify is event->midi_buffer and event->midi_buffer_length.  Do not modify
- * other fields, _ever_.  You may read them, though.
+ * other fields, _ever_.  You may read them, though.  Do not declare static instances
+ * of these types, i.e. never do something like this:  "smf_t smf;".  Always use
+ * "smf_t *smf = smf_new();".  The same applies to smf_track_t and smf_event_t.
  * 
  * Say you want to load a Standard MIDI File (.mid) file and play it back somehow.  This is (roughly)
  * how you do this:
@@ -67,6 +69,8 @@
  * 		wait until event->time_seconds.
  * 		feed_to_midi_output(event->midi_buffer, event->midi_buffer_length);
  * 	}
+ *
+ *	smf_delete(smf);
  *
  * \endcode
  * 
@@ -105,6 +109,8 @@
  * 		Whoops, saving failed for some reason.
  * 		return;
  * 	}
+ *
+ *	smf_delete(smf);
  *
  * \endcode
  *
@@ -159,7 +165,8 @@
  * 
  * All the libsmf functions have prefix "smf_".  First argument for routines whose names start with
  * "smf_event_" is "smf_event_t *", for routines whose names start with "smf_track_" - "smf_track_t *",
- * and for plain "smf_" - "smf_t *".  Library does not use any global variables and is thread-safe,
+ * and for plain "smf_" - "smf_t *".  The only exception are smf_whatever_new routines.
+ * Library does not use any global variables and is thread-safe,
  * as long as you don't try to work on the same SMF (smf_t and its descendant tracks and events) from several
  * threads at once without protecting it with mutex.  Library depends on glib and nothing else.  License is
  * BSD, two clause, which basically means you can use it freely in your software, both Open Source (including
