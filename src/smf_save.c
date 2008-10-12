@@ -388,14 +388,12 @@ write_track(smf_track_t *track)
 }
 
 /**
- * Takes smf->file_buffer and saves it to the file.  Frees the buffer afterwards.
+ * Takes smf->file_buffer and saves it to the file.
  */
 static int
-write_file_and_free_buffer(smf_t *smf, const char *file_name)
+write_file(smf_t *smf, const char *file_name)
 {
-	int i;
 	FILE *stream;
-	smf_track_t *track;
 
 	stream = fopen(file_name, "w+");
 	if (stream == NULL) {
@@ -416,6 +414,15 @@ write_file_and_free_buffer(smf_t *smf, const char *file_name)
 		return (-3);
 	}
 
+	return (0);
+}
+
+static void
+free_buffer(smf_t *smf)
+{
+	int i;
+	smf_track_t *track;
+
 	/* Clear the pointers. */
 	memset(smf->file_buffer, 0, smf->file_buffer_length);
 	free(smf->file_buffer);
@@ -428,8 +435,6 @@ write_file_and_free_buffer(smf_t *smf, const char *file_name)
 		track->file_buffer = NULL;
 		track->file_buffer_length = 0;
 	}
-
-	return (0);
 }
 
 #ifndef NDEBUG
@@ -610,7 +615,7 @@ assert_smf_saved_correctly(const smf_t *smf, const char *file_name)
 int
 smf_save(smf_t *smf, const char *file_name)
 {
-	int i, ret;
+	int i, error;
 	smf_track_t *track;
 
 	smf_rewind(smf);
@@ -628,13 +633,19 @@ smf_save(smf_t *smf, const char *file_name)
 
 		assert(track != NULL);
 
-		ret = write_track(track);
-		if (ret)
-			return (ret);
+		error = write_track(track);
+		if (error) {
+			free_buffer(smf);
+			return (error);
+		}
 	}
 
-	if (write_file_and_free_buffer(smf, file_name))
-		return (-3);
+	error = write_file(smf, file_name);
+
+	free_buffer(smf);
+
+	if (error)
+		return (error);
 
 #ifndef NDEBUG
 	assert_smf_saved_correctly(smf, file_name);
