@@ -117,8 +117,9 @@
  *
  * There are two basic ways of getting MIDI data out of smf - sequential or by track/event number.  You may
  * mix them if you need to.  First one is used in the example above - seek to the point from which you want
- * the playback to start (using smf_seek_to_seconds(), for example) and then do smf_get_next_event in loop,
- * until it returns NULL.  After smf_load, smf is rewound to the start of the song.
+ * the playback to start (using smf_seek_to_seconds(), smf_seek_to_pulses() or smf_seek_to_event()) and then
+ * do smf_get_next_event() in loop, until it returns NULL.  Calling smf_load() causes the smf to be rewound
+ * to the start of the song.
  *
  * Getting events by number works like this:
  *
@@ -129,11 +130,11 @@
  *
  * \endcode
  *
- * To create new event, use smf_event_new(), smf_event_new_from_pointer() or smf_new_from_bytes().
+ * To create new event, use smf_event_new(), smf_event_new_from_pointer() or smf_event_new_from_bytes().
  * First one creates an empty event - you need to manually allocate (using malloc(3)) buffer for
  * MIDI data, write MIDI data into it, put the address of that buffer into event->midi_buffer,
  * and the length of MIDI data into event->midi_buffer_length.  Note that deleting the event
- * (using smf_delete()) will free the buffer.
+ * (using smf_event_delete()) will free the buffer.
  *
  * Second form does most of this for you: it takes an address of the buffer containing MIDI data,
  * allocates storage and copies MIDI data into it.
@@ -179,7 +180,7 @@
  * event->time_pulses, which is PPQN clocks since the start of the song, and event->delta_pulses, which is PPQN clocks
  * since the previous event in that track.  These values are invalid if the event is not attached to the track.
  * If event is attached, all three values are valid.  Time of the event is specified when adding the event
- * (smf_track_add_event_seconds()/smf_track_add_event_pulses()/smf_track_add_event_delta_pulses()); the remaining
+ * (using smf_track_add_event_seconds(), smf_track_add_event_pulses() or smf_track_add_event_delta_pulses()); the remaining
  * two values are computed from that.
  *
  * Tempo related stuff happens automatically - when you add a metaevent that
@@ -188,7 +189,7 @@
  * event->time_seconds recomputed from event->time_pulses before smf_event_remove_from_track() function returns.
  * Adding Tempo Change in the middle of the song works in a similar way.
  * 	
- * MIDI data (event->midi_buffer) is always in normalized form - it always begins with status byte
+ * MIDI data (event->midi_buffer) is always kept in normalized form - it always begins with status byte
  * (no running status), there are no System Realtime events embedded in them etc.  Events like SysExes
  * are in "on the wire" form, without embedded length that is used in SMF file format.  Obviously
  * libsmf "normalizes" MIDI data during loading and "denormalizes" (adding length to SysExes, escaping
