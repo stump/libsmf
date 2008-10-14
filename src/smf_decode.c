@@ -501,7 +501,10 @@ note_from_int(char *buf, int note_number)
 /**
  * \return Textual representation of the event given, or NULL, if event is unknown.
  * Returned string looks like this:
+ *
  * Note On, channel 1, note F#3, velocity 0
+ *
+ * You should free the returned string afterwards, using free(3).
  */
 char *
 smf_event_decode(const smf_event_t *event)
@@ -582,7 +585,10 @@ smf_event_decode(const smf_event_t *event)
 /**
  * \return Textual representation of the data extracted from MThd header, or NULL, if something goes wrong.
  * Returned string looks like this:
+ *
  * format: 1 (several simultaneous tracks); number of tracks: 4; division: 192 PPQN.
+ *
+ * You should free the returned string afterwards, using free(3).
  */
 char *
 smf_decode(const smf_t *smf)
