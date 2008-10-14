@@ -50,19 +50,16 @@
  * how you do this:
  * 
  * \code
- * 	smf_t *smf = smf_load(file_name);
+ * 	smf_t *smf;
+ * 	smf_event_t *event;
+ *
+ * 	smf = smf_load(file_name);
  * 	if (smf == NULL) {
  * 		Whoops, something went wrong.
  * 		return;
  * 	}
  * 
- * 	for (;;) {
- * 		smf_event_t *event = smf_get_next_event(smf);
- * 		if (event == NULL) {
- * 			No more events, end of the song.
- * 			return;
- * 		}
- *
+ * 	while ((event = smf_get_next_event(smf)) != NULL) {
  *		if (smf_event_is_metadata(event))
  *			continue;
  * 
@@ -78,14 +75,18 @@
  * 
  * \code
  *
- * 	smf_t *smf = smf_new();
+ * 	smf_t *smf;
+ *	smf_track_t *track;
+ *	smf_event_t *event;
+ *
+ * 	smf = smf_new();
  * 	if (smf == NULL) {
  * 		Whoops.
  * 		return;
  * 	}
  * 
  * 	for (int i = 1; i <= number of tracks; i++) {
- * 		smf_track_t *track = smf_track_new();
+ * 		track = smf_track_new();
  * 		if (track == NULL) {
  * 			Whoops.
  * 			return;
@@ -93,8 +94,8 @@
  * 
  * 		smf_add_track(smf, track);
  * 
- * 		for (int j = 1; j <= number of events in this track; j++) {
- * 			smf_event_t *event = smf_event_new_from_pointer(your MIDI message, message length);
+ * 		for (int j = 1; j <= number of events you want to put into this track; j++) {
+ * 			event = smf_event_new_from_pointer(your MIDI message, message length);
  * 			if (event == NULL) {
  * 				Whoops.
  * 				return;
@@ -116,7 +117,7 @@
  *
  * There are two basic ways of getting MIDI data out of smf - sequential or by track/event number.  You may
  * mix them if you need to.  First one is used in the example above - seek to the point from which you want
- * the playback to start (using smf_seek_to_seconds, for example) and then do smf_get_next_event in loop,
+ * the playback to start (using smf_seek_to_seconds(), for example) and then do smf_get_next_event in loop,
  * until it returns NULL.  After smf_load, smf is rewound to the start of the song.
  *
  * Getting events by number works like this:
@@ -128,29 +129,63 @@
  *
  * \endcode
  *
+ * To create new event, use smf_event_new(), smf_event_new_from_pointer() or smf_new_from_bytes().
+ * First one creates an empty event - you need to manually allocate (using malloc(3)) buffer for
+ * MIDI data, write MIDI data into it, put the address of that buffer into event->midi_buffer,
+ * and the length of MIDI data into event->midi_buffer_length.  Note that deleting the event
+ * (using smf_delete()) will free the buffer.
+ *
+ * Second form does most of this for you: it takes an address of the buffer containing MIDI data,
+ * allocates storage and copies MIDI data into it.
+ *
+ * Third form is useful for manually creating short events, up to three bytes in length, for
+ * example Note On or Note Off events.  It simply takes three bytes and creates MIDI event containing
+ * them.  If you need to create MIDI message that takes only two bytes, pass -1 as the third byte.
+ * For one byte message (System Realtime), pass -1 as second and third byte.
+ *
+ * To free an event, use smf_event_delete().
+ *
+ * To add event to the track, use smf_track_add_event_delta_pulses(), smf_track_add_event_pulses(),
+ * or smf_track_add_event_seconds().  The difference between them is in the way you specify the time of
+ * the event - with the first one, you specify it as an interval, in pulses, from the previous event
+ * in this track; with the second one, you specify it as pulses from the start of the song, and with the
+ * last one, you specify it as seconds from the start of the song.  Obviously, the first version can
+ * only append events at the end of the track.
+ *
+ * To remove an event from the track it's attached to, use smf_event_remove_from_track().  You may
+ * want to free the event (using smf_event_delete()) afterwards.
+ *
+ * To create new track, use smf_track_new().  To add track to the smf, use smf_add_track().
+ * To remove track from its smf, use smf_track_remove_from_smf().  To free the track structure,
+ * use smf_track_delete().
+ *
+ * Note that libsmf keeps things consistent.  If you free (using smf_track_delete()) a track that
+ * is attached to an smf and contains events, libsmf will detach the events, free them, detach
+ * the track, free it etc.
+ *
  * Tracks and events are numbered consecutively, starting from one.  If you remove a track or event,
- * the rest of tracks/events will be renumbered.  To get number of event in its track, use event->event_number.
+ * the rest of tracks/events will get renumbered.  To get the number of a given event in its track, use event->event_number.
  * To get the number of track in its smf, use track->track_number.  To get the number of events in the track,
  * use track->number_of_events.  To get the number of tracks in the smf, use smf->number_of_tracks.
  *
- * In SMF File Format, each track has to end with End Of Track metaevent.  If you load SMF file using smf_load,
+ * In SMF File Format, each track has to end with End Of Track metaevent.  If you load SMF file using smf_load(),
  * that will be the case.  If you want to create or edit an SMF, you don't need to worry about EOT events;
  * libsmf automatically takes care of them for you.  If you try to save an SMF with tracks that do not end
- * with EOTs, smf_save will append them.  If you try to add event that happens after EOT metaevent, libsmf
- * will remove the EOT.  If you want to add EOT manually, you can, of course, using smf_track_add_eot_seconds
- * or smf_track_add_eot_pulses.
+ * with EOTs, smf_save() will append them.  If you try to add event that happens after EOT metaevent, libsmf
+ * will remove the EOT.  If you want to add EOT manually, you can, of course, using smf_track_add_eot_seconds()
+ * or smf_track_add_eot_pulses().
  *
  * Each event carries three time values - event->time_seconds, which is seconds since the start of the song,
  * event->time_pulses, which is PPQN clocks since the start of the song, and event->delta_pulses, which is PPQN clocks
  * since the previous event in that track.  These values are invalid if the event is not attached to the track.
  * If event is attached, all three values are valid.  Time of the event is specified when adding the event
- * (smf_track_add_event_seconds/smf_track_add_event_pulses/smf_track_add_event_delta_pulses); the remaining
+ * (smf_track_add_event_seconds()/smf_track_add_event_pulses()/smf_track_add_event_delta_pulses()); the remaining
  * two values are computed from that.
  *
  * Tempo related stuff happens automatically - when you add a metaevent that
  * is Tempo Change or Time Signature, libsmf adds that event to the tempo map.  If you remove
  * Tempo Change event that is in the middle of the song, the rest of the events will have their
- * event->time_seconds recomputed from event->time_pulses before smf_event_remove_from_track function returns.
+ * event->time_seconds recomputed from event->time_pulses before smf_event_remove_from_track() function returns.
  * Adding Tempo Change in the middle of the song works in a similar way.
  * 	
  * MIDI data (event->midi_buffer) is always in normalized form - it always begins with status byte
