@@ -53,14 +53,6 @@ char *last_file_name = NULL;
 #define COMMAND_LENGTH 10
 
 static void
-usage(void)
-{
-	fprintf(stderr, "usage: smfsh [file]\n");
-
-	exit(EX_USAGE);
-}
-
-static void
 log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer notused)
 {
 	fprintf(stderr, "%s: %s\n", log_domain, message);
@@ -986,11 +978,38 @@ smfsh_completion(const char *text, int start, int end)
 
 #endif
 
+static void
+usage(void)
+{
+	fprintf(stderr, "usage: smfsh [-V | file]\n");
+
+	exit(EX_USAGE);
+}
+
+static void
+show_version(void)
+{
+	fprintf(stderr, "libsmf %s\n", smf_get_version());
+}
+
 int main(int argc, char *argv[])
 {
-	if (argc > 2) {
-		usage();
+	int ch;
+
+	while ((ch = getopt(argc, argv, "V")) != -1) {
+		switch (ch) {
+		case 'V':
+			show_version();
+			exit(EX_OK);
+
+		case '?':
+		default:
+			usage();
+		}
 	}
+
+	if (argc > 2)
+		usage();
 
 	g_log_set_default_handler(log_handler, NULL);
 
