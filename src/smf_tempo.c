@@ -118,6 +118,9 @@ add_time_signature(smf_t *smf, int pulses, int numerator, int denominator, int c
 	return (0);
 }
 
+/**
+ * \internal
+ */
 void
 maybe_add_to_tempo_map(smf_event_t *event)
 {
@@ -160,10 +163,12 @@ maybe_add_to_tempo_map(smf_event_t *event)
 }
 
 /**
-  * This is an internal function, called from smf_track_remove_event when tempo-related
-  * event being removed does not require recreation of tempo map, i.e. there are no events
-  * after that one.
-  */
+ * \internal
+ *
+ * This is an internal function, called from smf_track_remove_event when tempo-related
+ * event being removed does not require recreation of tempo map, i.e. there are no events
+ * after that one.
+ */
 void
 remove_last_tempo_with_pulses(smf_t *smf, int pulses)
 {
@@ -221,6 +226,8 @@ pulses_from_seconds(const smf_t *smf, double seconds)
 }
 
 /**
+ * \internal
+ *
  * Computes value of event->time_seconds for all events in smf.
  * Warning: rewinds the smf.
  */
@@ -327,8 +334,10 @@ smf_get_last_tempo(const smf_t *smf)
 }
 
 /**
-  * Remove all smf_tempo_t structures from SMF.
-  */
+ * \internal 
+ *
+ * Remove all smf_tempo_t structures from SMF.
+ */
 void
 smf_fini_tempo(smf_t *smf)
 {
@@ -348,6 +357,8 @@ smf_fini_tempo(smf_t *smf)
 }
 
 /**
+ * \internal
+ *
  * Remove any existing tempos and add default one.
  *
  * \bug This will abort (by calling g_error) if new_tempo() (memory allocation there) fails.
