@@ -325,7 +325,7 @@ cmd_trackrm(char *arg)
 
 	smf_track_delete(smf_get_track_by_number(smf, num));
 
-	g_message("Track #%d removed.", num);
+	g_message("Track %d removed.", num);
 
 	return (0);
 }
@@ -359,7 +359,7 @@ show_event(smf_event_t *event)
 	}
 
 	g_message("%d: %s: %s, %f seconds, %d pulses, %d delta pulses", event->event_number, type, decoded,
-		event->time_seconds, event->time_pulses, event->delta_time_pulses);
+	    event->time_seconds, event->time_pulses, event->delta_time_pulses);
 
 	free(decoded);
 
@@ -385,9 +385,8 @@ cmd_events(char *notused)
 
 	smf_rewind(smf);
 
-	while ((event = smf_track_get_next_event(selected_track)) != NULL) {
+	while ((event = smf_track_get_next_event(selected_track)) != NULL)
 		show_event(event);
-	}
 
 	smf_rewind(smf);
 
@@ -421,11 +420,10 @@ parse_event_number(const char *arg)
 	}
 
 	if (num < 1 || num > selected_track->number_of_events) {
-		if (selected_track->number_of_events > 0) {
+		if (selected_track->number_of_events > 0)
 			g_critical("Invalid event number specified; valid choices are 1 - %d.", selected_track->number_of_events);
-		} else {
+		else
 			g_critical("There are no events in currently selected track.");
-		}
 
 		return (-1);
 	}
@@ -512,8 +510,8 @@ error:
 static void
 eventadd_usage(void)
 {
-	g_message("Usage: add time-in-seconds midi-in-hex.  For example, 'add 1 903C7F'");
-        g_message("will add Note On event, one second from the start of song, channel 1, note C4, velocity 127.");
+	g_message("Usage: add <time-in-seconds> <midi-in-hex> - for example, 'add 1 903C7F' will add");
+	g_message("Note On event, note C4, velocity 127, channel 1, one second from the start of song, channel 1.");
 }
 
 static int
@@ -594,7 +592,7 @@ cmd_text(char *str)
 	}
 
 	if (str == NULL) {
-		g_critical("Usage: text time-in-seconds event-type text-itself");
+		g_critical("Usage: text <time-in-seconds> <event-type> <text-itself>");
 		return (-2);
 	}
 
@@ -614,7 +612,7 @@ cmd_text(char *str)
 
 	/* Called with one parameter? */
 	if (str == NULL) {
-		g_critical("Usage: text time-in-seconds event-type text-itself");
+		g_critical("Usage: text <time-in-seconds> <event-type> <text-itself>");
 		return (-4);
 	}
 
@@ -633,13 +631,13 @@ cmd_text(char *str)
 	}
 
 	if (type < 1 || type > 9) {
-		g_critical("Valid values for type are 1 - 9, inlusive.");
+		g_critical("Valid values for type are 1 - 9, inclusive.");
 		return (-5);
 	}
 
 	/* Called with one parameter? */
 	if (str == NULL) {
-		g_critical("Usage: text time-in-seconds event-type text-itself");
+		g_critical("Usage: text <time-in-seconds> <event-type> <text-itself>");
 		return (-4);
 	}
 
@@ -721,10 +719,10 @@ cmd_tempo(char *notused)
 			break;
 
 		g_message("Tempo #%d: Starts at %d pulses, %f seconds, setting %d microseconds per quarter note, %.2f BPM.",
-			i, tempo->time_pulses, tempo->time_seconds, tempo->microseconds_per_quarter_note,
-			60000000.0 / (double)tempo->microseconds_per_quarter_note);
+		    i, tempo->time_pulses, tempo->time_seconds, tempo->microseconds_per_quarter_note,
+		    60000000.0 / (double)tempo->microseconds_per_quarter_note);
 		g_message("Time signature: %d/%d, %d clocks per click, %d 32nd notes per quarter note.",
-			tempo->numerator, tempo->denominator, tempo->clocks_per_click, tempo->notes_per_note);
+		    tempo->numerator, tempo->denominator, tempo->clocks_per_click, tempo->notes_per_note);
 	}
 
 	return (0);
@@ -989,20 +987,15 @@ usage(void)
 	exit(EX_USAGE);
 }
 
-static void
-show_version(void)
-{
-	fprintf(stderr, "libsmf %s\n", smf_get_version());
-}
-
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	int ch;
 
 	while ((ch = getopt(argc, argv, "V")) != -1) {
 		switch (ch) {
 		case 'V':
-			show_version();
+			cmd_version(NULL);
 			exit(EX_OK);
 
 		case '?':
@@ -1022,11 +1015,10 @@ int main(int argc, char *argv[])
 		return (-1);
 	}
 
-	if (argc == 2) {
+	if (argc == 2)
 		cmd_load(argv[1]);
-	} else {
+	else
 		cmd_trackadd(NULL);
-	}
 
 #ifdef HAVE_LIBREADLINE
 	rl_readline_name = "smfsh";
