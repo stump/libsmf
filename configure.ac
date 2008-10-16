@@ -55,5 +55,5 @@ PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.2)
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
-AC_CONFIG_FILES([Makefile smf.pc src/Makefile])
+AC_CONFIG_FILES([Makefile smf.pc src/Makefile man/Makefile])
 AC_OUTPUT
