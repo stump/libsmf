@@ -173,8 +173,9 @@ smf_add_track(smf_t *smf, smf_track_t *track)
 void
 smf_track_remove_from_smf(smf_track_t *track)
 {
-	int i;
+	int i, j;
 	smf_track_t *tmp;
+	smf_event_t *ev;
 
 	assert(track->smf != NULL);
 
@@ -187,6 +188,15 @@ smf_track_remove_from_smf(smf_track_t *track)
 	for (i = track->track_number; i <= track->smf->number_of_tracks; i++) {
 		tmp = smf_get_track_by_number(track->smf, i);
 		tmp->track_number = i;
+
+		/*
+		 * Events have track numbers too.  I guess this wasn't a wise
+		 * decision.  ;-/
+		 */
+		for (j = 1; j <= tmp->number_of_events; j++) {
+			ev = smf_track_get_event_by_number(tmp, j);
+			ev->track_number = i;
+		}
 	}
 
 	track->track_number = -1;
