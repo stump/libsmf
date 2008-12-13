@@ -6,6 +6,8 @@ Changes between 1.1 and 1.2:
  - Fixed a bug that broke adding SMF events in the middle of the track
    in some cases.
 
+ - Fixed a bug that broke removing tracks in some cases.
+
    If you encountered failed assertion during saving, it could be one
    of these bugs.
 
