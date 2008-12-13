@@ -33,6 +33,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sysexits.h>
 #include <string.h>
 #include <ctype.h>
