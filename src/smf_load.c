@@ -286,7 +286,8 @@ expected_sysex_length(const unsigned char status, const unsigned char *second_by
 		return (-1);
 	}
 
-	extract_vlq(second_byte, buffer_length, &sysex_length, &len);
+	if (extract_vlq(second_byte, buffer_length, &sysex_length, &len))
+		return (-1);
 
 	if (consumed_bytes != NULL)
 		*consumed_bytes = len;
