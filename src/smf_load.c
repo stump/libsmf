@@ -79,8 +79,8 @@ next_chunk(smf_t *smf)
 	smf->next_chunk_offset += sizeof(struct chunk_header_struct) + ntohl(chunk->length);
 
 	if (smf->next_chunk_offset > smf->file_buffer_length) {
-		g_critical("SMF error: malformed chunk; truncated file?");
-		return (NULL);
+		g_critical("SMF warning: malformed chunk; truncated file?");
+		smf->next_chunk_offset = smf->file_buffer_length;
 	}
 
 	return (chunk);
@@ -771,8 +771,14 @@ parse_mtrk_chunk(smf_track_t *track)
 		event = parse_next_event(track);
 
 		/* Couldn't parse an event? */
-		if (event == NULL)
-			return (-1);
+		if (event == NULL) {
+			g_critical("Unable to parse MIDI event; truncating track.");
+			if (smf_track_add_eot_delta_pulses(track, 0) != 0) {
+				g_critical("smf_track_add_eot_delta_pulses failed.");
+				return (-2);
+			}
+			break;
+		}
 
 		assert(smf_event_is_valid(event));
 
