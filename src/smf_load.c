@@ -793,61 +793,6 @@ parse_mtrk_chunk(smf_track_t *track)
 }
 
 /**
- * Allocate buffer of proper size and read file contents into it.  Close file afterwards.
- */
-static int
-load_file_into_buffer(void **file_buffer, int *file_buffer_length, const char *file_name)
-{
-	FILE *stream = fopen(file_name, "rb");
-
-	if (stream == NULL) {
-		g_critical("Cannot open input file: %s", strerror(errno));
-
-		return (-1);
-	}
-
-	if (fseek(stream, 0, SEEK_END)) {
-		g_critical("fseek(3) failed: %s", strerror(errno));
-
-		return (-2);
-	}
-
-	*file_buffer_length = ftell(stream);
-	if (*file_buffer_length == -1) {
-		g_critical("ftell(3) failed: %s", strerror(errno));
-
-		return (-3);
-	}
-
-	if (fseek(stream, 0, SEEK_SET)) {
-		g_critical("fseek(3) failed: %s", strerror(errno));
-
-		return (-4);
-	}
-
-	*file_buffer = malloc(*file_buffer_length);
-	if (*file_buffer == NULL) {
-		g_critical("malloc(3) failed: %s", strerror(errno));
-
-		return (-5);
-	}
-
-	if (fread(*file_buffer, 1, *file_buffer_length, stream) != *file_buffer_length) {
-		g_critical("fread(3) failed: %s", strerror(errno));
-
-		return (-6);
-	}
-	
-	if (fclose(stream)) {
-		g_critical("fclose(3) failed: %s", strerror(errno));
-
-		return (-7);
-	}
-
-	return (0);
-}
-
-/**
   * Creates new SMF and fills it with data loaded from the given buffer.
  * \return SMF or NULL, if loading failed.
   */
@@ -906,17 +851,17 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 smf_t *
 smf_load(const char *file_name)
 {
-	int file_buffer_length;
-	void *file_buffer;
+	gsize file_buffer_length;
+	char *file_buffer;
 	smf_t *smf;
 
-	if (load_file_into_buffer(&file_buffer, &file_buffer_length, file_name))
+	if (!g_file_get_contents(file_name, &file_buffer, &file_buffer_length, NULL))
 		return (NULL);
 
 	smf = smf_load_from_memory(file_buffer, file_buffer_length);
 
 	memset(file_buffer, 0, file_buffer_length);
-	free(file_buffer);
+	g_free(file_buffer);
 
 	if (smf == NULL)
 		return (NULL);
