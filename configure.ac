@@ -1,19 +1,15 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.61)
-AC_INIT([libsmf],[1.3],[trasz@FreeBSD.org])
+AC_PREREQ([2.69])
+AC_INIT([libsmf],[1.3+],[stump@jstump.com])
 AM_INIT_AUTOMAKE([-Wall foreign])
 AC_CONFIG_SRCDIR([src/smf.c])
 AC_CONFIG_HEADER([config.h])
 
 # Checks for programs.
 AC_PROG_CC
-AC_PROG_INSTALL
-AC_PROG_LIBTOOL
-AC_PROG_LN_S
-AC_PROG_MAKE_SET
-AC_PROG_RANLIB
+LT_INIT
 
 # Checks for libraries.
 AC_CHECK_LIB([m], [pow])
@@ -35,18 +31,15 @@ AS_IF([test "x$with_readline" != xno],
 
 
 # Checks for header files.
-AC_HEADER_STDC
 AC_CHECK_HEADERS([arpa/inet.h stdint.h stdlib.h string.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_C_CONST
 AC_TYPE_INT8_T
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC
-AC_FUNC_MEMCMP
 AC_FUNC_REALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([memset pow strdup strerror strtol strchr])
