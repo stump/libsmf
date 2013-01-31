@@ -37,7 +37,6 @@
 #include <assert.h>
 #include <math.h>
 #include <errno.h>
-#include <stdint.h>
 #include "smf.h"
 #include "smf_private.h"
 
@@ -255,7 +254,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 			off += snprintf(buf + off, BUFFER_SIZE - off, "Key Signature: ");
 
 			if (flats > 8 && flats < 248) {
-				off += snprintf(buf + off, BUFFER_SIZE - off, "%d %s, %s key", abs((int8_t)flats),
+				off += snprintf(buf + off, BUFFER_SIZE - off, "%d %s, %s key", abs((gint8)flats),
 					flats > 127 ? "flats" : "sharps", isminor ? "minor" : "major");
 			} else {
 				int i = (flats - 248) & 255;
