@@ -392,25 +392,12 @@ write_track(smf_track_t *track)
 static int
 write_file(smf_t *smf, const char *file_name)
 {
-	FILE *stream;
+	GError *err = NULL;
 
-	stream = fopen(file_name, "wb+");
-	if (stream == NULL) {
-		g_critical("Cannot open input file: %s", strerror(errno));
-
+	if (!g_file_set_contents(file_name, smf->file_buffer, smf->file_buffer_length, &err)) {
+		g_critical("write_file failed: %s", err->message);
+		g_error_free(err);
 		return (-1);
-	}
-
-	if (fwrite(smf->file_buffer, 1, smf->file_buffer_length, stream) != smf->file_buffer_length) {
-		g_critical("fwrite(3) failed: %s", strerror(errno));
-
-		return (-2);
-	}
-
-	if (fclose(stream)) {
-		g_critical("fclose(3) failed: %s", strerror(errno));
-
-		return (-3);
 	}
 
 	return (0);
