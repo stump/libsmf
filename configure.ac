@@ -31,7 +31,7 @@ AS_IF([test "x$with_readline" != xno],
 
 
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h stdint.h stdlib.h string.h])
+AC_CHECK_HEADERS([stdint.h stdlib.h string.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_INT8_T
