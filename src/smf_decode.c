@@ -125,6 +125,7 @@ smf_event_decode_textual(const smf_event_t *event, const char *name)
 	}
 
 	snprintf(buf + off, BUFFER_SIZE - off, "%s: %s", name, extracted);
+	free(extracted);
 
 	return (buf);
 }
