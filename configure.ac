@@ -31,7 +31,12 @@ AS_IF([test "x$with_readline" != xno],
 
 
 # Checks for header files.
-AC_CHECK_HEADERS([stdlib.h string.h])
+AC_CHECK_HEADERS([arpa/inet.h stdint.h stdlib.h string.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_TYPE_INT8_T
+AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC
@@ -39,7 +44,7 @@ AC_FUNC_REALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([memset pow strdup strerror strtol strchr])
 
-PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.10)
+PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.2)
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 

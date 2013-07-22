@@ -40,6 +40,11 @@
 #include <math.h>
 #include <errno.h>
 #include <ctype.h>
+#ifdef __MINGW32__
+#include <windows.h>
+#else /* ! __MINGW32__ */
+#include <arpa/inet.h>
+#endif /* ! __MINGW32__ */
 #include "smf.h"
 #include "smf_private.h"
 
@@ -75,7 +80,7 @@ next_chunk(smf_t *smf)
 	 * XXX: On SPARC, after compiling with "-fast" option there will be SIGBUS here.
 	 * Please compile with -xmemalign=8i".
 	 */
-	smf->next_chunk_offset += sizeof(struct chunk_header_struct) + GUINT32_FROM_BE(chunk->length);
+	smf->next_chunk_offset += sizeof(struct chunk_header_struct) + ntohl(chunk->length);
 
 	if (smf->next_chunk_offset > smf->file_buffer_length) {
 		g_critical("SMF warning: malformed chunk; truncated file?");
@@ -134,7 +139,7 @@ parse_mthd_header(smf_t *smf)
 
 	assert(mthd == tmp_mthd);
 
-	len = GUINT32_FROM_BE(mthd->length);
+	len = ntohl(mthd->length);
 	if (len != 6) {
 		g_critical("SMF error: MThd chunk length %d, must be 6.", len);
 
@@ -161,7 +166,7 @@ parse_mthd_chunk(smf_t *smf)
 
 	mthd = (struct mthd_chunk_struct *)smf->file_buffer;
 
-	smf->format = GUINT16_FROM_BE(mthd->format);
+	smf->format = ntohs(mthd->format);
 	if (smf->format < 0 || smf->format > 2) {
 		g_critical("SMF error: bad MThd format field value: %d, valid values are 0-2, inclusive.", smf->format);
 		return (-1);
@@ -172,7 +177,7 @@ parse_mthd_chunk(smf_t *smf)
 		return (-2);
 	}
 
-	smf->expected_number_of_tracks = GUINT16_FROM_BE(mthd->number_of_tracks);
+	smf->expected_number_of_tracks = ntohs(mthd->number_of_tracks);
 	if (smf->expected_number_of_tracks <= 0) {
 		g_critical("SMF error: bad number of tracks: %d, must be greater than zero.", smf->expected_number_of_tracks);
 		return (-3);
@@ -183,7 +188,7 @@ parse_mthd_chunk(smf_t *smf)
 	second_byte_of_division = *((signed char *)&(mthd->division) + 1);
 
 	if (first_byte_of_division >= 0) {
-		smf->ppqn = GUINT16_FROM_BE(mthd->division);
+		smf->ppqn = ntohs(mthd->division);
 		smf->frames_per_second = 0;
 		smf->resolution = 0;
 	} else {
@@ -687,7 +692,7 @@ parse_mtrk_header(smf_track_t *track)
 	}
 
 	track->file_buffer = mtrk;
-	track->file_buffer_length = sizeof(struct chunk_header_struct) + GUINT32_FROM_BE(mtrk->length);
+	track->file_buffer_length = sizeof(struct chunk_header_struct) + ntohl(mtrk->length);
 	track->next_event_offset = sizeof(struct chunk_header_struct);
 
 	return (0);
@@ -793,6 +798,61 @@ parse_mtrk_chunk(smf_track_t *track)
 }
 
 /**
+ * Allocate buffer of proper size and read file contents into it.  Close file afterwards.
+ */
+static int
+load_file_into_buffer(void **file_buffer, int *file_buffer_length, const char *file_name)
+{
+	FILE *stream = fopen(file_name, "rb");
+
+	if (stream == NULL) {
+		g_critical("Cannot open input file: %s", strerror(errno));
+
+		return (-1);
+	}
+
+	if (fseek(stream, 0, SEEK_END)) {
+		g_critical("fseek(3) failed: %s", strerror(errno));
+
+		return (-2);
+	}
+
+	*file_buffer_length = ftell(stream);
+	if (*file_buffer_length == -1) {
+		g_critical("ftell(3) failed: %s", strerror(errno));
+
+		return (-3);
+	}
+
+	if (fseek(stream, 0, SEEK_SET)) {
+		g_critical("fseek(3) failed: %s", strerror(errno));
+
+		return (-4);
+	}
+
+	*file_buffer = malloc(*file_buffer_length);
+	if (*file_buffer == NULL) {
+		g_critical("malloc(3) failed: %s", strerror(errno));
+
+		return (-5);
+	}
+
+	if (fread(*file_buffer, 1, *file_buffer_length, stream) != *file_buffer_length) {
+		g_critical("fread(3) failed: %s", strerror(errno));
+
+		return (-6);
+	}
+	
+	if (fclose(stream)) {
+		g_critical("fclose(3) failed: %s", strerror(errno));
+
+		return (-7);
+	}
+
+	return (0);
+}
+
+/**
   * Creates new SMF and fills it with data loaded from the given buffer.
  * \return SMF or NULL, if loading failed.
   */
@@ -851,17 +911,17 @@ smf_load_from_memory(const void *buffer, const int buffer_length)
 smf_t *
 smf_load(const char *file_name)
 {
-	gsize file_buffer_length;
-	char *file_buffer;
+	int file_buffer_length;
+	void *file_buffer;
 	smf_t *smf;
 
-	if (!g_file_get_contents(file_name, &file_buffer, &file_buffer_length, NULL))
+	if (load_file_into_buffer(&file_buffer, &file_buffer_length, file_name))
 		return (NULL);
 
 	smf = smf_load_from_memory(file_buffer, file_buffer_length);
 
 	memset(file_buffer, 0, file_buffer_length);
-	g_free(file_buffer);
+	free(file_buffer);
 
 	if (smf == NULL)
 		return (NULL);

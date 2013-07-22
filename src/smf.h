@@ -220,6 +220,12 @@ extern "C" {
 #include <stdio.h>
 #include <glib.h>
 
+#if defined(__GNUC__) && __GNUC__ >= 4
+#define WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
+#else
+#define WARN_UNUSED_RESULT
+#endif
+
 /** Represents a "song", that is, collection of one or more tracks. */
 struct smf_struct {
 	int		format;
@@ -328,79 +334,79 @@ struct smf_event_struct {
 typedef struct smf_event_struct smf_event_t;
 
 /* Routines for manipulating smf_t. */
-smf_t *smf_new(void) G_GNUC_WARN_UNUSED_RESULT;
+smf_t *smf_new(void) WARN_UNUSED_RESULT;
 void smf_delete(smf_t *smf);
 
-int smf_set_format(smf_t *smf, int format) G_GNUC_WARN_UNUSED_RESULT;
-int smf_set_ppqn(smf_t *smf, int format) G_GNUC_WARN_UNUSED_RESULT;
+int smf_set_format(smf_t *smf, int format) WARN_UNUSED_RESULT;
+int smf_set_ppqn(smf_t *smf, int format) WARN_UNUSED_RESULT;
 
-char *smf_decode(const smf_t *smf) G_GNUC_WARN_UNUSED_RESULT;
+char *smf_decode(const smf_t *smf) WARN_UNUSED_RESULT;
 
-smf_track_t *smf_get_track_by_number(const smf_t *smf, int track_number) G_GNUC_WARN_UNUSED_RESULT;
+smf_track_t *smf_get_track_by_number(const smf_t *smf, int track_number) WARN_UNUSED_RESULT;
 
-smf_event_t *smf_peek_next_event(smf_t *smf) G_GNUC_WARN_UNUSED_RESULT;
-smf_event_t *smf_get_next_event(smf_t *smf) G_GNUC_WARN_UNUSED_RESULT;
+smf_event_t *smf_peek_next_event(smf_t *smf) WARN_UNUSED_RESULT;
+smf_event_t *smf_get_next_event(smf_t *smf) WARN_UNUSED_RESULT;
 void smf_skip_next_event(smf_t *smf);
 
 void smf_rewind(smf_t *smf);
-int smf_seek_to_seconds(smf_t *smf, double seconds) G_GNUC_WARN_UNUSED_RESULT;
-int smf_seek_to_pulses(smf_t *smf, int pulses) G_GNUC_WARN_UNUSED_RESULT;
-int smf_seek_to_event(smf_t *smf, const smf_event_t *event) G_GNUC_WARN_UNUSED_RESULT;
+int smf_seek_to_seconds(smf_t *smf, double seconds) WARN_UNUSED_RESULT;
+int smf_seek_to_pulses(smf_t *smf, int pulses) WARN_UNUSED_RESULT;
+int smf_seek_to_event(smf_t *smf, const smf_event_t *event) WARN_UNUSED_RESULT;
 
-int smf_get_length_pulses(const smf_t *smf) G_GNUC_WARN_UNUSED_RESULT;
-double smf_get_length_seconds(const smf_t *smf) G_GNUC_WARN_UNUSED_RESULT;
-int smf_event_is_last(const smf_event_t *event) G_GNUC_WARN_UNUSED_RESULT;
+int smf_get_length_pulses(const smf_t *smf) WARN_UNUSED_RESULT;
+double smf_get_length_seconds(const smf_t *smf) WARN_UNUSED_RESULT;
+int smf_event_is_last(const smf_event_t *event) WARN_UNUSED_RESULT;
 
 void smf_add_track(smf_t *smf, smf_track_t *track);
 void smf_track_remove_from_smf(smf_track_t *track);
 
 /* Routines for manipulating smf_track_t. */
-smf_track_t *smf_track_new(void) G_GNUC_WARN_UNUSED_RESULT;
+smf_track_t *smf_track_new(void) WARN_UNUSED_RESULT;
 void smf_track_delete(smf_track_t *track);
 
-smf_event_t *smf_track_get_next_event(smf_track_t *track) G_GNUC_WARN_UNUSED_RESULT;
-smf_event_t *smf_track_get_event_by_number(const smf_track_t *track, int event_number) G_GNUC_WARN_UNUSED_RESULT;
-smf_event_t *smf_track_get_last_event(const smf_track_t *track) G_GNUC_WARN_UNUSED_RESULT;
+smf_event_t *smf_track_get_next_event(smf_track_t *track) WARN_UNUSED_RESULT;
+smf_event_t *smf_track_get_event_by_number(const smf_track_t *track, int event_number) WARN_UNUSED_RESULT;
+smf_event_t *smf_track_get_last_event(const smf_track_t *track) WARN_UNUSED_RESULT;
 
 void smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int pulses);
 void smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses);
 void smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double seconds);
-int smf_track_add_eot_delta_pulses(smf_track_t *track, int delta) G_GNUC_WARN_UNUSED_RESULT;
-int smf_track_add_eot_pulses(smf_track_t *track, int pulses) G_GNUC_WARN_UNUSED_RESULT;
-int smf_track_add_eot_seconds(smf_track_t *track, double seconds) G_GNUC_WARN_UNUSED_RESULT;
+int smf_track_add_eot_delta_pulses(smf_track_t *track, int delta) WARN_UNUSED_RESULT;
+int smf_track_add_eot_pulses(smf_track_t *track, int pulses) WARN_UNUSED_RESULT;
+int smf_track_add_eot_seconds(smf_track_t *track, double seconds) WARN_UNUSED_RESULT;
 void smf_event_remove_from_track(smf_event_t *event);
 
 /* Routines for manipulating smf_event_t. */
-smf_event_t *smf_event_new(void) G_GNUC_WARN_UNUSED_RESULT;
-smf_event_t *smf_event_new_from_pointer(void *midi_data, int len) G_GNUC_WARN_UNUSED_RESULT;
-smf_event_t *smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte) G_GNUC_WARN_UNUSED_RESULT;
+smf_event_t *smf_event_new(void) WARN_UNUSED_RESULT;
+smf_event_t *smf_event_new_from_pointer(void *midi_data, int len) WARN_UNUSED_RESULT;
+smf_event_t *smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte) WARN_UNUSED_RESULT;
 smf_event_t *smf_event_new_textual(int type, const char *text);
 void smf_event_delete(smf_event_t *event);
 
-int smf_event_is_valid(const smf_event_t *event) G_GNUC_WARN_UNUSED_RESULT;
-int smf_event_is_metadata(const smf_event_t *event) G_GNUC_WARN_UNUSED_RESULT;
-int smf_event_is_system_realtime(const smf_event_t *event) G_GNUC_WARN_UNUSED_RESULT;
-int smf_event_is_system_common(const smf_event_t *event) G_GNUC_WARN_UNUSED_RESULT;
-int smf_event_is_sysex(const smf_event_t *event) G_GNUC_WARN_UNUSED_RESULT;
-int smf_event_is_eot(const smf_event_t *event) G_GNUC_WARN_UNUSED_RESULT;
-int smf_event_is_textual(const smf_event_t *event) G_GNUC_WARN_UNUSED_RESULT;
-char *smf_event_decode(const smf_event_t *event) G_GNUC_WARN_UNUSED_RESULT;
-char *smf_event_extract_text(const smf_event_t *event) G_GNUC_WARN_UNUSED_RESULT;
+int smf_event_is_valid(const smf_event_t *event) WARN_UNUSED_RESULT;
+int smf_event_is_metadata(const smf_event_t *event) WARN_UNUSED_RESULT;
+int smf_event_is_system_realtime(const smf_event_t *event) WARN_UNUSED_RESULT;
+int smf_event_is_system_common(const smf_event_t *event) WARN_UNUSED_RESULT;
+int smf_event_is_sysex(const smf_event_t *event) WARN_UNUSED_RESULT;
+int smf_event_is_eot(const smf_event_t *event) WARN_UNUSED_RESULT;
+int smf_event_is_textual(const smf_event_t *event) WARN_UNUSED_RESULT;
+char *smf_event_decode(const smf_event_t *event) WARN_UNUSED_RESULT;
+char *smf_event_extract_text(const smf_event_t *event) WARN_UNUSED_RESULT;
 
 /* Routines for loading SMF files. */
-smf_t *smf_load(const char *file_name) G_GNUC_WARN_UNUSED_RESULT;
-smf_t *smf_load_from_memory(const void *buffer, const int buffer_length) G_GNUC_WARN_UNUSED_RESULT;
+smf_t *smf_load(const char *file_name) WARN_UNUSED_RESULT;
+smf_t *smf_load_from_memory(const void *buffer, const int buffer_length) WARN_UNUSED_RESULT;
 
 /* Routine for writing SMF files. */
-int smf_save(smf_t *smf, const char *file_name) G_GNUC_WARN_UNUSED_RESULT;
+int smf_save(smf_t *smf, const char *file_name) WARN_UNUSED_RESULT;
 
 /* Routines for manipulating smf_tempo_t. */
-smf_tempo_t *smf_get_tempo_by_pulses(const smf_t *smf, int pulses) G_GNUC_WARN_UNUSED_RESULT;
-smf_tempo_t *smf_get_tempo_by_seconds(const smf_t *smf, double seconds) G_GNUC_WARN_UNUSED_RESULT;
-smf_tempo_t *smf_get_tempo_by_number(const smf_t *smf, int number) G_GNUC_WARN_UNUSED_RESULT;
-smf_tempo_t *smf_get_last_tempo(const smf_t *smf) G_GNUC_WARN_UNUSED_RESULT;
+smf_tempo_t *smf_get_tempo_by_pulses(const smf_t *smf, int pulses) WARN_UNUSED_RESULT;
+smf_tempo_t *smf_get_tempo_by_seconds(const smf_t *smf, double seconds) WARN_UNUSED_RESULT;
+smf_tempo_t *smf_get_tempo_by_number(const smf_t *smf, int number) WARN_UNUSED_RESULT;
+smf_tempo_t *smf_get_last_tempo(const smf_t *smf) WARN_UNUSED_RESULT;
 
-const char *smf_get_version(void) G_GNUC_WARN_UNUSED_RESULT;
+const char *smf_get_version(void) WARN_UNUSED_RESULT;
 
 #ifdef __cplusplus
 }
