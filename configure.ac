@@ -49,5 +49,10 @@ PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.2)
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
+case "$host" in
+  *-cygwin|*-mingw*) WS2_32_IF_NEEDED=-lws2_32 ;;
+esac
+AC_SUBST([WS2_32_IF_NEEDED])
+
 AC_CONFIG_FILES([Makefile smf.pc src/Makefile man/Makefile])
 AC_OUTPUT
