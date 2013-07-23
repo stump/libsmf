@@ -12,3 +12,6 @@ to compile this. It builds in the usual autotools manner:
   $ ./configure [configure options]
   $ make
   # make install
+
+Release directory:
+http://ftp.stump.io/software/libsmf/
