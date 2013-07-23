@@ -328,7 +328,12 @@ cmd_trackadd(char *notused)
 		return (-1);
 	}
 
-	smf_add_track(smf, selected_track);
+	if (smf_add_track(smf, selected_track) < 0) {
+		warn("Unable to add track to SMF.");
+		smf_track_delete(selected_track);
+		selected_track = NULL;
+		return (-2);
+	}
 
 	selected_event = NULL;
 
@@ -601,7 +606,12 @@ cmd_eventadd(char *str)
 		return (-7);
 	}
 
-	smf_track_add_event_seconds(selected_track, selected_event, seconds);
+	if (smf_track_add_event_seconds(selected_track, selected_event, seconds) < 0) {
+		warn("Unable to add event to track.");
+		smf_event_delete(selected_event);
+		selected_event = NULL;
+		return (-8);
+	}
 
 	message("Event created.");
 
@@ -677,7 +687,12 @@ cmd_text(char *str)
 
 	assert(smf_event_is_valid(selected_event));
 
-	smf_track_add_event_seconds(selected_track, selected_event, seconds);
+	if (smf_track_add_event_seconds(selected_track, selected_event, seconds) < 0) {
+		warn("Unable to add event to track.");
+		smf_event_delete(selected_event);
+		selected_event = NULL;
+		return (-7);
+	}
 
 	message("Event created.");
 

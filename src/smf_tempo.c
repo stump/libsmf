@@ -400,8 +400,9 @@ last_event_pulses(const smf_track_t *track)
  * The remaining two time fields will be computed automatically based on the third argument
  * and current tempo map.  Note that ->delta_pulses is computed by smf.c:smf_track_add_event,
  * not here.
+ * \return 0 if everything went ok, nonzero otherwise.
  */
-void
+int
 smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int delta)
 {
 	assert(delta >= 0);
@@ -409,15 +410,16 @@ smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int del
 	assert(event->time_seconds == -1.0);
 	assert(track->smf != NULL);
 
-	smf_track_add_event_pulses(track, event, last_event_pulses(track) + delta);
+	return smf_track_add_event_pulses(track, event, last_event_pulses(track) + delta);
 }
 
 /**
  * Adds event to the track at the time "pulses" clocks from the start of song.
  * The remaining two time fields will be computed automatically based on the third argument
  * and current tempo map.
+ * \return 0 if everything went ok, nonzero otherwise.
  */
-void
+int
 smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses)
 {
 	assert(pulses >= 0);
@@ -427,15 +429,16 @@ smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses)
 
 	event->time_pulses = pulses;
 	event->time_seconds = seconds_from_pulses(track->smf, pulses);
-	smf_track_add_event(track, event);
+	return smf_track_add_event(track, event);
 }
 
 /**
  * Adds event to the track at the time "seconds" seconds from the start of song.
  * The remaining two time fields will be computed automatically based on the third argument
  * and current tempo map.
+ * \return 0 if everything went ok, nonzero otherwise.
  */
-void
+int
 smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double seconds)
 {
 	assert(seconds >= 0.0);
@@ -445,6 +448,6 @@ smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double secon
 
 	event->time_seconds = seconds;
 	event->time_pulses = pulses_from_seconds(track->smf, seconds);
-	smf_track_add_event(track, event);
+	return smf_track_add_event(track, event);
 }
 

@@ -151,8 +151,9 @@ smf_track_delete(smf_track_t *track)
 
 /**
  * Appends smf_track_t to smf.
+ * \return 0 if everything went ok, nonzero otherwise.
  */
-void
+int
 smf_add_track(smf_t *smf, smf_track_t *track)
 {
 	int cantfail;
@@ -169,6 +170,8 @@ smf_add_track(smf_t *smf, smf_track_t *track)
 		cantfail = smf_set_format(smf, 1);
 		assert(!cantfail);
 	}
+
+	return 0;
 }
 
 /**
@@ -436,8 +439,9 @@ remove_eot_if_before_pulses(smf_track_t *track, int pulses)
  * Usually you want to use smf_track_add_event_seconds or smf_track_add_event_pulses
  * instead of this one.  Event needs to have ->time_pulses and ->time_seconds already set.
  * If you try to add event after an EOT, EOT event will be automatically deleted.
+ * \return 0 if everything went ok, nonzero otherwise.
  */
-void
+int
 smf_track_add_event(smf_track_t *track, smf_event_t *event)
 {
 	int i, last_pulses = 0;
@@ -509,6 +513,8 @@ smf_track_add_event(smf_track_t *track, smf_event_t *event)
 		else
 			smf_create_tempo_map_and_compute_seconds(event->track->smf);
 	}
+
+	return 0;
 }
 
 /**
@@ -529,7 +535,10 @@ smf_track_add_eot_delta_pulses(smf_track_t *track, int delta)
 	if (event == NULL)
 		return (-1);
 
-	smf_track_add_event_delta_pulses(track, event, delta);
+	if (smf_track_add_event_delta_pulses(track, event, delta) < 0) {
+		smf_event_delete(event);
+		return (-2);
+	}
 
 	return (0);
 }
@@ -549,7 +558,10 @@ smf_track_add_eot_pulses(smf_track_t *track, int pulses)
 	if (event == NULL)
 		return (-3);
 
-	smf_track_add_event_pulses(track, event, pulses);
+	if (smf_track_add_event_pulses(track, event, pulses) < 0) {
+		smf_event_delete(event);
+		return (-4);
+	}
 
 	return (0);
 }
@@ -569,7 +581,10 @@ smf_track_add_eot_seconds(smf_track_t *track, double seconds)
 	if (event == NULL)
 		return (-1);
 
-	smf_track_add_event_seconds(track, event, seconds);
+	if (smf_track_add_event_seconds(track, event, seconds) < 0) {
+		smf_event_delete(event);
+		return (-3);
+	}
 
 	return (0);
 }

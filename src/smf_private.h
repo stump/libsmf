@@ -67,7 +67,7 @@ struct mthd_chunk_struct {
 #pragma pack()
 #endif
 
-void smf_track_add_event(smf_track_t *track, smf_event_t *event);
+int smf_track_add_event(smf_track_t *track, smf_event_t *event) WARN_UNUSED_RESULT;
 void smf_init_tempo(smf_t *smf);
 void smf_fini_tempo(smf_t *smf);
 void smf_create_tempo_map_and_compute_seconds(smf_t *smf);

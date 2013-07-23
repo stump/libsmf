@@ -357,7 +357,7 @@ int smf_get_length_pulses(const smf_t *smf) WARN_UNUSED_RESULT;
 double smf_get_length_seconds(const smf_t *smf) WARN_UNUSED_RESULT;
 int smf_event_is_last(const smf_event_t *event) WARN_UNUSED_RESULT;
 
-void smf_add_track(smf_t *smf, smf_track_t *track);
+int smf_add_track(smf_t *smf, smf_track_t *track) WARN_UNUSED_RESULT;
 void smf_track_remove_from_smf(smf_track_t *track);
 
 /* Routines for manipulating smf_track_t. */
@@ -368,9 +368,9 @@ smf_event_t *smf_track_get_next_event(smf_track_t *track) WARN_UNUSED_RESULT;
 smf_event_t *smf_track_get_event_by_number(const smf_track_t *track, int event_number) WARN_UNUSED_RESULT;
 smf_event_t *smf_track_get_last_event(const smf_track_t *track) WARN_UNUSED_RESULT;
 
-void smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int pulses);
-void smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses);
-void smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double seconds);
+int smf_track_add_event_delta_pulses(smf_track_t *track, smf_event_t *event, int pulses) WARN_UNUSED_RESULT;
+int smf_track_add_event_pulses(smf_track_t *track, smf_event_t *event, int pulses) WARN_UNUSED_RESULT;
+int smf_track_add_event_seconds(smf_track_t *track, smf_event_t *event, double seconds) WARN_UNUSED_RESULT;
 int smf_track_add_eot_delta_pulses(smf_track_t *track, int delta) WARN_UNUSED_RESULT;
 int smf_track_add_eot_pulses(smf_track_t *track, int pulses) WARN_UNUSED_RESULT;
 int smf_track_add_eot_seconds(smf_track_t *track, double seconds) WARN_UNUSED_RESULT;
