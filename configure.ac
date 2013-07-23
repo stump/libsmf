@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([libsmf],[1.3+],[stump@jstump.com])
+AC_INIT([libsmf],[1.3+],[stump@stump.io])
 AM_INIT_AUTOMAKE([-Wall foreign])
 AC_CONFIG_SRCDIR([src/smf.c])
 AC_CONFIG_HEADER([config.h])
