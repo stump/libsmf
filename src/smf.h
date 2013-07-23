@@ -408,6 +408,8 @@ smf_tempo_t *smf_get_last_tempo(const smf_t *smf) WARN_UNUSED_RESULT;
 
 const char *smf_get_version(void) WARN_UNUSED_RESULT;
 
+void smf_set_warning_handler(void (*handler)(const char *msg, void *userdata), void *userdata);
+
 #ifdef __cplusplus
 }
 #endif

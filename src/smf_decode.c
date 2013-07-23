@@ -120,7 +120,7 @@ smf_event_decode_textual(const smf_event_t *event, const char *name)
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
-		g_critical("smf_event_decode_textual: malloc failed.");
+		smf_warn("smf_event_decode_textual: malloc failed.");
 		return (NULL);
 	}
 
@@ -184,7 +184,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
-		g_critical("smf_event_decode_metadata: malloc failed.");
+		smf_warn("smf_event_decode_metadata: malloc failed.");
 		return (NULL);
 	}
 
@@ -196,7 +196,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 		/* http://music.columbia.edu/pipermail/music-dsp/2004-August/061196.html */
 		case 0x20:
 			if (event->midi_buffer_length < 4) {
-				g_critical("smf_event_decode_metadata: truncated MIDI message.");
+				smf_warn("smf_event_decode_metadata: truncated MIDI message.");
 				goto error;
 			}
 
@@ -205,7 +205,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 
 		case 0x21:
 			if (event->midi_buffer_length < 4) {
-				g_critical("smf_event_decode_metadata: truncated MIDI message.");
+				smf_warn("smf_event_decode_metadata: truncated MIDI message.");
 				goto error;
 			}
 
@@ -218,7 +218,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 
 		case 0x51:
 			if (event->midi_buffer_length < 6) {
-				g_critical("smf_event_decode_metadata: truncated MIDI message.");
+				smf_warn("smf_event_decode_metadata: truncated MIDI message.");
 				goto error;
 			}
 
@@ -234,7 +234,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 
 		case 0x58:
 			if (event->midi_buffer_length < 7) {
-				g_critical("smf_event_decode_metadata: truncated MIDI message.");
+				smf_warn("smf_event_decode_metadata: truncated MIDI message.");
 				goto error;
 			}
 
@@ -246,7 +246,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 
 		case 0x59:
 			if (event->midi_buffer_length < 5) {
-				g_critical("smf_event_decode_metadata: truncated MIDI message.");
+				smf_warn("smf_event_decode_metadata: truncated MIDI message.");
 				goto error;
 			}
 
@@ -254,7 +254,7 @@ smf_event_decode_metadata(const smf_event_t *event)
 			isminor = event->midi_buffer[4];
 
 			if (isminor != 0 && isminor != 1) {
-				g_critical("smf_event_decode_metadata: last byte of the Key Signature event has invalid value %d.", isminor);
+				smf_warn("smf_event_decode_metadata: last byte of the Key Signature event has invalid value %d.", isminor);
 				goto error;
 			}
 
@@ -303,13 +303,13 @@ smf_event_decode_system_realtime(const smf_event_t *event)
 	assert(smf_event_is_system_realtime(event));
 
 	if (event->midi_buffer_length != 1) {
-		g_critical("smf_event_decode_system_realtime: event length is not 1.");
+		smf_warn("smf_event_decode_system_realtime: event length is not 1.");
 		return (NULL);
 	}
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
-		g_critical("smf_event_decode_system_realtime: malloc failed.");
+		smf_warn("smf_event_decode_system_realtime: malloc failed.");
 		return (NULL);
 	}
 
@@ -355,13 +355,13 @@ smf_event_decode_sysex(const smf_event_t *event)
 	assert(smf_event_is_sysex(event));
 
 	if (event->midi_buffer_length < 5) {
-		g_critical("smf_event_decode_sysex: truncated MIDI message.");
+		smf_warn("smf_event_decode_sysex: truncated MIDI message.");
 		return (NULL);
 	}
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
-		g_critical("smf_event_decode_sysex: malloc failed.");
+		smf_warn("smf_event_decode_sysex: malloc failed.");
 		return (NULL);
 	}
 
@@ -462,7 +462,7 @@ smf_event_decode_system_common(const smf_event_t *event)
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
-		g_critical("smf_event_decode_system_realtime: malloc failed.");
+		smf_warn("smf_event_decode_system_realtime: malloc failed.");
 		return (NULL);
 	}
 
@@ -527,13 +527,13 @@ smf_event_decode(const smf_event_t *event)
 		return (smf_event_decode_system_common(event));
 
 	if (!smf_event_length_is_valid(event)) {
-		g_critical("smf_event_decode: incorrect MIDI message length.");
+		smf_warn("smf_event_decode: incorrect MIDI message length.");
 		return (NULL);
 	}
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
-		g_critical("smf_event_decode: malloc failed.");
+		smf_warn("smf_event_decode: malloc failed.");
 		return (NULL);
 	}
 
@@ -603,7 +603,7 @@ smf_decode(const smf_t *smf)
 
 	buf = malloc(BUFFER_SIZE);
 	if (buf == NULL) {
-		g_critical("smf_event_decode: malloc failed.");
+		smf_warn("smf_event_decode: malloc failed.");
 		return (NULL);
 	}
 

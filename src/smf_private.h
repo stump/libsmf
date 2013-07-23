@@ -77,5 +77,7 @@ int smf_event_is_tempo_change_or_time_signature(const smf_event_t *event) WARN_U
 int smf_event_length_is_valid(const smf_event_t *event) WARN_UNUSED_RESULT;
 int is_status_byte(const unsigned char status) WARN_UNUSED_RESULT;
 
+void smf_warn(const char *fmt, ...);
+
 #endif /* SMF_PRIVATE_H */
 

@@ -64,7 +64,7 @@ smf_extend(smf_t *smf, const int length)
 	smf->file_buffer_length += length;
 	smf->file_buffer = realloc(smf->file_buffer, smf->file_buffer_length);
 	if (smf->file_buffer == NULL) {
-		g_critical("realloc(3) failed: %s", strerror(errno));
+		smf_warn("realloc(3) failed: %s", strerror(errno));
 		smf->file_buffer_length = 0;
 		return (NULL);
 	}
@@ -91,7 +91,7 @@ smf_append(smf_t *smf, const void *buffer, const int buffer_length)
 
 	dest = smf_extend(smf, buffer_length);
 	if (dest == NULL) {
-		g_critical("Cannot extend track buffer.");
+		smf_warn("Cannot extend track buffer.");
 		return (-1);
 	}
 
@@ -151,7 +151,7 @@ track_append(smf_track_t *track, const void *buffer, const int buffer_length)
 
 	dest = track_extend(track, buffer_length);
 	if (dest == NULL) {
-		g_critical("Cannot extend track buffer.");
+		smf_warn("Cannot extend track buffer.");
 		return (-1);
 	}
 
@@ -207,7 +207,7 @@ smf_event_new_textual(int type, const char *text)
 	event->midi_buffer_length = 2 + text_length + MAX_VLQ_LENGTH;
 	event->midi_buffer = malloc(event->midi_buffer_length);
 	if (event->midi_buffer == NULL) {
-		g_critical("Cannot allocate MIDI buffer structure: %s", strerror(errno));
+		smf_warn("Cannot allocate MIDI buffer structure: %s", strerror(errno));
 		smf_event_delete(event);
 
 		return (NULL); 
@@ -401,19 +401,19 @@ write_file(smf_t *smf, const char *file_name)
 
 	stream = fopen(file_name, "wb+");
 	if (stream == NULL) {
-		g_critical("Cannot open input file: %s", strerror(errno));
+		smf_warn("Cannot open input file: %s", strerror(errno));
 
 		return (-1);
 	}
 
 	if (fwrite(smf->file_buffer, 1, smf->file_buffer_length, stream) != smf->file_buffer_length) {
-		g_critical("fwrite(3) failed: %s", strerror(errno));
+		smf_warn("fwrite(3) failed: %s", strerror(errno));
 
 		return (-2);
 	}
 
 	if (fclose(stream)) {
-		g_critical("fclose(3) failed: %s", strerror(errno));
+		smf_warn("fclose(3) failed: %s", strerror(errno));
 
 		return (-3);
 	}
@@ -496,22 +496,22 @@ smf_validate(smf_t *smf)
 	smf_event_t *event;
 
 	if (smf->format < 0 || smf->format > 2) {
-		g_critical("SMF error: smf->format is less than zero of greater than two.");
+		smf_warn("SMF error: smf->format is less than zero of greater than two.");
 		return (-1);
 	}
 
 	if (smf->number_of_tracks < 1) {
-		g_critical("SMF error: number of tracks is less than one.");
+		smf_warn("SMF error: number of tracks is less than one.");
 		return (-2);
 	}
 
 	if (smf->format == 0 && smf->number_of_tracks > 1) {
-		g_critical("SMF error: format is 0, but number of tracks is more than one.");
+		smf_warn("SMF error: format is 0, but number of tracks is more than one.");
 		return (-3);
 	}
 
 	if (smf->ppqn <= 0) {
-		g_critical("SMF error: PPQN has to be > 0.");
+		smf_warn("SMF error: PPQN has to be > 0.");
 		return (-4);
 	}
 
@@ -526,13 +526,13 @@ smf_validate(smf_t *smf)
 			assert(event);
 
 			if (!smf_event_is_valid(event)) {
-				g_critical("Event #%d on track #%d is invalid.", eventno, trackno);
+				smf_warn("Event #%d on track #%d is invalid.", eventno, trackno);
 				return (-5);
 			}
 
 			if (smf_event_is_eot(event)) {
 				if (eot_found) {
-					g_critical("Duplicate End Of Track event on track #%d.", trackno);
+					smf_warn("Duplicate End Of Track event on track #%d.", trackno);
 					return (-6);
 				}
 
@@ -542,7 +542,7 @@ smf_validate(smf_t *smf)
 
 		if (!eot_found) {
 			if (smf_track_add_eot_delta_pulses(track, 0)) {
-				g_critical("smf_track_add_eot_delta_pulses failed.");
+				smf_warn("smf_track_add_eot_delta_pulses failed.");
 				return (-6);
 			}
 		}

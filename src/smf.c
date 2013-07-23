@@ -58,7 +58,7 @@ smf_new(void)
 
 	smf_t *smf = malloc(sizeof(smf_t));
 	if (smf == NULL) {
-		g_critical("Cannot allocate smf_t structure: %s", strerror(errno));
+		smf_warn("Cannot allocate smf_t structure: %s", strerror(errno));
 		return (NULL);
 	}
 
@@ -111,7 +111,7 @@ smf_track_new(void)
 {
 	smf_track_t *track = malloc(sizeof(smf_track_t));
 	if (track == NULL) {
-		g_critical("Cannot allocate smf_track_t structure: %s", strerror(errno));
+		smf_warn("Cannot allocate smf_track_t structure: %s", strerror(errno));
 		return (NULL);
 	}
 
@@ -218,7 +218,7 @@ smf_event_new(void)
 {
 	smf_event_t *event = malloc(sizeof(smf_event_t));
 	if (event == NULL) {
-		g_critical("Cannot allocate smf_event_t structure: %s", strerror(errno));
+		smf_warn("Cannot allocate smf_event_t structure: %s", strerror(errno));
 		return (NULL);
 	}
 
@@ -251,7 +251,7 @@ smf_event_new_from_pointer(void *midi_data, int len)
 	event->midi_buffer_length = len;
 	event->midi_buffer = malloc(event->midi_buffer_length);
 	if (event->midi_buffer == NULL) {
-		g_critical("Cannot allocate MIDI buffer structure: %s", strerror(errno));
+		smf_warn("Cannot allocate MIDI buffer structure: %s", strerror(errno));
 		smf_event_delete(event);
 
 		return (NULL); 
@@ -290,19 +290,19 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 		return (NULL);
 
 	if (first_byte < 0) {
-		g_critical("First byte of MIDI message cannot be < 0");
+		smf_warn("First byte of MIDI message cannot be < 0");
 		smf_event_delete(event);
 
 		return (NULL);
 	}
 
 	if (first_byte > 255) {
-		g_critical("smf_event_new_from_bytes: first byte is %d, which is larger than 255.", first_byte);
+		smf_warn("smf_event_new_from_bytes: first byte is %d, which is larger than 255.", first_byte);
 		return (NULL);
 	}
 
 	if (!is_status_byte(first_byte)) {
-		g_critical("smf_event_new_from_bytes: first byte is not a valid status byte.");
+		smf_warn("smf_event_new_from_bytes: first byte is not a valid status byte.");
 		return (NULL);
 	}
 
@@ -316,24 +316,24 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 
 	if (len > 1) {
 		if (second_byte > 255) {
-			g_critical("smf_event_new_from_bytes: second byte is %d, which is larger than 255.", second_byte);
+			smf_warn("smf_event_new_from_bytes: second byte is %d, which is larger than 255.", second_byte);
 			return (NULL);
 		}
 
 		if (is_status_byte(second_byte)) {
-			g_critical("smf_event_new_from_bytes: second byte cannot be a status byte.");
+			smf_warn("smf_event_new_from_bytes: second byte cannot be a status byte.");
 			return (NULL);
 		}
 	}
 
 	if (len > 2) {
 		if (third_byte > 255) {
-			g_critical("smf_event_new_from_bytes: third byte is %d, which is larger than 255.", third_byte);
+			smf_warn("smf_event_new_from_bytes: third byte is %d, which is larger than 255.", third_byte);
 			return (NULL);
 		}
 
 		if (is_status_byte(third_byte)) {
-			g_critical("smf_event_new_from_bytes: third byte cannot be a status byte.");
+			smf_warn("smf_event_new_from_bytes: third byte cannot be a status byte.");
 			return (NULL);
 		}
 	}
@@ -341,7 +341,7 @@ smf_event_new_from_bytes(int first_byte, int second_byte, int third_byte)
 	event->midi_buffer_length = len;
 	event->midi_buffer = malloc(event->midi_buffer_length);
 	if (event->midi_buffer == NULL) {
-		g_critical("Cannot allocate MIDI buffer structure: %s", strerror(errno));
+		smf_warn("Cannot allocate MIDI buffer structure: %s", strerror(errno));
 		smf_event_delete(event);
 
 		return (NULL); 
@@ -655,7 +655,7 @@ smf_set_format(smf_t *smf, int format)
 	assert(format == 0 || format == 1);
 
 	if (smf->number_of_tracks > 1 && format == 0) {
-		g_critical("There is more than one track, cannot set format to 0.");
+		smf_warn("There is more than one track, cannot set format to 0.");
 		return (-1);
 	}
 
@@ -990,7 +990,7 @@ smf_seek_to_seconds(smf_t *smf, double seconds)
 		event = smf_peek_next_event(smf);
 
 		if (event == NULL) {
-			g_critical("Trying to seek past the end of song.");
+			smf_warn("Trying to seek past the end of song.");
 			return (-1);
 		}
 
@@ -1027,7 +1027,7 @@ smf_seek_to_pulses(smf_t *smf, int pulses)
 		event = smf_peek_next_event(smf);
 
 		if (event == NULL) {
-			g_critical("Trying to seek past the end of song.");
+			smf_warn("Trying to seek past the end of song.");
 			return (-1);
 		}
 
