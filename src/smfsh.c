@@ -61,6 +61,7 @@ char *last_file_name = NULL;
 static void
 log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer notused)
 {
+	(void) notused;
 	if (strcmp(log_domain, "smfsh") == 0)
 		fprintf(stderr, "%s\n", message);
 	else
@@ -220,6 +221,7 @@ cmd_format(char *new_format)
 static int
 cmd_tracks(char *notused)
 {
+	(void) notused;
 	if (smf->number_of_tracks > 0)
 		g_message("There are %d tracks, numbered from 1 to %d.", smf->number_of_tracks, smf->number_of_tracks);
 	else
@@ -301,6 +303,7 @@ cmd_track(char *arg)
 static int
 cmd_trackadd(char *notused)
 {
+	(void) notused;
 	selected_track = smf_track_new();
 	if (selected_track == NULL) {
 		g_critical("smf_track_new() failed, track not created.");
@@ -376,6 +379,7 @@ static int
 cmd_events(char *notused)
 {
 	smf_event_t *event;
+	(void) notused;
 
 	if (selected_track == NULL) {
 		g_critical("No track selected - please use 'track <number>' command first.");
@@ -718,6 +722,7 @@ cmd_tempo(char *notused)
 {
 	int i;
 	smf_tempo_t *tempo;
+	(void) notused;
 
 	for (i = 0;; i++) {
 		tempo = smf_get_tempo_by_number(smf, i);
@@ -737,6 +742,7 @@ cmd_tempo(char *notused)
 static int
 cmd_length(char *notused)
 {
+	(void) notused;
 	g_message("Length: %d pulses, %f seconds.", smf_get_length_pulses(smf), smf_get_length_seconds(smf));
 
 	return (0);
@@ -745,6 +751,7 @@ cmd_length(char *notused)
 static int
 cmd_version(char *notused)
 {
+	(void) notused;
 	g_message("libsmf version %s.", smf_get_version());
 
 	return (0);
@@ -753,6 +760,7 @@ cmd_version(char *notused)
 static int
 cmd_exit(char *notused)
 {
+	(void) notused;
 	g_debug("Good bye.");
 	exit(0);
 }
@@ -766,7 +774,7 @@ static struct command_struct {
 } commands[] = {{"help", cmd_help, "Show this help."},
 		{"?", cmd_help, NULL},
 		{"load", cmd_load, "Load named file."},
-		{"open", cmd_load},
+		{"open", cmd_load, NULL},
 		{"save", cmd_save, "Save to named file."},
 		{"ppqn", cmd_ppqn, "Show ppqn (aka division), or set ppqn if used with parameter."},
 		{"format", cmd_format, "Show format, or set format if used with parameter."},
@@ -797,6 +805,7 @@ cmd_help(char *notused)
 	int i, padding_length;
 	char padding[COMMAND_LENGTH + 1];
 	struct command_struct *tmp;
+	(void) notused;
 
 	g_message("Available commands:");
 
@@ -971,6 +980,7 @@ static char **
 smfsh_completion(const char *text, int start, int end)
 {
 	int i;
+	(void) end;
 
 	/* Return NULL if "text" is not the first word in the input line. */
 	if (start != 0) {

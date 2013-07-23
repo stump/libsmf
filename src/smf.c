@@ -864,6 +864,7 @@ smf_skip_next_event(smf_t *smf)
 	void *notused;
 
 	notused = smf_get_next_event(smf);
+	(void) notused;
 }
 
 /**

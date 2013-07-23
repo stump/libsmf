@@ -391,6 +391,7 @@ extract_sysex_event(const unsigned char *buf, const int buffer_length, smf_event
 {
 	int status, message_length, vlq_length;
 	const unsigned char *c = buf;
+	(void) last_status;
 
 	status = *buf;
 
@@ -430,6 +431,7 @@ extract_escaped_event(const unsigned char *buf, const int buffer_length, smf_eve
 {
 	int status, message_length, vlq_length;
 	const unsigned char *c = buf;
+	(void) last_status;
 
 	status = *buf;
 
