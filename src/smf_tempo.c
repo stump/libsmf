@@ -81,7 +81,10 @@ new_tempo(smf_t *smf, int pulses)
 		tempo->notes_per_note = -1;
 	}
 
-	g_ptr_array_add(smf->tempo_array, tempo);
+	if (vector_add(smf->tempo_array, tempo) < 0) {
+		smf_warn("Cannot add tempo event to array.");
+		return NULL;
+	}
 
 	if (pulses == 0)
 		tempo->time_seconds = 0.0;
@@ -190,7 +193,7 @@ remove_last_tempo_with_pulses(smf_t *smf, int pulses)
 	memset(tempo, 0, sizeof(smf_tempo_t));
 	free(tempo);
 
-	g_ptr_array_remove_index(smf->tempo_array, smf->tempo_array->len - 1);
+	vector_remove_index(smf->tempo_array, smf->tempo_array->len - 1);
 }
 
 static double
@@ -261,7 +264,7 @@ smf_get_tempo_by_number(const smf_t *smf, int number)
 	if (number >= smf->tempo_array->len)
 		return (NULL);
 
-	return (g_ptr_array_index(smf->tempo_array, number));
+	return (vector_index(smf->tempo_array, number));
 }
 
 /**
@@ -344,13 +347,13 @@ smf_fini_tempo(smf_t *smf)
 	smf_tempo_t *tempo;
 
 	while (smf->tempo_array->len > 0) {
-		tempo = g_ptr_array_index(smf->tempo_array, smf->tempo_array->len - 1);
+		tempo = vector_index(smf->tempo_array, smf->tempo_array->len - 1);
 		assert(tempo);
 
 		memset(tempo, 0, sizeof(smf_tempo_t));
 		free(tempo);
 
-		g_ptr_array_remove_index(smf->tempo_array, smf->tempo_array->len - 1);
+		vector_remove_index(smf->tempo_array, smf->tempo_array->len - 1);
 	}
 
 	assert(smf->tempo_array->len == 0);

@@ -226,6 +226,9 @@ extern "C" {
 #define WARN_UNUSED_RESULT
 #endif
 
+/** Opaque type representing a dynamic array. */
+typedef struct smf_vector smf_vector_t;
+
 /** Represents a "song", that is, collection of one or more tracks. */
 struct smf_struct {
 	int		format;
@@ -244,12 +247,12 @@ struct smf_struct {
 	int		expected_number_of_tracks;
 
 	/** Private, used by smf.c. */
-	GPtrArray	*tracks_array;
+	smf_vector_t	*tracks_array;
 	double		last_seek_position;
 
 	/** Private, used by smf_tempo.c. */
 	/** Array of pointers to smf_tempo_struct. */
-	GPtrArray	*tempo_array;
+	smf_vector_t	*tempo_array;
 };
 
 typedef struct smf_struct smf_t;
@@ -286,7 +289,7 @@ struct smf_track_struct {
 
 	/** Absolute time of next event on events_queue. */
 	int		time_of_next_event;
-	GPtrArray	*events_array;
+	smf_vector_t	*events_array;
 
 	/** API consumer is free to use this for whatever purpose.  NULL in freshly allocated track.
 	    Note that tracks might be deallocated not only explicitly, by calling smf_track_delete(),

@@ -77,6 +77,20 @@ int smf_event_is_tempo_change_or_time_signature(const smf_event_t *event) WARN_U
 int smf_event_length_is_valid(const smf_event_t *event) WARN_UNUSED_RESULT;
 int is_status_byte(const unsigned char status) WARN_UNUSED_RESULT;
 
+struct smf_vector {
+	void		**ary;
+	unsigned int	len;
+	unsigned int	allocated_len;
+};
+
+smf_vector_t *vector_new(void) WARN_UNUSED_RESULT;
+void *vector_index(smf_vector_t *vector, unsigned int index) WARN_UNUSED_RESULT;
+int vector_add(smf_vector_t *vector, void *item) WARN_UNUSED_RESULT;
+int vector_remove(smf_vector_t *vector, void *item);
+void *vector_remove_index(smf_vector_t *vector, unsigned int index);
+void vector_sort(smf_vector_t *vector, int (*compare)(const void *, const void *));
+void vector_free(smf_vector_t *vector);
+
 void smf_warn(const char *fmt, ...);
 
 #endif /* SMF_PRIVATE_H */
