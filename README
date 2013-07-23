@@ -5,8 +5,8 @@ documentation and an example program (which is also rather useful in
 its own right) are also provided. libsmf was originally written and
 maintained by Edward Tomasz Napierała at http://libsmf.sourceforge.net/.
 
-You will need a C compilation environment and the GLib development files
-to compile this. It builds in the usual autotools manner:
+This package has no dependencies other than the standard C library.
+It builds in the usual autotools manner:
 
   $ ./autogen.sh  # if it's a fresh git clone
   $ ./configure [configure options]

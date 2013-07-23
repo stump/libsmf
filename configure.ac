@@ -45,10 +45,6 @@ AC_FUNC_REALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([memset pow strdup strerror strtol strchr])
 
-PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.2)
-AC_SUBST(GLIB_CFLAGS)
-AC_SUBST(GLIB_LIBS)
-
 case "$host" in
   *-cygwin|*-mingw*) WS2_32_IF_NEEDED=-lws2_32 ;;
 esac

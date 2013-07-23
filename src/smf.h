@@ -204,10 +204,8 @@
  * and for plain "smf_" - "smf_t *".  The only exception are smf_whatever_new routines.
  * Library does not use any global variables and is thread-safe,
  * as long as you don't try to work on the same SMF (smf_t and its descendant tracks and events) from several
- * threads at once without protecting it with mutex.  Library depends on glib and nothing else.  License is
- * BSD, two clause, which basically means you can use it freely in your software, both Open Source (including
- * GPL) and closed source.
- *
+ * threads at once without protecting it with mutex.  License is BSD, two clause, which basically means you can
+ * use it freely in your software, both Open Source (including GPL) and closed source.
  */
 
 #ifndef SMF_H
@@ -218,7 +216,6 @@ extern "C" {
 #endif
 
 #include <stdio.h>
-#include <glib.h>
 
 #if defined(__GNUC__) && __GNUC__ >= 4
 #define WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
