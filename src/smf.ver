@@ -1,0 +1,6 @@
+LIBSMF_1.4 {
+  global:
+    smf_*;
+  local:
+    *;
+};
