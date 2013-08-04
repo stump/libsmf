@@ -65,7 +65,7 @@ warn(const char* fmt, ...)
 	va_list v;
 	va_start(v, fmt);
 	vfprintf(stderr, fmt, v);
-	putchar('\n');
+	fputc('\n', stderr);
 	va_end(v);
 }
 
