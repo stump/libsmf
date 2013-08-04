@@ -60,13 +60,6 @@ char *last_file_name = NULL;
 #define COMMAND_LENGTH 10
 
 static void
-log_handler(const char *msg, void *notused)
-{
-	(void) notused;
-	fprintf(stderr, "%s\n", msg);
-}
-
-static void
 warn(const char* fmt, ...)
 {
 	va_list v;
@@ -1055,8 +1048,6 @@ main(int argc, char *argv[])
 
 	if (argc > 2)
 		usage();
-
-	smf_set_warning_handler(log_handler, NULL);
 
 	smf = smf_new();
 	if (smf == NULL) {
