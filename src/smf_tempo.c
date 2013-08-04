@@ -61,7 +61,7 @@ new_tempo(smf_t *smf, int pulses)
 
 	tempo = malloc(sizeof(smf_tempo_t));
 	if (tempo == NULL) {
-		smf_warn("Cannot allocate smf_tempo_t.");
+		smf_critical("Cannot allocate smf_tempo_t.");
 		return (NULL);
 	}
 
@@ -82,7 +82,7 @@ new_tempo(smf_t *smf, int pulses)
 	}
 
 	if (vector_add(smf->tempo_array, tempo) < 0) {
-		smf_warn("Cannot add tempo event to array.");
+		smf_critical("Cannot add tempo event to array.");
 		return NULL;
 	}
 
@@ -138,7 +138,7 @@ maybe_add_to_tempo_map(smf_event_t *event)
 	if (event->midi_buffer[1] == 0x51) {
 		int new_tempo = (event->midi_buffer[3] << 16) + (event->midi_buffer[4] << 8) + event->midi_buffer[5];
 		if (new_tempo <= 0) {
-			smf_warn("Ignoring invalid tempo change.");
+			smf_critical("Ignoring invalid tempo change.");
 			return;
 		}
 
@@ -150,7 +150,7 @@ maybe_add_to_tempo_map(smf_event_t *event)
 		int numerator, denominator, clocks_per_click, notes_per_note;
 
 		if (event->midi_buffer_length < 7) {
-			smf_warn("Time Signature event seems truncated.");
+			smf_critical("Time Signature event seems truncated.");
 			return;
 		}
 
@@ -375,7 +375,7 @@ smf_init_tempo(smf_t *smf)
 
 	tempo = new_tempo(smf, 0);
 	if (tempo == NULL) {
-		smf_warn("tempo_init failed, sorry.");
+		smf_critical("tempo_init failed, sorry.");
 		abort();
 	}
 }

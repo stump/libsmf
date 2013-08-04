@@ -35,41 +35,43 @@
 #include <stdarg.h>
 
 static void
-default_warning_handler(const char *msg, void *userdata)
+default_log_handler(smf_log_level_t level, const char *msg, void *userdata)
 {
   (void) userdata;
-  fprintf(stderr, "%s\n", msg);
+  if (level != SMF_LOG_LEVEL_DEBUG)
+    fprintf(stderr, "%s\n", msg);
 }
 
-static void (*warning_handler)(const char *, void *) = default_warning_handler;
-static void  *warning_handler_userdata = NULL;
+static void (*log_handler)(smf_log_level_t, const char *, void *) = default_log_handler;
+static void  *log_handler_userdata = NULL;
 
 #define MAX_WARNING_SIZE 1024
 
 void
-smf_warn(const char *fmt, ...)
+smf_log(smf_log_level_t level, const char *fmt, ...)
 {
-  char warn_buf[MAX_WARNING_SIZE];
+  char log_buf[MAX_WARNING_SIZE];
   va_list v;
 
   va_start(v, fmt);
-  vsnprintf(warn_buf, sizeof(warn_buf), fmt, v);
-  warning_handler(warn_buf, warning_handler_userdata);
+  vsnprintf(log_buf, sizeof(log_buf), fmt, v);
+  log_handler(level, log_buf, log_handler_userdata);
   va_end(v);
 }
 
 /**
- * Set the libsmf warning handler.
+ * Set the libsmf log handler.
  *
- * When libsmf encounters a problem, it issues warning messages and
- * calls the warning handler. The default handler outputs the messages
- * to standard error. This function allows you to supply your own
- * warning-message-handling function. NULL restores the default handler.
+ * When libsmf encounters a problem, it issues log messages and calls the
+ * log handler. The default handler outputs the messages to standard
+ * error, except for debug messages, which are discarded. This function
+ * allows you to supply your own log-message-handling function. NULL
+ * restores the default handler.
  */
 void
-smf_set_warning_handler(void (*handler)(const char *msg, void *userdata),
-                        void  *userdata)
+smf_set_log_handler(void (*handler)(smf_log_level_t level, const char *msg, void *userdata),
+                    void  *userdata)
 {
-  warning_handler = (handler != NULL) ? handler : default_warning_handler;
-  warning_handler_userdata = userdata;
+  log_handler = (handler != NULL) ? handler : default_log_handler;
+  log_handler_userdata = userdata;
 }

@@ -52,7 +52,7 @@ vector_resize_array(smf_vector_t *vector, unsigned int newlen)
 
   newary = realloc(vector->ary, newlen * sizeof(void *));
   if (newary == NULL) {
-    smf_warn("vector_resize_array: failed to reallocate array");
+    smf_critical("vector_resize_array: failed to reallocate array");
     return -1;
   } else {
     vector->ary = newary;
@@ -70,7 +70,7 @@ vector_new(void)
 {
   smf_vector_t *vector = malloc(sizeof(smf_vector_t));
   if (vector == NULL) {
-    smf_warn("vector_new: malloc failed");
+    smf_critical("vector_new: malloc failed");
     return NULL;
   }
   memset(vector, 0, sizeof(smf_vector_t));

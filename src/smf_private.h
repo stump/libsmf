@@ -91,7 +91,12 @@ void *vector_remove_index(smf_vector_t *vector, unsigned int index);
 void vector_sort(smf_vector_t *vector, int (*compare)(const void *, const void *));
 void vector_free(smf_vector_t *vector);
 
-void smf_warn(const char *fmt, ...);
+void smf_log(smf_log_level_t level, const char *fmt, ...);
+#define smf_critical(...) smf_log(SMF_LOG_LEVEL_CRITICAL, __VA_ARGS__)
+#define smf_warning(...)  smf_log(SMF_LOG_LEVEL_WARNING,  __VA_ARGS__)
+#define smf_message(...)  smf_log(SMF_LOG_LEVEL_MESSAGE,  __VA_ARGS__)
+#define smf_info(...)     smf_log(SMF_LOG_LEVEL_INFO,     __VA_ARGS__)
+#define smf_debug(...)    smf_log(SMF_LOG_LEVEL_DEBUG,    __VA_ARGS__)
 
 #endif /* SMF_PRIVATE_H */
 

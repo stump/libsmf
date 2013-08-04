@@ -408,7 +408,22 @@ smf_tempo_t *smf_get_last_tempo(const smf_t *smf) WARN_UNUSED_RESULT;
 
 const char *smf_get_version(void) WARN_UNUSED_RESULT;
 
-void smf_set_warning_handler(void (*handler)(const char *msg, void *userdata), void *userdata);
+/** Log message levels.
+ * These are intentionally the same values as in GLib (which have been unchanged since
+ * GLib 1.2) so that it is trivial to write a message handler that delegates to GLib's
+ * logging mechanism, which libsmf formerly used itself. ERROR is omitted, as, being a
+ * library, no libsmf error should be automatically fatal. */
+enum smf_log_level {
+  SMF_LOG_LEVEL_CRITICAL  = 1 << 3,
+  SMF_LOG_LEVEL_WARNING   = 1 << 4,
+  SMF_LOG_LEVEL_MESSAGE   = 1 << 5,
+  SMF_LOG_LEVEL_INFO      = 1 << 6,
+  SMF_LOG_LEVEL_DEBUG     = 1 << 7,
+};
+
+typedef enum smf_log_level smf_log_level_t;
+
+void smf_set_log_handler(void (*handler)(smf_log_level_t level, const char *msg, void *userdata), void *userdata);
 
 #ifdef __cplusplus
 }
